@@ -32,10 +32,10 @@ class NoticeCRUD(CRUDBase[NoticeModel, NoticeCreateSchema, NoticeUpdateSchema]):
         """更新公告"""
         return await self.update(id=id, data=data)
     
-    async def delete_crud(self, ids: List[int]) -> None:
+    async def delete_crud(self, ids: List[str]) -> None:
         """删除公告"""
         return await self.delete(ids=ids)
     
-    async def set_available_crud(self, ids: List[int], available: bool) -> None:
+    async def set_available_crud(self, ids: List[str], available: bool) -> None:
         """设置公告的可用状态"""
         return await self.set(ids=ids, available=available)

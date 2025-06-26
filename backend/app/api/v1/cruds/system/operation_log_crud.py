@@ -25,7 +25,7 @@ class OperationLogCRUD(CRUDBase[OperationLogModel, OperationLogCreateSchema, Non
         """
         return await self.create(data=data.model_dump())
 
-    async def get_by_id_crud(self, id: int) -> Optional[OperationLogModel]:
+    async def get_by_id_crud(self, id: str) -> Optional[OperationLogModel]:
         """
         根据ID获取操作日志详情
         

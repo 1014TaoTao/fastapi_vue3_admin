@@ -36,6 +36,6 @@ class ConfigCRUD(CRUDBase[ConfigModel, ConfigCreateSchema, ConfigUpdateSchema]):
         """更新配置管理型"""
         return await self.update(id=id, data=data)
     
-    async def delete_obj_crud(self, ids: List[int]) -> None:
+    async def delete_obj_crud(self, ids: List[str]) -> None:
         """删除配置管理型"""
         return await self.delete(ids=ids)

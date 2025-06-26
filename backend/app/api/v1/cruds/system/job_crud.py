@@ -32,11 +32,11 @@ class JobCRUD(CRUDBase[JobModel, JobCreateSchema, JobUpdateSchema]):
         """更新定时任务"""
         return await self.update(id=id, data=data)
     
-    async def delete_obj_crud(self, ids: List[int]) -> None:
+    async def delete_obj_crud(self, ids: List[str]) -> None:
         """删除定时任务"""
         return await self.delete(ids=ids)
     
-    async def set_obj_field_crud(self, ids: List[int], **kwargs) -> None:
+    async def set_obj_field_crud(self, ids: List[str], **kwargs) -> None:
         """设置定时任务的可用状态"""
         return await self.set(ids=ids, **kwargs)
     

@@ -1,0 +1,54 @@
+ENVIRONMENT: dev
+
+server:
+  host: 0.0.0.0
+  port: 8001
+  reload: true
+  workers: 1
+  factory: true
+  limit_concurrency: 1000
+  backlog: 2048
+  limit_max_requests: 4094
+  timeout_keep_alive: 5
+  lifespan: "on"
+
+docs:
+  debug: true
+  title: "🎉 Fastapi Vue Admin 🎉 -dev"
+  version: 0.1.0
+  description: "该项目是一个基于python的web服务框架，基于fastapi和sqlalchemy实现。"
+  summary: "接口汇总"
+  docs_url: "/docs"
+  redoc_url: "/redoc"
+  root_path: "/api/v1"
+
+demo:
+  enable: false
+
+orm_db:
+  driver: sqlserver
+  enable: false
+  host: localhost
+  user: sa
+  password: ABCabc123!
+  port: 1433
+  name: fastapi_vue_admin
+
+redis:
+  enable: true
+  host: 192.168.2.22
+  port: 6379
+  user: ""
+  password: 3hQDGGcwRpPmcfw7
+  db_name: 1
+
+mongodb:
+  enable: false
+  host: localhost
+  user: ""
+  password: ""
+  port: 27017
+  name: admin
+
+logger:
+  level: DEBUG

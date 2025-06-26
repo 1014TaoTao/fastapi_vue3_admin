@@ -32,11 +32,11 @@ class DictTypeCRUD(CRUDBase[DictTypeModel, DictTypeCreateSchema, DictTypeUpdateS
         """更新数据字典类型"""
         return await self.update(id=id, data=data)
     
-    async def delete_obj_crud(self, ids: List[int]) -> None:
+    async def delete_obj_crud(self, ids: List[str]) -> None:
         """删除数据字典类型"""
         return await self.delete(ids=ids)
     
-    async def set_obj_available_crud(self, ids: List[int], available: bool) -> None:
+    async def set_obj_available_crud(self, ids: List[str], available: bool) -> None:
         """设置数据字典类型的可用状态"""
         return await self.set(ids=ids, available=available)
 
@@ -65,10 +65,10 @@ class DictDataCRUD(CRUDBase[DictDataModel, DictDataCreateSchema, DictDataUpdateS
         """更新数据字典数据"""
         return await self.update(id=id, data=data)
     
-    async def delete_obj_crud(self, ids: List[int]) -> None:
+    async def delete_obj_crud(self, ids: List[str]) -> None:
         """删除数据字典数据"""
         return await self.delete(ids=ids)
     
-    async def set_obj_available_crud(self, ids: List[int], available: bool) -> None:
+    async def set_obj_available_crud(self, ids: List[str], available: bool) -> None:
         """设置数据字典数据的可用状态"""
         return await self.set(ids=ids, available=available)

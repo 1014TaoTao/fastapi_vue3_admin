@@ -30,7 +30,7 @@ class UserRegisterSchema(BaseModel):
     mobile: Optional[str] = Field(default=None, description="手机号")
     username: str = Field(default=None, max_length=15, description="账号")
     password: str = Field(default=None, max_length=128, description="密码哈希值")
-    role_ids: Optional[List[str]] = Field(default=["2"], description='角色ID')
+    role_ids: Optional[List[str]] = Field(default=["dcfd6d46-5586-48d5-ba3e-f13415b87f06"], description='角色ID')
     creator_id: Optional[str] = Field(default=None, description='创建人ID')
     description: Optional[str] = Field(default=f'注册用户{username}', max_length=250, description="备注")
 

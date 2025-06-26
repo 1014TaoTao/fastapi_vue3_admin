@@ -253,14 +253,16 @@ class UserService:
 
         data.password = PwdUtil.set_password_hash(password=data.password)
         data.name = data.username
-        data.creator_id = 1
-        dict_data = data.model_dump(exclude_unset=True)
-        # dict_data['creator_id'] = data.creator_id
-        # dict_data['dept_id'] = data.dept_id
-        # dict_data['description'] = data.description
+        # data.creator_id = "885b3930-f56d-499c-8731-55451dfcb875"
+        # 只传递UserModel支持的字段
+        dict_data = data.model_dump(exclude_unset=True, exclude={"role_ids", "position_ids"})
         result = await UserCRUD(auth).create(data=dict_data)
-        await UserCRUD(auth).set_user_roles_crud(user_ids=[result.id], role_ids=data.role_ids)
-        # await UserCRUD(auth).set_user_positions_crud(user_ids=[result.id], position_ids=data.position_ids)
+        # 分配角色
+        if getattr(data, "role_ids", None):
+            await UserCRUD(auth).set_user_roles_crud(user_ids=[result.id], role_ids=data.role_ids)
+        # 分配岗位
+        if getattr(data, "position_ids", None):
+            await UserCRUD(auth).set_user_positions_crud(user_ids=[result.id], position_ids=data.position_ids)
         return UserOutSchema.model_validate(result).model_dump()
 
     @classmethod

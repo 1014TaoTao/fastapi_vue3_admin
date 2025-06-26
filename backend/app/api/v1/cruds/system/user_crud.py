@@ -23,7 +23,7 @@ class UserCRUD(CRUDBase[UserModel, UserCreateSchema, UserUpdateSchema]):
         """初始化用户CRUD"""
         super().__init__(model=UserModel, auth=auth)
 
-    async def get_by_id_crud(self, id: int) -> Optional[UserModel]:
+    async def get_by_id_crud(self, id: str) -> Optional[UserModel]:
         """
         根据id获取用户信息
         
@@ -72,7 +72,7 @@ class UserCRUD(CRUDBase[UserModel, UserCreateSchema, UserUpdateSchema]):
         """
         return await self.list(search=search, order_by=order_by)
 
-    async def update_last_login_crud(self, id: int) -> Optional[UserModel]:
+    async def update_last_login_crud(self, id: str) -> Optional[UserModel]:
         """
         更新用户最后登录时间
         
@@ -84,7 +84,7 @@ class UserCRUD(CRUDBase[UserModel, UserCreateSchema, UserUpdateSchema]):
         """
         return await self.update(id=id, data={"last_login": datetime.now()})
 
-    async def set_available_crud(self, ids: List[int], available: bool) -> None:
+    async def set_available_crud(self, ids: List[str], available: bool) -> None:
         """
         批量设置用户可用状态
         
@@ -94,7 +94,7 @@ class UserCRUD(CRUDBase[UserModel, UserCreateSchema, UserUpdateSchema]):
         """
         await self.set(ids=ids, available=available)
 
-    async def set_user_roles_crud(self, user_ids: List[int], role_ids: List[int]) -> None:
+    async def set_user_roles_crud(self, user_ids: List[str], role_ids: List[str]) -> None:
         """
         批量设置用户角色
         
@@ -113,7 +113,7 @@ class UserCRUD(CRUDBase[UserModel, UserCreateSchema, UserUpdateSchema]):
             related_objs=role_objs
         )
 
-    async def set_user_positions_crud(self, user_ids: List[int], position_ids: List[int]) -> None:
+    async def set_user_positions_crud(self, user_ids: List[str], position_ids: List[str]) -> None:
         """
         批量设置用户岗位
         
@@ -132,7 +132,7 @@ class UserCRUD(CRUDBase[UserModel, UserCreateSchema, UserUpdateSchema]):
             related_objs=position_objs
         )
 
-    async def change_password_crud(self, id: int, password_hash: str) -> Optional[UserModel]:
+    async def change_password_crud(self, id: str, password_hash: str) -> Optional[UserModel]:
         """
         修改用户密码
         
@@ -145,7 +145,7 @@ class UserCRUD(CRUDBase[UserModel, UserCreateSchema, UserUpdateSchema]):
         """
         return await self.update(id=id, data={"password": password_hash})
 
-    async def forget_password_crud(self, id: int, password_hash: str) -> Optional[UserModel]:
+    async def forget_password_crud(self, id: str, password_hash: str) -> Optional[UserModel]:
         """
         重置密码
         

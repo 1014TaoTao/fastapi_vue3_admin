@@ -9,7 +9,9 @@ backend/.vscode
 backend/.idea
 backend/.DS_Store
 backend/venv
+backend/.venv
 backend/logs
+backend/env/.env.dev
 backend/*.db
 backend/site
 
