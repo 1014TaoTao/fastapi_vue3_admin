@@ -16,6 +16,7 @@
     "echarts": "^5.5.0",
     "element-plus": "^2.8.4",
     "highlight.js": "^11.10.0",
+    "nprogress": "^0.2.0",
     "pinia": "^3.0.0",
     "pinia-plugin-persistedstate": "^4.3.0",
     "sass": "1.63.2",

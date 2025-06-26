@@ -130,12 +130,12 @@
         <div class="header-centent">
           <router-view v-slot="{ Component, route }">
             <transition name="fade" mode="out-in">
-              <div :key="route.path">
+              <!-- <div :key="route.path"> -->
                 <keep-alive v-if="route.meta.keepAlive">
                   <component :is="Component" />
                 </keep-alive>
                 <component :is="Component" v-else />
-              </div>
+              <!-- </div> -->
             </transition>
           </router-view>
         </div>

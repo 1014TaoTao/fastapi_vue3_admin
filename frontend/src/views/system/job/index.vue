@@ -102,7 +102,7 @@
                                         <a-menu>
                                             <a-menu-item @click="handleOption(record, 1)">暂停</a-menu-item>
                                             <a-menu-item @click="handleOption(record, 2)">恢复</a-menu-item>
-                                            <a-menu-item @click="handleOption(record, 3)">重启</a-menu-item>
+                                            <!-- <a-menu-item @click="handleOption(record, 3)">重启</a-menu-item> -->
                                         </a-menu>
                                     </template>
                                 </a-dropdown>
@@ -866,7 +866,7 @@ const handleClear = () => {
     })
 }
 
-// 操作按钮:操作类型 1: 暂停 2: 恢复 3: 重启
+// 操作按钮:操作类型 1: 暂停 2: 恢复 3: 重启（暂时移除重启）
 const handleOption = (row: tableJobType, option: number) => {
     OptionJob({ id: row.id, option: option }).then(() => {
         loadingData();

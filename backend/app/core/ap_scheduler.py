@@ -260,10 +260,12 @@ class SchedulerUtil:
         :param job_id: 任务id
         :return:
         """
+        logger.info(f"开始获取全部任务：{cls.get_all_jobs()}， 状态： {cls.get_job_status()}")
         query_job = cls.get_job(job_id=str(job_id))
         if not query_job:
             raise ValueError(f"未找到该任务：{job_id}")
         scheduler.pause_job(job_id=str(job_id))
+        logger.info(f"查看获取全部任务：{cls.get_all_jobs()}， 状态： {cls.get_job_status()}")
 
     @classmethod
     def resume_job(cls, job_id: Union[str, int]):
@@ -272,10 +274,13 @@ class SchedulerUtil:
         :param job_id: 任务id
         :return:
         """
+        
+        logger.info(f"开始获取全部任务：{cls.get_all_jobs()}， 状态： {cls.get_job_status()}")
         query_job = cls.get_job(job_id=str(job_id))
         if not query_job:
             raise ValueError(f"未找到该任务：{job_id}")
         scheduler.resume_job(job_id=str(job_id))
+        logger.info(f"查看获取全部任务：{cls.get_all_jobs()}， 状态： {cls.get_job_status()}")
 
     @classmethod
     def reschedule_job(cls, job_id: Union[str, int]) -> Job:
@@ -284,10 +289,12 @@ class SchedulerUtil:
         :param job_id: 任务id
         :return: 重启后的任务对象
         """
+        logger.info(f"开始获取全部任务：{cls.get_all_jobs()}， 状态： {cls.get_job_status()}")
         query_job = cls.get_job(job_id=str(job_id))
         if not query_job:
             raise CustomException(msg=f"未找到该任务：{job_id}")
-        return scheduler.reschedule_job(job_id=str(job_id))
+        scheduler.reschedule_job(job_id=str(job_id))
+        logger.info(f"查看获取全部任务：{cls.get_all_jobs()}， 状态： {cls.get_job_status()}")
 
     @classmethod
     def export_jobs(cls):

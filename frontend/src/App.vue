@@ -3,9 +3,19 @@
     :locale="zhCN"
     :theme="{
       algorithm: isDarkMode ? theme.darkAlgorithm : theme.defaultAlgorithm,
-      // 自定义皮肤
+      // algorithm: isDarkMode ? theme.compactAlgorithm : theme.defaultAlgorithm,
+
+      // // 自定义皮肤
       // token: {
       //   colorPrimary: '#00b96b',
+      //   colorBgContainer: '#fafafa',
+      //   colorPrimaryBg: '#e6f7ff',
+      //   colorLink: '#1890ff',
+      // },
+      // components: {
+      //   Radio: {
+      //     colorPrimary: '#00b96b',
+      //   },
       // },
     }"
   >

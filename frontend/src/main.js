@@ -10,13 +10,33 @@ import { createPinia } from 'pinia';
 import { useConfigStore } from "@/store/index";
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
-
+// 新增：引入NProgress
+import NProgress from 'nprogress';
+import 'nprogress/nprogress.css';
 
 const app = createApp(App);
 const pinia = createPinia();
 
 app.use(pinia);
 app.use(ElementPlus)
+
+// 新增：配置NProgress
+NProgress.configure({
+  showSpinner: false, // 关闭加载动画
+  trickleSpeed: 100, // 进度条递增速度
+  easing: 'ease', // 动画方式
+  speed: 500 // 动画速度
+});
+
+// 新增：路由钩子
+router.beforeEach((to, from, next) => {
+  NProgress.start(); // 开始进度条
+  next();
+});
+
+router.afterEach(() => {
+  NProgress.done(); // 结束进度条
+});
 
 const initConfig = async () => {
   const configStore = useConfigStore();

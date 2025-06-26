@@ -16,25 +16,29 @@
         />
         <!-- 使用 rightExtra 插槽添加关闭全部按钮 -->
         <template #rightExtra>
+            <!-- 修改为以 icon 显示的刷新缓存按钮 -->
+            <a-button type="link" @click="refreshCache">
+                <template #icon>
+                    <ReloadOutlined />
+                </template>
+            </a-button>
             <a-button type="link" @click="closeAllTabs">关闭全部</a-button>
         </template>
     </a-tabs>
     
 </template>
-
 <script lang="ts" setup>
 import { ref, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from "vue-router";
+import { ReloadOutlined } from '@ant-design/icons-vue'; // 导入刷新图标
 interface Pane {
     title: string;
     path: string;
     key: string;
     closable?: boolean;
 }
-
 const router = useRouter();
 const route = useRoute();
-
 const panes = ref<Pane[]>([
     { 
         title: '工作台', 
@@ -43,9 +47,7 @@ const panes = ref<Pane[]>([
         closable: false 
     }
 ]);
-
 const activeKey = ref(panes.value[0].key);
-
 const getRoute = () => {
     const existingPane = panes.value.some(pane => pane.key === route.path);
     if (!existingPane) {
@@ -58,7 +60,6 @@ const getRoute = () => {
     }
     activeKey.value = route.path;
 }
-
 const removePane = (targetKey: string) => {
     const paneIndex = panes.value.findIndex(pane => pane.key === targetKey);
     panes.value = panes.value.filter(pane => pane.key !== targetKey);
@@ -93,6 +94,12 @@ const closeAllTabs = () => {
         activeKey.value = panes.value[0].key;
         router.push(activeKey.value);
     }
+};
+
+// 新增刷新缓存的方法
+const refreshCache = () => {
+    // 刷新页面
+    window.location.reload();
 };
 
 onMounted(getRoute);

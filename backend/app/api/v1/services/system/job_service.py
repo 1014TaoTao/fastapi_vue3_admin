@@ -77,9 +77,9 @@ class JobService:
         elif option == 2:
             SchedulerUtil().resume_job(job_id=id)
             await JobCRUD(auth).set_obj_field_crud(ids=[id], status=True)
-        elif option == 3:
-            SchedulerUtil().reschedule_job(job_id=id)
-            await JobCRUD(auth).set_obj_field_crud(ids=[id], status=False)
+        # elif option == 3:
+        #     SchedulerUtil().reschedule_job(job_id=id)
+        #     await JobCRUD(auth).set_obj_field_crud(ids=[id], status=False)
 
     @classmethod
     async def export_job_service(cls, data_list: List[Dict[str, Any]]) -> bytes:
