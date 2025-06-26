@@ -1,0 +1,14 @@
+[
+  {
+    "role_id": 1,
+    "dept_id": 1
+  },
+  {
+    "role_id": 2,
+    "dept_id": 1
+  },
+  {
+    "role_id": 2,
+    "dept_id": 6
+  }
+]

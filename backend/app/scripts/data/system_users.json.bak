@@ -1,0 +1,34 @@
+[
+  {
+    "id": 1,
+    "username": "admin",
+    "password": "$2b$12$e2IJgS/cvHgJ0H3G7Xa08OXoXnk6N/NX3IZRtubBDElA0VLZhkNOa",
+    "name": "管理员",
+    "mobile": "15382112222",
+    "email": "admin@qq.com",
+    "gender": "0",
+    "avatar": "https://gw.alipayobjects.com/zos/rmsportal/BiazfanxmamNRoxxVxka.png",
+    "available": true,
+    "is_superuser": true,
+    "last_login": null,
+    "dept_id": 1,
+    "description": "超级管理员",
+    "creator_id": null
+  },
+  {
+    "id": 2,
+    "username": "demo",
+    "password": "$2b$12$e2IJgS/cvHgJ0H3G7Xa08OXoXnk6N/NX3IZRtubBDElA0VLZhkNOa",
+    "name": "演示用户",
+    "mobile": "15382112121",
+    "email": "demo@qq.com",
+    "gender": "1",
+    "avatar": "https://gw.alipayobjects.com/zos/rmsportal/BiazfanxmamNRoxxVxka.png",
+    "available": true,
+    "is_superuser": false,
+    "last_login": null,
+    "dept_id": 6,
+    "description": "演示用户",
+    "creator_id": 1
+  }
+]

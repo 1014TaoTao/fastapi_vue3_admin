@@ -1,0 +1,20 @@
+[
+  {
+    "id": 1,
+    "name": "管理员角色",
+    "data_scope": 4,
+    "available": true,
+    "order": 1,
+    "description": "管理员",
+    "creator_id": 1
+  },
+  {
+    "id": 2,
+    "name": "普通角色",
+    "data_scope": 1,
+    "available": true,
+    "order": 2,
+    "description": "普通角色",
+    "creator_id": 1
+  }
+]

@@ -1,0 +1,38 @@
+[
+    {
+        "id": 1,
+        "notice_title": "系统更新",
+        "notice_type": "1",
+        "notice_content": "2099年9月9日，晚上12:00，系统更新",
+        "available": true,
+        "description": "系统更新",
+        "creator_id": 1
+    },
+    {
+        "id": 2,
+        "notice_title": "系统维护",
+        "notice_type": "2",
+        "notice_content": "2099年9月9日，晚上12:00，系统维护",
+        "available": true,
+        "description": "系统维护",
+        "creator_id": 1
+    },
+    {
+        "id": 3,
+        "notice_title": "系统更新完成",
+        "notice_type": "1",
+        "notice_content": "2099年9月9日，晚上12:00，系统更新完成",
+        "available": false,
+        "description": "系统更新完成",
+        "creator_id": 1
+    },
+    {
+        "id": 4,
+        "notice_title": "系统维护完成",
+        "notice_type": "2",
+        "notice_content": "2099年9月9日，晚上12:00，系统维护完成",
+        "available": false,
+        "description": "系统维护完成",
+        "creator_id": 1
+    }
+]

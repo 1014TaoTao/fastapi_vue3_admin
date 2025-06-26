@@ -1,0 +1,114 @@
+[
+  {
+    "id": 1,
+    "dict_name": "用户性别",
+    "dict_type": "sys_user_sex",
+    "available": true,
+    "description": "用户性别列表",
+    "creator_id": 1
+  },
+  {
+    "id": 2,
+    "dict_name": "菜单状态",
+    "dict_type": "sys_show_hide",
+    "available": true,
+    "description": "菜单状态列表",
+    "creator_id": 1
+  },
+  {
+    "id": 3,
+    "dict_name": "系统开关",
+    "dict_type": "sys_normal_disable",
+    "available": true,
+    "description": "系统开关列表",
+    "creator_id": 1
+  },
+  {
+    "id": 4,
+    "dict_name": "任务状态",
+    "dict_type": "sys_job_status",
+    "available": true,
+    "description": "任务状态列表",
+    "creator_id": 1
+  },
+  {
+    "id": 5,
+    "dict_name": "任务分组",
+    "dict_type": "sys_job_group",
+    "available": true,
+    "description": "任务分组列表",
+    "creator_id": 1
+  },
+  {
+    "id": 6,
+    "dict_name": "任务执行器",
+    "dict_type": "sys_job_executor",
+    "available": true,
+    "description": "任务执行器列表",
+    "creator_id": 1
+  },
+  {
+    "id": 7,
+    "dict_name": "系统是否",
+    "dict_type": "sys_yes_no",
+    "available": true,
+    "description": "系统是否列表",
+    "creator_id": 1
+  },
+  {
+    "id": 8,
+    "dict_name": "通知类型",
+    "dict_type": "sys_notice_type",
+    "available": true,
+    "description": "通知类型列表",
+    "creator_id": 1
+  },
+  {
+    "id": 9,
+    "dict_name": "通知状态",
+    "dict_type": "sys_notice_status",
+    "available": true,
+    "description": "通知状态列表",
+    "creator_id": 1
+  },
+  {
+    "id": 10,
+    "dict_name": "操作类型",
+    "dict_type": "sys_oper_type",
+    "available": true,
+    "description": "操作类型列表",
+    "creator_id": 1
+  },
+  {
+    "id": 11,
+    "dict_name": "系统状态",
+    "dict_type": "sys_common_status",
+    "available": true,
+    "description": "登录状态列表",
+    "creator_id": 1
+  },
+  {
+    "id": 12,
+    "dict_name": "任务函数",
+    "dict_type": "sys_job_function",
+    "available": true,
+    "description": "任务函数列表",
+    "creator_id": 1
+  },
+  {
+    "id": 13,
+    "dict_name": "任务触发器",
+    "dict_type": "sys_job_trigger",
+    "available": true,
+    "description": "任务触发器列表",
+    "creator_id": 1
+  },
+  {
+    "id": 14,
+    "dict_name": "字典配置表格回显样式",
+    "dict_type": "sys_dictdata_list_class",
+    "available": true,
+    "description": "字典配置表格回显样式列表",
+    "creator_id": 1
+  }
+]
