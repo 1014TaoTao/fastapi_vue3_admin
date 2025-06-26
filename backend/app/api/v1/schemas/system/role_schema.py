@@ -21,9 +21,9 @@ class RoleCreateSchema(BaseModel):
 class RolePermissionSettingSchema(BaseModel):
     """角色权限配置模型"""
     data_scope: int = Field(default=1, ge=1, le=5, description='数据权限范围')
-    role_ids: List[int] = Field(default_factory=list, description='角色ID列表')
-    menu_ids: List[int] = Field(default_factory=list, description='菜单ID列表')
-    dept_ids: List[int] = Field(default_factory=list, description='部门ID列表')
+    role_ids: List[str] = Field(default_factory=list, description='角色ID列表')
+    menu_ids: List[str] = Field(default_factory=list, description='菜单ID列表')
+    dept_ids: List[str] = Field(default_factory=list, description='部门ID列表')
     
     @classmethod
     @model_validator(mode='after')
@@ -34,7 +34,7 @@ class RolePermissionSettingSchema(BaseModel):
 
 class RoleUpdateSchema(RoleCreateSchema):
     """角色更新模型"""
-    id: int = Field(..., gt=0, description="角色ID")
+    id: str = Field(..., description="角色ID")
 
 
 class RoleOutSchema(RoleCreateSchema, BaseSchema):

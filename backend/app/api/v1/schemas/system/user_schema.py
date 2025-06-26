@@ -30,8 +30,8 @@ class UserRegisterSchema(BaseModel):
     mobile: Optional[str] = Field(default=None, description="手机号")
     username: str = Field(default=None, max_length=15, description="账号")
     password: str = Field(default=None, max_length=128, description="密码哈希值")
-    role_ids: Optional[List[int]] = Field(default=[2], description='角色ID')
-    creator_id: Optional[int] = Field(default=1, description='创建人ID')
+    role_ids: Optional[List[str]] = Field(default=["2"], description='角色ID')
+    creator_id: Optional[str] = Field(default=None, description='创建人ID')
     description: Optional[str] = Field(default=f'注册用户{username}', max_length=250, description="备注")
 
 
@@ -63,14 +63,14 @@ class UserCreateSchema(CurrentUserUpdateSchema):
     is_superuser: bool = Field(default=False, description="是否超管")
     description: Optional[str] = Field(None, max_length=255, description="备注")
     
-    dept_id: Optional[int] = Field(default=None, description='部门ID')
-    role_ids: Optional[List[int]] = Field(default=[], description='角色ID')
-    position_ids: Optional[List[int]] = Field(default=[], description='岗位ID')
+    dept_id: Optional[str] = Field(default=None, description='部门ID')
+    role_ids: Optional[List[str]] = Field(default=[], description='角色ID')
+    position_ids: Optional[List[str]] = Field(default=[], description='岗位ID')
 
 
 class UserUpdateSchema(UserCreateSchema):
     """更新"""
-    id: int = Field(..., description="主键ID")
+    id: str = Field(..., description="主键ID")
 
 
 class UserOutSchema(UserCreateSchema, BaseSchema):

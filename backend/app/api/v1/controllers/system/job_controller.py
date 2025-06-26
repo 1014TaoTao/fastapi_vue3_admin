@@ -24,7 +24,7 @@ router = APIRouter(route_class=OperationLogRoute)
 
 @router.get("/detail", summary="获取定时任务详情", description="获取定时任务详情")
 async def get_obj_detail_controller(
-    id: int = Query(..., description="定时任务ID"),
+    id: str = Query(..., description="定时任务ID"),
     auth: AuthSchema = Depends(AuthPermission(permissions=["system:job:query"]))
 ) -> JSONResponse:
     result_dict = await JobService.get_job_detail_service(id=id, auth=auth)
@@ -39,7 +39,7 @@ async def get_obj_list_controller(
 ) -> JSONResponse:
     result_dict_list = await JobService.get_job_list_service(auth=auth, search=search, order_by=page.order_by)
     result_dict = await PaginationService.get_page_obj(data_list= result_dict_list, page_no= page.page_no, page_size = page.page_size)
-    logger.info(f"查询定时任务列表成功")
+    logger.info("查询定时任务列表成功")
     return SuccessResponse(data=result_dict, msg="查询定时任务列表成功")
 
 @router.post("/create", summary="创建定时任务", description="创建定时任务")
@@ -62,7 +62,7 @@ async def update_obj_controller(
 
 @router.delete("/delete", summary="删除定时任务", description="删除定时任务")
 async def delete_obj_controller(
-    id: int = Query(..., description="定时任务ID"),
+    id: str = Query(..., description="定时任务ID"),
     auth: AuthSchema = Depends(AuthPermission(permissions=["system:job:delete"]))
 ) -> JSONResponse:
     await JobService.delete_job_service(auth=auth, id=id)
@@ -92,12 +92,12 @@ async def clear_obj_log_controller(
     auth: AuthSchema = Depends(AuthPermission(permissions=["system:job:delete"]))
 ) -> JSONResponse:
     await JobService.clear_job_service(auth=auth)
-    logger.info(f"清空定时任务成功")
+    logger.info("清空定时任务成功")
     return SuccessResponse(msg="清空定时任务成功")
 
 @router.put("/option", summary="暂停/恢复/重启定时任务", description="暂停/恢复/重启定时任务")
 async def option_obj_controller(
-    id: int = Query(..., description="定时任务ID"),
+    id: str = Query(..., description="定时任务ID"),
     option: int = Query(..., description="操作类型 1: 暂停 2: 恢复 3: 重启"),
     auth: AuthSchema = Depends(AuthPermission(permissions=["system:job:update"]))
 ) -> JSONResponse:
@@ -113,14 +113,14 @@ async def get_job_log_controller():
             "name": i.name,
             "trigger": i.trigger.__class__.__name__,
             "executor": i.executor,
-            "func": i.func,
-            "func_ref": i.func_ref,
-            "args": i.args,
-            "kwargs": i.kwargs,
+            "func": getattr(i.func, "__name__", str(i.func)),
+            "func_ref": getattr(i, "func_ref", None),
+            "args": str(i.args),
+            "kwargs": str(i.kwargs),
             "misfire_grace_time": i.misfire_grace_time,
             "coalesce": i.coalesce,
             "max_instances": i.max_instances,
-            "next_run_time": i.next_run_time,
+            "next_run_time": str(i.next_run_time) if i.next_run_time else None,
             "state": SchedulerUtil.get_job_status()
         }
         for i in SchedulerUtil.get_all_jobs()

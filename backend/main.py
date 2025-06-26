@@ -14,8 +14,8 @@ shell_app = typer.Typer()
 # 初始化 Alembic 配置
 alembic_cfg = Config("alembic.ini")
 
+
 def create_app() -> FastAPI:
-    
     from app.config.setting import settings
     from app.plugin.init_app import (
         register_middlewares,
@@ -23,8 +23,9 @@ def create_app() -> FastAPI:
         register_routers,
         register_files,
         reset_api_docs,
-        lifespan
+        lifespan,
     )
+
     # 创建FastAPI应用
     app = FastAPI(**settings.FASTAPI_CONFIG, lifespan=lifespan)
 
@@ -43,20 +44,25 @@ def create_app() -> FastAPI:
 
 
 @shell_app.command()
-def run(env: EnvironmentEnum = typer.Option(EnvironmentEnum.DEV, "--env", help="运行环境 (dev, prod)")):
+# def run(env: EnvironmentEnum = typer.Option(EnvironmentEnum.DEV, "--env", help="运行环境 (dev, prod)")):
+def run(env: str = typer.Option("dev", "--env", help="运行环境 (dev, prod)")):
     typer.echo("项目启动中..")
     # 设置环境变量
-    os.environ["ENVIRONMENT"] = env.value
+    # os.environ["ENVIRONMENT"] = env.value
+    os.environ["ENVIRONMENT"] = env
     from app.config.setting import settings
-    
+
     # 启动uvicorn服务
-    uvicorn.run(
-        app='main:create_app',
-        **settings.UVICORN_CONFIG
-    )
+    uvicorn.run(app="main:create_app", **settings.UVICORN_CONFIG)
+
 
 @shell_app.command()
-def revision(message: str, env: EnvironmentEnum = typer.Option(EnvironmentEnum.DEV, "--env", help="运行环境 (dev, test, prod)")):
+def revision(
+    message: str,
+    env: EnvironmentEnum = typer.Option(
+        EnvironmentEnum.DEV, "--env", help="运行环境 (dev, test, prod)"
+    ),
+):
     """
     生成新的 Al
     embic 迁移脚本。
@@ -65,8 +71,13 @@ def revision(message: str, env: EnvironmentEnum = typer.Option(EnvironmentEnum.D
     command.revision(alembic_cfg, message=message, autogenerate=True)
     typer.echo(f"迁移脚本已生成: {message}")
 
+
 @shell_app.command()
-def upgrade(env: EnvironmentEnum = typer.Option(EnvironmentEnum.DEV, "--env", help="运行环境 (dev, test, prod)")):
+def upgrade(
+    env: EnvironmentEnum = typer.Option(
+        EnvironmentEnum.DEV, "--env", help="运行环境 (dev, test, prod)"
+    ),
+):
     """
     应用最新的 Alembic 迁移。
     """
@@ -75,7 +86,7 @@ def upgrade(env: EnvironmentEnum = typer.Option(EnvironmentEnum.DEV, "--env", he
     typer.echo("所有迁移已应用。")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # 启动服务
     # python main.py run    # 启动服务
     # python3 main.py run --env=dev(不加默认为dev)
@@ -84,5 +95,5 @@ if __name__ == '__main__':
     # python main.py revision "初始化迁移" --env=dev(不加默认为dev)
     # 应用迁移
     # python main.py upgrade --env=dev(不加默认为dev)
-    
+
     shell_app()

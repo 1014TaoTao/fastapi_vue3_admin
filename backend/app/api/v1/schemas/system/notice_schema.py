@@ -17,7 +17,7 @@ class NoticeCreateSchema(BaseModel):
 
 class NoticeUpdateSchema(NoticeCreateSchema):
     """公告通知更新模型"""
-    id: int = Field(..., gt=0, description="公告通知ID")
+    id: str = Field(..., description="公告通知ID")
 
 
 class NoticeOutSchema(NoticeCreateSchema, BaseSchema):

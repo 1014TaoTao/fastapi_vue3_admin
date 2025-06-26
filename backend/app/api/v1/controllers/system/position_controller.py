@@ -31,13 +31,13 @@ async def get_obj_list_controller(
 ) -> JSONResponse:
     result_dict_list = await PositionService.get_position_list_service(search=search, auth=auth, order_by=page.order_by)
     result_dict = await PaginationService.get_page_obj(data_list= result_dict_list, page_no= page.page_no, page_size = page.page_size)
-    logger.info(f"查询岗位列表成功")
+    logger.info("查询岗位列表成功")
     return SuccessResponse(data=result_dict, msg="查询岗位列表成功")
 
 
 @router.get("/detail", summary="查询岗位详情", description="查询岗位详情")
 async def get_obj_detail_controller(
-    id: int = Query(..., description="岗位ID"),
+    id: str = Query(..., description="岗位ID"),
     auth: AuthSchema = Depends(AuthPermission(permissions=["system:position:query"])),
 ) -> JSONResponse:
     result_dict = await PositionService.get_position_detail_service(id=id, auth=auth)
@@ -67,7 +67,7 @@ async def update_obj_controller(
 
 @router.delete("/delete", summary="删除岗位", description="删除岗位")
 async def delete_obj_controller(
-    id: int = Query(..., description="岗位ID"),
+    id: str = Query(..., description="岗位ID"),
     auth: AuthSchema = Depends(AuthPermission(permissions=["system:position:delete"])),
 ) -> JSONResponse:
     await PositionService.delete_position_service(id=id, auth=auth)

@@ -26,13 +26,13 @@ async def get_obj_list_controller(
     """ 查询日志 """
     result_dict_list = await OperationLogService.get_log_list_service(search=search, auth=auth, order_by=page.order_by)
     result_dict = await PaginationService.get_page_obj(data_list= result_dict_list, page_no= page.page_no, page_size = page.page_size)
-    logger.info(f"查询日志成功")
+    logger.info("查询日志成功")
     return SuccessResponse(data=result_dict, msg="查询日志成功")
 
 
 @router.get("/detail", summary="日志详情", description="日志详情")
 async def get_obj_detail_controller(
-    id: int = Query(..., description="操作日志ID"),
+    id: str = Query(..., description="操作日志ID"),
     auth: AuthSchema = Depends(AuthPermission(permissions=["system:log:query"]))
 ) -> JSONResponse:
     """ 详情日志 """
@@ -43,7 +43,7 @@ async def get_obj_detail_controller(
 
 @router.delete("/delete", summary="删除日志", description="删除日志")
 async def delete_obj_log_controller(
-    id: int = Query(..., description="操作日志ID"),
+    id: str = Query(..., description="操作日志ID"),
     auth: AuthSchema = Depends(AuthPermission(permissions=["system:log:delete"]))
 ) -> JSONResponse:
     """ 删除日志 """

@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_validation_decorator import NotBlank, Pattern, Size
-from typing import Literal, Optional
+from typing import Optional
 
 from app.core.base_schema import BaseSchema
 
@@ -37,7 +37,7 @@ class DictTypeCreateSchema(BaseModel):
 
 class DictTypeUpdateSchema(DictTypeCreateSchema):
     """字典类型更新模型"""
-    id: int = Field(..., gt=0, description="字典类型ID")
+    id: str = Field(..., description="字典类型ID")
 
 
 class DictTypeOutSchema(DictTypeCreateSchema, BaseSchema):
@@ -89,7 +89,7 @@ class DictDataCreateSchema(BaseModel):
 
 class DictDataUpdateSchema(DictDataCreateSchema):
     """字典数据更新模型"""
-    id: int = Field(..., gt=0, description="字典数据ID")
+    id: str = Field(..., description="字典数据ID")
 
 
 class DictDataOutSchema(DictDataCreateSchema, BaseSchema):

@@ -3,6 +3,7 @@
 from datetime import datetime
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
+import uuid
 
 from app.core.base_model import ModelBase
 
@@ -15,7 +16,7 @@ class DictTypeModel(ModelBase):
     __tablename__ = "system_dict_type"
     __table_args__ = ({'comment': '数据字典类型表'})
 
-    id = Column(Integer, primary_key=True, autoincrement=True, comment='字典主键')
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()), nullable=False, unique=True, comment='字典主键')
     dict_name = Column(String(100), nullable=True, unique=True, default='', comment='字典名称')
     dict_type = Column(String(100), nullable=True, unique=True, default='', comment='字典类型')
     available = Column(Boolean, nullable=True, default='0', comment='状态（0正常 1停用）')
@@ -25,10 +26,10 @@ class DictTypeModel(ModelBase):
     created_at = Column(DateTime, nullable=True,default=datetime.now, comment='创建时间')
     updated_at = Column(DateTime, nullable=True,default=datetime.now, onupdate=datetime.now, comment='更新时间')
     creator_id = Column(
-        Integer, 
-        ForeignKey("system_users.id", ondelete="SET NULL", onupdate="CASCADE"), 
-        nullable=True, 
-        index=True, 
+        String(36),
+        ForeignKey("system_users.id", ondelete="SET NULL", onupdate="CASCADE"),
+        nullable=True,
+        index=True,
         comment="创建人ID"
     )
     creator = relationship(
@@ -48,7 +49,7 @@ class DictDataModel(ModelBase):
     __tablename__ = 'system_dict_data'
     __table_args__ = ({'comment': '数据字典数据表'})
 
-    id = Column(Integer, primary_key=True, autoincrement=True, comment='字典编码')
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()), nullable=False, unique=True, comment='字典编码')
     dict_sort = Column(Integer, nullable=True, default=0, comment='字典排序')
     dict_label = Column(String(100), nullable=True, default='', comment='字典标签')
     dict_value = Column(String(100), nullable=True, default='', comment='字典键值')
@@ -63,10 +64,10 @@ class DictDataModel(ModelBase):
     created_at = Column(DateTime, nullable=True,default=datetime.now, comment='创建时间')
     updated_at = Column(DateTime, nullable=True,default=datetime.now, onupdate=datetime.now, comment='更新时间')
     creator_id = Column(
-        Integer, 
-        ForeignKey("system_users.id", ondelete="SET NULL", onupdate="CASCADE"), 
-        nullable=True, 
-        index=True, 
+        String(36),
+        ForeignKey("system_users.id", ondelete="SET NULL", onupdate="CASCADE"),
+        nullable=True,
+        index=True,
         comment="创建人ID"
     )
     creator = relationship(

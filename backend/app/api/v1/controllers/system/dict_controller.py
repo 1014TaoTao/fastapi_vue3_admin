@@ -27,7 +27,7 @@ router = APIRouter(route_class=OperationLogRoute)
 
 @router.get("/type/detail", summary="获取字典类型详情", description="获取字典类型详情")
 async def get_type_detail_controller(
-    id: int = Query(..., description="字典类型ID"),
+    id: str = Query(..., description="字典类型ID"),
     auth: AuthSchema = Depends(AuthPermission(permissions=["system:dict_type:query"]))
 ) -> JSONResponse:
     result_dict = await DictTypeService.get_obj_detail_service(id=id, auth=auth)
@@ -42,7 +42,7 @@ async def get_type_list_controller(
 ) -> JSONResponse:
     result_dict_list = await DictTypeService.get_obj_list_service(auth=auth, search=search, order_by=page.order_by)
     result_dict = await PaginationService.get_page_obj(data_list= result_dict_list, page_no= page.page_no, page_size = page.page_size)
-    logger.info(f"查询字典类型列表成功")
+    logger.info("查询字典类型列表成功")
     return SuccessResponse(data=result_dict, msg="查询字典类型列表成功")
 
 @router.get("/type/optionselect", summary="获取全部字典类型", description="获取全部字典类型")
@@ -50,7 +50,7 @@ async def get_type_list_controller(
     auth: AuthSchema = Depends(AuthPermission(permissions=["system:dict_type:query"]))
 ) -> JSONResponse:
     result_dict_list = await DictTypeService.get_obj_list_service(auth=auth)
-    logger.info(f"获取字典类型列表成功")
+    logger.info("获取字典类型列表成功")
     return SuccessResponse(data=result_dict_list, msg="获取字典类型列表成功")
 
 @router.post("/type/create", summary="创建字典类型", description="创建字典类型")
@@ -76,7 +76,7 @@ async def update_type_controller(
 @router.delete("/type/delete", summary="删除字典类型", description="删除字典类型")
 async def delete_type_controller(
     redis: Redis = Depends(redis_getter),
-    id: int = Query(..., description="字典类型ID"),
+    id: str = Query(..., description="字典类型ID"),
     auth: AuthSchema = Depends(AuthPermission(permissions=["system:dict_type:delete"]))
 ) -> JSONResponse:
     await DictTypeService.delete_obj_service(auth=auth, redis=redis, id=id)
@@ -103,7 +103,7 @@ async def export_type_list_controller(
 
 @router.get("/data/detail", summary="获取字典数据详情", description="获取字典数据详情")
 async def get_data_detail_controller(
-    id: int = Query(..., description="字典数据ID"),
+    id: str = Query(..., description="字典数据ID"),
     auth: AuthSchema = Depends(AuthPermission(permissions=["system:dict_data:query"]))
 ) -> JSONResponse:
     result_dict = await DictDataService.get_obj_detail_service(id=id, auth=auth)
@@ -118,7 +118,7 @@ async def get_data_list_controller(
 ) -> JSONResponse:
     result_dict_list = await DictDataService.get_obj_list_service(auth=auth, search=search, order_by=page.order_by)
     result_dict = await PaginationService.get_page_obj(data_list= result_dict_list, page_no= page.page_no, page_size = page.page_size)
-    logger.info(f"查询字典数据列表成功")
+    logger.info("查询字典数据列表成功")
     return SuccessResponse(data=result_dict, msg="查询字典数据列表成功")
 
 @router.post("/data/create", summary="创建字典数据", description="创建字典数据")
@@ -144,7 +144,7 @@ async def update_data_controller(
 @router.delete("/data/delete", summary="删除字典数据", description="删除字典数据")
 async def delete_data_controller(
     redis: Redis = Depends(redis_getter),
-    id: int = Query(..., description="字典数据ID"),
+    id: str = Query(..., description="字典数据ID"),
     auth: AuthSchema = Depends(AuthPermission(permissions=["system:dict_data:delete"]))
 ) -> JSONResponse:
     await DictDataService.delete_obj_service(auth=auth, redis=redis, id=id)

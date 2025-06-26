@@ -33,7 +33,7 @@ async def get_current_user_info_controller(
     auth: AuthSchema = Depends(get_current_user)
 ) -> JSONResponse:
     result_dict = await UserService.get_current_user_info_service(auth=auth)
-    logger.info(f"获取当前用户信息成功")
+    logger.info("获取当前用户信息成功")
     return SuccessResponse(data=result_dict, msg='获取当前用户信息成功')
 
 
@@ -97,13 +97,13 @@ async def get_obj_list_controller(
 ) -> JSONResponse:
     result_dict_list = await UserService.get_user_list_service(search=search, auth=auth, order_by=page.order_by)
     result_dict = await PaginationService.get_page_obj(data_list= result_dict_list, page_no= page.page_no, page_size = page.page_size)
-    logger.info(f"查询用户成功")
+    logger.info("查询用户成功")
     return SuccessResponse(data=result_dict, msg="查询用户成功")
 
 
 @router.get("/detail", summary="查询用户详情", description="查询用户详情")
 async def get_obj_detail_controller(
-    id: int = Query(..., description="用户ID"),
+    id: str = Query(..., description="用户ID"),
     auth: AuthSchema = Depends(AuthPermission(permissions=["system:user:query"])),
 ) -> JSONResponse:
     result_dict = await UserService.get_detail_by_id_service(id=id, auth=auth)
@@ -133,7 +133,7 @@ async def update_obj_controller(
 
 @router.delete("/delete", summary="删除用户", description="删除用户")
 async def delete_obj_controller(
-    id: int = Query(..., description="用户ID"),
+    id: str = Query(..., description="用户ID"),
     auth: AuthSchema = Depends(AuthPermission(permissions=["system:user:delete"])),
 ) -> JSONResponse:
     await UserService.delete_user_service(id=id, auth=auth)

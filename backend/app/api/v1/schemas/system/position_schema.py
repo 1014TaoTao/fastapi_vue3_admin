@@ -16,7 +16,7 @@ class PositionCreateSchema(BaseModel):
 
 class PositionUpdateSchema(PositionCreateSchema):
     """岗位更新模型"""
-    id: int = Field(..., gt=0, description="岗位ID")
+    id: str = Field(..., description="岗位ID")
 
 
 class PositionOutSchema(PositionCreateSchema, BaseSchema):

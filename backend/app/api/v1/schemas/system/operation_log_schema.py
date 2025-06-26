@@ -19,7 +19,7 @@ class OperationLogCreateSchema(BaseModel):
     response_json: Optional[str] = Field(default=None, description="响应 JSON 数据")
     process_time: Optional[float] = Field(default=None, description="处理时间")
     description: Optional[str] = Field(default=None, max_length=255, description="备注")
-    creator_id: Optional[int] = Field(default=None, description="创建人ID")
+    creator_id: Optional[str] = Field(default=None, description="创建人ID")
 
 
 class OperationLogOutSchema(OperationLogCreateSchema, BaseSchema):

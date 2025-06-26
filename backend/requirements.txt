@@ -34,3 +34,6 @@ mkdocs
 mkdocs-material #  安装主题
 mkdocs-minify-plugin # 插件
 mkdocs-git-revision-date-localized-plugin
+aioodbc==0.5.0
+pyodbc==5.2.0
+asyncpg==0.30.0

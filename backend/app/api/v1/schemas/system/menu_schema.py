@@ -21,7 +21,7 @@ class MenuCreateSchema(BaseModel):
     available: bool = Field(default=True, description="是否启用(True:启用 False:禁用)")
     cache: bool = Field(default=True, description="是否缓存(True:是 False:否)")
     hidden: bool = Field(default=False, description="是否隐藏(True:是 False:否)")
-    parent_id: Optional[int] = Field(default=None, ge=0, description="父菜单ID")
+    parent_id: Optional[str] = Field(default=None, description="父菜单ID")
     description: Optional[str] = Field(default=None, max_length=500, description="备注说明")
 
     @classmethod
@@ -32,7 +32,7 @@ class MenuCreateSchema(BaseModel):
 
 class MenuUpdateSchema(MenuCreateSchema):
     """菜单更新模型"""
-    id: int = Field(..., gt=0, description="菜单ID")
+    id: str = Field(..., description="菜单ID")
     parent_name: Optional[str] = Field(default=None, max_length=50, description="父菜单名称")
 
 

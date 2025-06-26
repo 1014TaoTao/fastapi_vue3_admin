@@ -3,6 +3,7 @@
 from datetime import datetime
 from sqlalchemy import Column, ForeignKey, String, Integer, Text, DateTime, Float
 from sqlalchemy.orm import relationship
+import uuid
 
 from app.core.base_model import ModelBase
 
@@ -12,7 +13,7 @@ class OperationLogModel(ModelBase):
     __tablename__ = "system_operation_log"
     __table_args__ = ({'comment': '操作日志表'})
 
-    id = Column(Integer, primary_key=True, autoincrement=True, comment='主键ID')
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()), nullable=False, unique=True, comment='主键ID')
     request_path = Column(String(255), nullable=True, comment="请求路径", index=True)
     request_method = Column(String(10), nullable=True, comment="请求方式", index=True)
     request_payload = Column(Text, nullable=True, comment="请求体")
@@ -29,10 +30,10 @@ class OperationLogModel(ModelBase):
     created_at = Column(DateTime, default=datetime.now, comment='创建时间')
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now, comment='更新时间')
     creator_id = Column(
-        Integer, 
-        ForeignKey("system_users.id", ondelete="SET NULL", onupdate="CASCADE"), 
-        nullable=True, 
-        index=True, 
+        String(36),
+        ForeignKey("system_users.id", ondelete="SET NULL", onupdate="CASCADE"),
+        nullable=True,
+        index=True,
         comment="创建人ID"
     )
     creator = relationship(

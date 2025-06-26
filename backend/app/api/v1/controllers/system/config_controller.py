@@ -22,7 +22,7 @@ router = APIRouter(route_class=OperationLogRoute)
 
 @router.get("/detail", summary="获取系统配置详情", description="获取系统配置详情")
 async def get_type_detail_controller(
-    id: int = Query(..., description="系统配置ID"),
+    id: str = Query(..., description="系统配置ID"),
     auth: AuthSchema = Depends(AuthPermission(permissions=["system:config:query"]))
 ) -> JSONResponse:
     result_dict = await ConfigService.get_obj_detail_service(id=id, auth=auth)
@@ -38,7 +38,7 @@ async def get_obj_list_controller(
 ) -> JSONResponse:
     result_dict_list = await ConfigService.get_obj_list_service(auth=auth, search=search, order_by=page.order_by)
     result_dict = await PaginationService.get_page_obj(data_list= result_dict_list, page_no= page.page_no, page_size = page.page_size)
-    logger.info(f"获取配置成功")
+    logger.info("获取配置成功")
     return SuccessResponse(data=result_dict, msg="查询配置列表成功")
 
 
@@ -67,7 +67,7 @@ async def update_objs_controller(
 @router.delete("/delete", summary="删除系统配置", description="删除系统配置")
 async def delete_type_controller(
     redis: Redis = Depends(redis_getter),
-    id: int = Query(..., description="系统配置ID"),
+    id: str = Query(..., description="系统配置ID"),
     auth: AuthSchema = Depends(AuthPermission(permissions=["system:config:delete"]))
 ) -> JSONResponse:
     await ConfigService.delete_obj_service(auth=auth, redis=redis, id=id)

@@ -3,6 +3,7 @@
 from datetime import datetime
 from sqlalchemy import Boolean, Column, String, Integer, ForeignKey, Text, DateTime
 from sqlalchemy.orm import relationship
+import uuid
 
 from app.core.base_model import ModelBase
 
@@ -19,7 +20,7 @@ class MenuModel(ModelBase):
     __table_args__ = ({'comment': '菜单表'})
 
     # 基础字段
-    id = Column(Integer, primary_key=True, autoincrement=True, comment='主键ID')
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()), nullable=False, unique=True, comment='主键ID')
     name = Column(String(50), nullable=False, comment="菜单名称", unique=True)
     type = Column(Integer, nullable=False, default=2, comment="菜单类型")
     order = Column(Integer, nullable=False, default=1, comment="显示排序")
@@ -39,10 +40,10 @@ class MenuModel(ModelBase):
     
     # 层级关系
     parent_id = Column(
-        Integer, 
-        ForeignKey("system_menu.id", ondelete="CASCADE", onupdate="CASCADE"), 
-        nullable=True, 
-        index=True, 
+        String(36),
+        ForeignKey("system_menu.id"),
+        nullable=True,
+        index=True,
         comment="父级菜单ID"
     )
     parent = relationship(

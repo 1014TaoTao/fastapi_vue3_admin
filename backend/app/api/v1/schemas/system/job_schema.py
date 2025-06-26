@@ -2,9 +2,7 @@
 
 from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional
-from datetime import datetime
 
-from app.core.validator import DateTimeStr
 from app.core.base_schema import BaseSchema
 
 
@@ -32,7 +30,7 @@ class JobCreateSchema(BaseModel):
 class JobUpdateSchema(JobCreateSchema):
     """定时任务更新模型"""
     ...
-    id: int = Field(..., gt=0, description="ID")
+    id: str = Field(..., description="ID")
     
 
 class JobOutSchema(JobCreateSchema, BaseSchema):

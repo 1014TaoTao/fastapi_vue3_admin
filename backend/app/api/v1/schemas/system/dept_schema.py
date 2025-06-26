@@ -1,18 +1,16 @@
 # -*- coding: utf-8 -*-
 
-from typing import Any, Optional
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator, validator
+from typing import Optional
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.core.base_schema import BaseSchema
-from app.core.validator import DateTimeStr
-from app.core.logger import logger
 
 class DeptCreateSchema(BaseModel):
     """部门创建模型"""
     name: str = Field(..., max_length=40, description="部门名称")
     order: int = Field(default=1, ge=0, description="显示顺序")
     available: bool = Field(default=True, description="是否启用(True:启用 False:禁用)")
-    parent_id: Optional[int] = Field(default=None, ge=0, description="父部门ID")
+    parent_id: Optional[str] = Field(default=None, description="父部门ID")
     description: Optional[str] = Field(default=None, max_length=500, description="备注说明")
 
     @model_validator(mode='after')
@@ -25,7 +23,7 @@ class DeptCreateSchema(BaseModel):
 
 class DeptUpdateSchema(DeptCreateSchema):
     """部门更新模型"""
-    id: int = Field(..., gt=0, description="部门ID")
+    id: str = Field(..., description="部门ID")
 
 
 class DeptOutSchema(DeptCreateSchema, BaseSchema):

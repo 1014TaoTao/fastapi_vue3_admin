@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import asyncio
 from typing import Any, AsyncGenerator
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -10,7 +9,6 @@ from fastapi.openapi.docs import (
     get_swagger_ui_html,
     get_swagger_ui_oauth2_redirect_html
 )
-from sqlalchemy import text
 
 from app.config.setting import settings
 from app.api.v1.urls.system_url import SystemApiRouter

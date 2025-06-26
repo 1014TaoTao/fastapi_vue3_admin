@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 from datetime import datetime
-import stat
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
+import uuid
 
 from app.core.base_model import ModelBase
 
@@ -16,7 +16,7 @@ class JobModel(ModelBase):
     __tablename__ = 'system_job'
     __table_args__ = ({'comment': '定时任务调度表'})
 
-    id=Column(Integer, primary_key=True, autoincrement=True, comment='任务ID')
+    id=Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()), nullable=False, unique=True, comment='任务ID')
     name=Column(String(64), nullable=True, default='', comment='任务名称')
     jobstore=Column(String(64), nullable=True, default='default', comment='存储器')
     executor=Column(String(64), nullable=True, default='default', comment='执行器:将运行此作业的执行程序的名称')
@@ -37,10 +37,10 @@ class JobModel(ModelBase):
     created_at = Column(DateTime, nullable=True, default=datetime.now, comment='创建时间')
     updated_at = Column(DateTime, nullable=True, default=datetime.now, onupdate=datetime.now, comment='更新时间')
     creator_id = Column(
-        Integer, 
-        ForeignKey("system_users.id", ondelete="SET NULL", onupdate="CASCADE"), 
-        nullable=True, 
-        index=True, 
+        String(36),
+        ForeignKey("system_users.id", ondelete="SET NULL", onupdate="CASCADE"),
+        nullable=True,
+        index=True,
         comment="创建人ID"
     )
     creator = relationship(

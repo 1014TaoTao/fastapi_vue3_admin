@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 
 from datetime import datetime
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Text, Boolean
+from sqlalchemy import Column, String, DateTime, ForeignKey, Text, Boolean
 from sqlalchemy.orm import relationship
+import uuid
 
 from app.core.base_model import ModelBase
 
@@ -15,7 +16,7 @@ class ConfigModel(ModelBase):
     __table_args__ = ({'comment': '配置表'})
 
     # 基础字段
-    id = Column(Integer, primary_key=True, autoincrement=True, comment='主键ID')
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()), nullable=False, unique=True, comment='主键ID')
     config_name = Column(String(500), nullable=True, unique=True, default='', comment='参数名称')
     config_key = Column(String(500), nullable=True, unique=True, default='', comment='参数键名')
     config_value = Column(String(500), nullable=True, default='', comment='参数键值')
@@ -26,10 +27,10 @@ class ConfigModel(ModelBase):
     created_at = Column(DateTime, default=datetime.now, comment='创建时间')
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now, comment='更新时间')
     creator_id = Column(
-        Integer, 
-        ForeignKey("system_users.id", ondelete="SET NULL", onupdate="CASCADE"), 
-        nullable=True, 
-        index=True, 
+        String(36),
+        ForeignKey("system_users.id", ondelete="SET NULL", onupdate="CASCADE"),
+        nullable=True,
+        index=True,
         comment="创建人ID"
     )
     creator = relationship(

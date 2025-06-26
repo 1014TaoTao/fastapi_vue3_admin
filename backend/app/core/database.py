@@ -3,13 +3,12 @@
 import aioredis
 from motor.motor_asyncio import AsyncIOMotorClient
 from fastapi import FastAPI
-from sqlalchemy import create_engine, inspect, text
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
     create_async_engine,
     async_sessionmaker,
     AsyncSession,
-    AsyncEngine
+    AsyncEngine,
 )
 from sqlalchemy.exc import (
     OperationalError,
@@ -21,13 +20,12 @@ from sqlalchemy.exc import (
     DataError,
     InternalError,
     NotSupportedError,
-    InvalidRequestError
+    InvalidRequestError,
 )
 
 from app.core.logger import logger
 from app.config.setting import settings
 from app.core.exceptions import CustomException
-
 
 
 def async_db_engine() -> AsyncEngine:
@@ -46,7 +44,7 @@ def async_db_engine() -> AsyncEngine:
     )
 
     return async_engine
-    
+
 
 # 创建会话工厂
 async_session = async_sessionmaker(
@@ -54,7 +52,7 @@ async_session = async_sessionmaker(
     autocommit=settings.AUTOCOMMIT,
     autoflush=settings.AUTOFETCH,
     expire_on_commit=settings.EXPIRE_ON_COMMIT,
-    class_=AsyncSession
+    class_=AsyncSession,
 )
 
 
@@ -62,22 +60,26 @@ def session_connect() -> AsyncSession:
     """获取数据库会话"""
     try:
         if not settings.SQL_DB_ENABLE:
-            raise CustomException(msg="请先开启数据库连接", data="请启用 app/config/setting.py: SQL_DB_ENABLE")
+            raise CustomException(
+                msg="请先开启数据库连接",
+                data="请启用 app/config/setting.py: SQL_DB_ENABLE",
+            )
         return async_session()
     except Exception as e:
         logger.error(f"数据库连接失败: {e}")
         raise CustomException(msg=f"数据库连接失败: {e}")
+
 
 async def test_db_connection(session: AsyncSession) -> bool:
     try:
         # 执行简单查询测试连接是否真实可用
         await session.execute(text("SELECT 1"))
         return True
-    except OperationalError as e:
-        logger.error(f"数据库操作失败，请检查数据库服务是否正常运行")
+    except OperationalError:
+        logger.error("数据库操作失败，请检查数据库服务是否正常运行")
         raise CustomException(msg="数据库操作失败，请检查数据库服务是否正常运行")
-    except TimeoutError as e:
-        logger.error(f"数据库连接超时，请检查网络连接或增加连接超时时间")
+    except TimeoutError:
+        logger.error("数据库连接超时，请检查网络连接或增加连接超时时间")
         raise CustomException(msg="数据库连接超时，请检查网络连接或增加连接超时时间")
     except DisconnectionError as e:
         logger.error(f"数据库连接中断: {e}")
@@ -107,21 +109,23 @@ async def test_db_connection(session: AsyncSession) -> bool:
         logger.error(f"数据库操作异常: {e}")
         raise CustomException(msg="数据库操作异常，请联系管理员")
 
+
 async def redis_connect(app: FastAPI, status: bool) -> aioredis.Redis:
     """创建或关闭Redis连接"""
     if not settings.REDIS_ENABLE:
-        raise CustomException(msg="请先开启Redis连接", data="请启用 app/core/config.py: REDIS_ENABLE")
+        raise CustomException(
+            msg="请先开启Redis连接", data="请启用 app/core/config.py: REDIS_ENABLE"
+        )
 
     if status:
         try:
-            
             rd = await aioredis.from_url(
                 url=settings.REDIS_URI,
-                encoding='utf-8',
+                encoding="utf-8",
                 decode_responses=True,
                 health_check_interval=20,
                 max_connections=settings.POOL_SIZE,
-                socket_timeout=settings.POOL_TIMEOUT
+                socket_timeout=settings.POOL_TIMEOUT,
             )
             app.state.redis = rd
             if await rd.ping():
@@ -129,32 +133,33 @@ async def redis_connect(app: FastAPI, status: bool) -> aioredis.Redis:
                 return rd
             raise CustomException(msg="Redis连接失败")
         except aioredis.AuthenticationError as e:
-            logger.error(f'Redis认证失败: {e}')
+            logger.error(f"Redis认证失败: {e}")
             raise aioredis.AuthenticationError(f"Redis认证失败: {e}")
         except aioredis.TimeoutError as e:
-            logger.error(f'Redis连接超时: {e}')
+            logger.error(f"Redis连接超时: {e}")
             raise aioredis.TimeoutError(f"Redis连接超时: {e}")
         except aioredis.RedisError as e:
-            logger.error(f'Redis连接错误: {e}')
+            logger.error(f"Redis连接错误: {e}")
             raise aioredis.RedisError(f"Redis连接错误: {e}")
     else:
         await app.state.redis.close()
-        logger.info('Redis连接已关闭')
+        logger.info("Redis连接已关闭")
 
 
 async def mongodb_connect(app: FastAPI, status: bool) -> AsyncIOMotorClient:
     """创建或关闭MongoDB连接"""
     if not settings.MONGO_DB_ENABLE:
-        raise CustomException(msg="请先开启MongoDB连接", data="请启用 app/core/config.py: MONGO_DB_ENABLE")
+        raise CustomException(
+            msg="请先开启MongoDB连接", data="请启用 app/core/config.py: MONGO_DB_ENABLE"
+        )
 
     if status:
         try:
-            
             client = AsyncIOMotorClient(
                 settings.MONGO_DB_URI,
                 maxPoolSize=settings.POOL_SIZE,
                 minPoolSize=settings.MAX_OVERFLOW,
-                serverSelectionTimeoutMS=settings.POOL_TIMEOUT * 1000
+                serverSelectionTimeoutMS=settings.POOL_TIMEOUT * 1000,
             )
             app.state.mongo_client = client
             app.state.mongo = client[settings.MONGO_DB_NAME]
@@ -167,4 +172,3 @@ async def mongodb_connect(app: FastAPI, status: bool) -> AsyncIOMotorClient:
     else:
         app.state.mongo_client.close()
         logger.info("MongoDB连接已关闭")
-
