@@ -50,7 +50,7 @@ export default defineConfig({
     siteTitle: 'Fastapi Vue3 Admin',
     nav: [
       { text: '首页', link: '/' },
-      { text: '指南', link: '/guide' },
+      { text: '指南', link: '/guide_info' },
       { text: '演示环境', link: 'https://service.fastapiadmin.com/web', target: '_blank' },
       { text: '小程序环境', link: 'https://service.fastapiadmin.com/app', target: '_blank' },
       {
@@ -75,19 +75,16 @@ export default defineConfig({
 
     sidebar: [
       {
-        text: '项目指南',
+        text: '简介',
+        collapsible: true,  // 开启折叠功能
+        collapsed: false,   // 默认不折叠（展开状态）
         items: [
-          { text: '项目介绍', link: '/guide#📘项目介绍' },
-          { text: '核心亮点', link: '/guide#✨核心亮点' },
-          { text: '技术栈概览', link: '/guide#🛠️技术栈概览' },
-          { text: '内置模块', link: '/guide#📌内置模块' },
-          { text: 'Docker部署', link: '/guide#🍪演示环境' },
-          {text: '安装和使用', link: '/guide#👷安装和使用' },
-          {text: '模块展示', link: '/guide#🔧模块展示' },
-          {text: '二开教程', link: '/guide#🚀二开教程' },
-          {text: '特别鸣谢', link: '/guide#🙏特别鸣谢' },
-          {text: '支持我', link: '/guide#❤️支持我' }
+          { text: '项目介绍', link: '/guide_info' },
+          { text: '快速开始', link: '/guide_start' }
         ]
+      },
+      {
+        text: '关于我们', link: '/about'
       }
     ],
 

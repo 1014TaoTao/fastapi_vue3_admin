@@ -37,6 +37,7 @@ English | [Chinese](./README.md)
 
 > **Original Design Concept**: With modularity and loose coupling at its core, it pursues rich functional modules, simple and easy - to - use interfaces, detailed development documentation, and convenient maintenance methods. By unifying frameworks and components, it reduces the cost of technology selection, follows development specifications and design patterns, builds a powerful code hierarchical model, and comes with comprehensive local Chinese support. It is specifically tailored for team and enterprise development scenarios.
 
+## 📦Engineering Structures
 ```sh
 fastapi_vue3_admin
 ├─ backend        # Backend project
@@ -63,7 +64,7 @@ fastapi_vue3_admin
 | 📊 Permission Management | The RBAC model enables fine-grained permission control at the menu, button, and data levels. |
 | 🚀 Rapid Deployment | Supports one-click deployment with Docker/Docker Compose/Nginx. |
 | 📄 Developer-friendly | Provides comprehensive Chinese documentation, a Chinese interface, and a visual toolchain to reduce the learning curve. |
-| 🚀 Quick Access | Based on mainstream front-end technology stacks such as Vue3, Vite5, Pinia, and ElementPlus, it's ready to use out of the box. |
+| 🧩 Quick Access | Based on mainstream front-end technology stacks such as Vue3, Vite5, Pinia, and ElementPlus, it's ready to use out of the box. |
 
 ---
 
