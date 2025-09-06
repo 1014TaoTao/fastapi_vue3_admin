@@ -1,7 +1,7 @@
 <template>
   <div ref="navbar-actions" :class="['navbar-actions', navbarActionsClass]">
     <!-- 桌面端工具项 -->
-    <template v-if="isDesktop">
+    <template v-if="isDesktop && settingStore.showDesktopTools">
       <!-- 搜索 -->
       <div class="navbar-actions__item">
         <MenuSearch />
@@ -55,10 +55,6 @@
               <el-icon><Document /></el-icon>
               {{ t("navbar.document") }}
             </el-dropdown-item>
-            <el-dropdown-item @click="handleDocumentClick">
-              <el-icon><Document /></el-icon>
-              {{ t("navbar.document") }}
-            </el-dropdown-item>
             <el-dropdown-item @click="handleGiteeClick">
               <el-icon><Reading /></el-icon>
               {{ t("navbar.gitee") }}
@@ -66,6 +62,14 @@
             <el-dropdown-item @click="handleTourClick">
               <el-icon><Position /></el-icon>
               {{ t("navbar.tour") }}
+            </el-dropdown-item>
+            <el-dropdown-item divided @click="handleToggleSettings">
+              <el-icon><Tools /></el-icon>
+              {{ settingStore.showSettings ? t('navbar.hideSettings') : t('navbar.showSettings') }}
+            </el-dropdown-item>
+            <el-dropdown-item @click="handleToggleDesktopTools">
+              <el-icon><Operation /></el-icon>
+              {{ settingStore.showDesktopTools ? t('navbar.hideDesktopTools') : t('navbar.showDesktopTools') }}
             </el-dropdown-item>
             <el-dropdown-item divided @click="handlelockScreen">
               <el-icon><Lock /></el-icon>
@@ -177,6 +181,26 @@ function handleTourClick() {
   } else {
     guideVisible.value = true;
   }
+}
+
+/**
+ * 切换项目配置显示状态
+ */
+function handleToggleSettings() {
+  settingStore.updateSetting('showSettings', !settingStore.showSettings);
+  ElMessage.success(
+    settingStore.showSettings ? t('navbar.settingsEnabled') : t('navbar.settingsDisabled')
+  );
+}
+
+/**
+ * 切换桌面端工具项打开状态
+ */
+function handleToggleDesktopTools() {
+  settingStore.updateSetting('showDesktopTools', !settingStore.showDesktopTools);
+  ElMessage.success(
+    settingStore.showDesktopTools ? t('navbar.desktopToolsEnabled') : t('navbar.desktopToolsDisabled')
+  );
 }
 
 /**

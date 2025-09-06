@@ -15,6 +15,8 @@ export const DICT_CACHE_KEY = "dict_cache";
 export const SHOW_TAGS_VIEW_KEY = "showTagsView";
 export const SHOW_APP_LOGO_KEY = "showAppLogo";
 export const SHOW_WATERMARK_KEY = "showWatermark";
+export const SHOW_SETTINGS_KEY = "showSettings";
+export const SHOW_DESKTOP_TOOLS_KEY = "showDesktopTools";
 export const LAYOUT_KEY = "layout";
 export const SIDEBAR_COLOR_SCHEME_KEY = "sidebarColorScheme";
 export const THEME_KEY = "theme";
@@ -39,6 +41,8 @@ export const SETTINGS_KEYS = {
   SHOW_TAGS_VIEW: SHOW_TAGS_VIEW_KEY,
   SHOW_APP_LOGO: SHOW_APP_LOGO_KEY,
   SHOW_WATERMARK: SHOW_WATERMARK_KEY,
+  SHOW_SETTINGS: SHOW_SETTINGS_KEY,
+  SHOW_DESKTOP_TOOLS: SHOW_DESKTOP_TOOLS_KEY,
   SIDEBAR_COLOR_SCHEME: SIDEBAR_COLOR_SCHEME_KEY,
   LAYOUT: LAYOUT_KEY,
   THEME_COLOR: THEME_COLOR_KEY,

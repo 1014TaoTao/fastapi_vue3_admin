@@ -11,6 +11,8 @@ interface SettingsState {
   showTagsView: boolean;
   showAppLogo: boolean;
   showWatermark: boolean;
+  showSettings: boolean;
+  showDesktopTools: boolean;
 
   // 布局设置
   layout: LayoutMode;
@@ -42,6 +44,16 @@ export const useSettingsStore = defineStore("setting", () => {
     defaultSettings.showWatermark
   );
 
+  const showSettings = useStorage<boolean>(
+    SETTINGS_KEYS.SHOW_SETTINGS,
+    defaultSettings.showSettings
+  );
+
+  const showDesktopTools = useStorage<boolean>(
+    SETTINGS_KEYS.SHOW_DESKTOP_TOOLS,
+    defaultSettings.showDesktopTools
+  );
+
   const sidebarColorScheme = useStorage<string>(
     SETTINGS_KEYS.SIDEBAR_COLOR_SCHEME,
     defaultSettings.sidebarColorScheme
@@ -58,6 +70,8 @@ export const useSettingsStore = defineStore("setting", () => {
     showTagsView,
     showAppLogo,
     showWatermark,
+    showSettings,
+    showDesktopTools,
     sidebarColorScheme,
     layout,
   } as const;
@@ -125,6 +139,8 @@ export const useSettingsStore = defineStore("setting", () => {
     showTagsView.value = defaultSettings.showTagsView;
     showAppLogo.value = defaultSettings.showAppLogo;
     showWatermark.value = defaultSettings.showWatermark;
+    showSettings.value = defaultSettings.showSettings;
+    showDesktopTools.value = defaultSettings.showDesktopTools;
     sidebarColorScheme.value = defaultSettings.sidebarColorScheme;
     layout.value = defaultSettings.layout as LayoutMode;
     themeColor.value = defaultSettings.themeColor;
@@ -137,6 +153,8 @@ export const useSettingsStore = defineStore("setting", () => {
     showTagsView,
     showAppLogo,
     showWatermark,
+    showSettings,
+    showDesktopTools,
     sidebarColorScheme,
     layout,
     themeColor,

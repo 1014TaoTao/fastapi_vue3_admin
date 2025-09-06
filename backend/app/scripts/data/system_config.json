@@ -1,6 +1,5 @@
 [
   {
-    "id": 1,
     "config_name": "网站名称",
     "config_key": "sys_web_title",
     "config_value": "FastAPI Vue3 Admin",
@@ -9,7 +8,6 @@
     "creator_id": 1
   },
   {
-    "id": 2,
     "config_name": "网站描述",
     "config_key": "sys_web_description",
     "config_value": "FastAPI Vue3 Admin 是完全开源的权限管理系统",
@@ -18,7 +16,6 @@
     "creator_id": 1
   },
   {
-    "id": 3,
     "config_name": "网页图标",
     "config_key": "sys_web_favicon",
     "config_value": "https://service.fastapiadmin.com/api/v1/static/image/favicon.png",
@@ -27,7 +24,6 @@
     "creator_id": 1
   },
   {
-    "id": 4,
     "config_name": "网站Logo",
     "config_key": "sys_web_logo",
     "config_value": "https://service.fastapiadmin.com/api/v1/static/image/logo.png",
@@ -36,7 +32,6 @@
     "creator_id": 1
   },
   {
-    "id": 5,
     "config_name": "登录背景",
     "config_key": "sys_login_background",
     "config_value": "https://service.fastapiadmin.com/api/v1/static/image/background.svg",
@@ -45,7 +40,6 @@
     "creator_id": 1
   },
   {
-    "id": 6,
     "config_name": "版权信息",
     "config_key": "sys_web_copyright",
     "config_value": "Copyright © 2025-2026 service.fastapiadmin.com 版权所有",
@@ -54,7 +48,6 @@
     "creator_id": 1
   },
   {
-    "id": 7,
     "config_name": "备案信息",
     "config_key": "sys_keep_record",
     "config_value": "陕ICP备2025069493号-1",
@@ -63,7 +56,6 @@
     "creator_id": 1
   },
   {
-    "id": 8,
     "config_name": "帮助文档",
     "config_key": "sys_help_doc",
     "config_value": "https://service.fastapiadmin.com",
@@ -72,7 +64,6 @@
     "creator_id": 1
   },
   {
-    "id": 9,
     "config_name": "隐私政策",
     "config_key": "sys_web_privacy",
     "config_value": "https://github.com/1014TaoTao/fastapi_vue3_admin/blob/master/LICENSE",
@@ -81,7 +72,6 @@
     "creator_id": 1
   },
   {
-    "id": 10,
     "config_name": "用户协议",
     "config_key": "sys_web_clause",
     "config_value": "https://github.com/1014TaoTao/fastapi_vue3_admin/blob/master/LICENSE",
@@ -90,7 +80,6 @@
     "creator_id": 1
   },
   {
-    "id": 11,
     "config_name": "源码代码",
     "config_key": "sys_git_code",
     "config_value": "https://github.com/1014TaoTao/fastapi_vue3_admin.git",
@@ -99,7 +88,6 @@
     "creator_id": 1
   },
   {
-    "id": 12,
     "config_name": "项目版本",
     "config_key": "sys_web_version",
     "config_value": "2.0.0",

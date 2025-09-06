@@ -64,6 +64,8 @@ declare global {
     version: string;
     /** 是否显示设置 */
     showSettings: boolean;
+    /** 是否显示桌面端工具项 */
+    showDesktopTools: boolean;
     /** 是否显示多标签导航 */
     showTagsView: boolean;
     /** 是否显示应用Logo */

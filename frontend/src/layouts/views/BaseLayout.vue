@@ -13,7 +13,7 @@
 
     <!-- 新增：悬浮的系统设置按钮 -->
     <el-button
-      v-if="defaultSettings.showSettings"
+      v-if="settingStore.showSettings"
       class="floating-settings-button"
       type="primary"
       @click="handleSettingsClick"

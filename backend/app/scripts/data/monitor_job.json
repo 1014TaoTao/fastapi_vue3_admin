@@ -1,6 +1,5 @@
 [
   {
-    "id": 1,
     "name": "系统默认（无参）",
     "func": "scheduler_test.job",
     "trigger": "cron",
@@ -18,7 +17,6 @@
     "creator_id": 1
   },
   {
-    "id": 2,
     "name": "系统默认（有参）",
     "func": "scheduler_test.job",
     "trigger": "cron",
@@ -36,7 +34,6 @@
     "creator_id": 1
   },
   {
-    "id": 3,
     "name": "系统默认（多参）",
     "func": "scheduler_test.job",
     "trigger": "cron",

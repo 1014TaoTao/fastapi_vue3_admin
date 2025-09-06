@@ -53,10 +53,18 @@ class OperationLogRoute(APIRoute):
                 payload = await request.body()
                 path_params = request.path_params
                 oper_param = {}
+                
+                # 处理请求体数据
                 if payload:
-                    oper_param.update(json.loads(payload.decode()))
+                    try:
+                        oper_param['body'] = json.loads(payload.decode())
+                    except (json.JSONDecodeError, UnicodeDecodeError):
+                        oper_param['body'] = payload.decode('utf-8', errors='ignore')
+                
+                # 处理路径参数
                 if path_params:
-                    oper_param.update(path_params)
+                    oper_param['path_params'] = dict(path_params)
+                
                 payload = json.dumps(oper_param, ensure_ascii=False)
                 # payload = str(oper_param)
 

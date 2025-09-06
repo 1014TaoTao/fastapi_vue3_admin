@@ -1,6 +1,5 @@
 [
   {
-    "id": 1,
     "name": "董事长岗",
     "status": true,
     "order": 1,
@@ -8,7 +7,6 @@
     "creator_id": 1
   },
   {
-    "id": 2,
     "name": "运营岗",
     "status": true,
     "order": 2,
@@ -16,7 +14,6 @@
     "creator_id": 1
   },
   {
-    "id": 3,
     "name": "销售岗",
     "status": true,
     "order": 3,
@@ -24,7 +21,6 @@
     "creator_id": 1
   },
   {
-    "id": 4,
     "name": "人事行政岗",
     "status": true,
     "order": 4,
@@ -32,7 +28,6 @@
     "creator_id": 1
   },
   {
-    "id": 5,
     "name": "开发岗",
     "status": true,
     "order": 5,
@@ -40,7 +35,6 @@
     "creator_id": 1
   },
   {
-    "id": 6,
     "name": "测试岗",
     "status": true,
     "order": 6,
@@ -48,7 +42,6 @@
     "creator_id": 1
   },
   {
-    "id": 7,
     "name": "演示岗",
     "status": true,
     "order": 7,

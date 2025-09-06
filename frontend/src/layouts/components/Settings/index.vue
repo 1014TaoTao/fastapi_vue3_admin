@@ -68,15 +68,43 @@
       <!-- 系统主题 -->
       <section class="config-section">
         <el-divider>{{ t("settings.systemTheme") }}</el-divider>
-        <div class="config-item flex-x-between">
-          <span class="text-xs">{{ t("settings.themeColor") }}</span>
-          <el-color-picker
-            v-model="selectedThemeColor"
-            :predefine="colorPresets"
-            popper-class="theme-picker-dropdown"
-          />
+        <div class="config-item">
+          <!-- <div class="flex-x-between mb-3">
+            <span class="text-xs">{{ t("settings.themeColor") }}</span>
+          </div> -->
+          <!-- 自定义主题颜色选择器 -->
+          <div class="theme-color-selector">
+            <div class="color-options">
+              <!-- 预设颜色选项 -->
+              <div
+                v-for="(color, index) in displayColorPresets"
+                :key="color"
+                :class="[
+                  'color-option',
+                  { 'is-active': selectedThemeColor === color }
+                ]"
+                :style="{ backgroundColor: color }"
+                @click="handleColorSelect(color)"
+              >
+                <div v-if="selectedThemeColor === color" class="color-check">
+                  <el-icon><Check /></el-icon>
+                </div>
+              </div>
+              <!-- 自定义颜色选择器 -->
+              <div class="color-picker-wrapper">
+                <el-color-picker
+                  v-model="selectedThemeColor"
+                  :predefine="allColorPresets"
+                  show-alpha
+                  size="small"
+                  class="custom-color-picker"
+                />
+              </div>
+            </div>
+          </div>
         </div>
       </section>
+
 
       <!-- 导航主题 -->
       <section v-if="!isDark" class="config-section ">
@@ -157,7 +185,7 @@
 </template>
 
 <script setup lang="ts">
-import { DocumentCopy, RefreshLeft, Check } from "@element-plus/icons-vue";
+import { DocumentCopy, RefreshLeft, Check, Plus } from "@element-plus/icons-vue";
 
 const { t } = useI18n();
 import { LayoutMode, SidebarColor, ThemeMode } from "@/enums";
@@ -192,8 +220,16 @@ const layoutOptions: LayoutOption[] = [
 
 // 使用统一的颜色预设配置
 const colorPresets = themeColorPresets;
-
 const settingsStore = useSettingsStore();
+
+// 主题颜色选择器相关
+const displayColorPresets = computed(() => themeColorPresets.slice(0, 9)); // 只显示前9个预设颜色
+const allColorPresets = themeColorPresets; // 所有颜色预设，用于自定义颜色选择器
+
+// 判断当前颜色是否为自定义颜色（不在前7个预设中）
+const isCustomColor = computed(() => {
+  return !displayColorPresets.value.includes(selectedThemeColor.value);
+});
 
 const isDark = ref<boolean>(settingsStore.theme === ThemeMode.DARK);
 const sidebarColor = ref(settingsStore.sidebarColorScheme);
@@ -236,6 +272,16 @@ const handleLayoutChange = (layout: LayoutMode) => {
 
   settingsStore.updateLayout(layout);
 };
+
+/**
+ * 处理颜色选择
+ *
+ * @param color - 选中的颜色
+ */
+const handleColorSelect = (color: string) => {
+  selectedThemeColor.value = color;
+};
+
 
 /**
  * 复制当前配置
@@ -618,6 +664,118 @@ const handleCloseDrawer = () => {
   }
 }
 
+/* 主题颜色选择器样式 */
+.theme-color-selector {
+  .color-options {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .color-option {
+    position: relative;
+    width: 22px;
+    height: 22px;
+    cursor: pointer;
+    border: 2px solid var(--el-border-color-light);
+    border-radius: 6px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+    &:hover {
+      transform: translateY(-2px) scale(1.05);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      border-color: var(--el-color-primary-light-3);
+    }
+
+    &.is-active {
+      border-color: var(--el-color-primary);
+      transform: translateY(-1px) scale(1.08);
+      box-shadow: 0 4px 16px rgba(64, 128, 255, 0.3);
+    }
+
+    .color-check {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      color: white;
+      background: rgba(0, 0, 0, 0.6);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 10px;
+      backdrop-filter: blur(2px);
+    }
+  }
+
+  .color-picker-wrapper {
+    .custom-color-picker {
+      :deep(.el-color-picker__trigger) {
+        width: 22px !important;
+        height: 22px !important;
+        border: 2px solid var(--el-border-color-light) !important;
+        border-radius: 6px !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+
+        &:hover {
+          transform: translateY(-2px) scale(1.05) !important;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+          border-color: var(--el-color-primary-light-3) !important;
+        }
+      }
+
+      :deep(.el-color-picker__color) {
+        border: none !important;
+        border-radius: 3px !important;
+      }
+
+      :deep(.el-color-picker__color-inner) {
+        border-radius: 3px !important;
+      }
+
+      :deep(.el-color-picker__icon) {
+        font-size: 10px !important;
+      }
+    }
+  }
+}
+
+
+/* 深色模式适配 */
+.dark {
+  .theme-color-selector {
+    .color-option {
+      border-color: var(--el-border-color);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+
+      &:hover {
+        border-color: var(--el-color-primary-light-3);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      }
+    }
+
+    .color-picker-wrapper {
+      .custom-color-picker {
+        :deep(.el-color-picker__trigger) {
+          border-color: var(--el-border-color) !important;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+
+          &:hover {
+            border-color: var(--el-color-primary-light-3) !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+          }
+        }
+      }
+    }
+  }
+}
+
 /* 复制配置对话框样式 */
 :deep(.copy-config-dialog) {
   .el-message-box__content {
@@ -626,3 +784,4 @@ const handleCloseDrawer = () => {
   }
 }
 </style>
+
