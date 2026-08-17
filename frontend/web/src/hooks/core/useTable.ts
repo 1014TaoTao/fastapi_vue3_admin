@@ -6,7 +6,7 @@
  *
  * 去重：
  * - 同实例：`inFlightDedupePromise` + `inFlightDedupeKey`
- * - 跨实例（同参）：模块级 `globalListNetworkInflight`（布局短时多挂载时合并为一条 HTTP）
+ * - 跨实例（同接口 + 同参）：模块级 `globalListNetworkInflight`（布局短时多挂载时合并为一条 HTTP）
  *
  * KeepAlive：`onDeactivated` 会取消请求并置 `tableViewActive`，失活期间 `fetchData` 直接返回当前快照不发 HTTP。
  */
@@ -46,6 +46,27 @@ import type { ColumnOption } from "@/types/component";
 
 /** 跨组件实例：同一 dedupeKey 仅一条进行中的网络请求 */
 const globalListNetworkInflight = new Map<string, Promise<TableResponse<unknown>>>();
+
+/**
+ * apiFn 身份标记，用于计入 dedupeKey。
+ *
+ * dedupeKey 若只由请求参数拼成，两个不同接口只要参数恰好相同（最典型：都只有
+ * page_no/page_size 两个默认值），就会命中 `globalListNetworkInflight` 而互相
+ * 复用进行中的请求，导致后发起的表格拿到另一个接口的响应。同页多表必然踩中。
+ *
+ * 用 WeakMap 按函数引用分配稳定 id：同一接口仍然合并（去重能力不变），
+ * 不同接口永不互串。
+ */
+const apiFnIds = new WeakMap<object, number>();
+let apiFnIdSeq = 0;
+function apiFnId(fn: object): number {
+  let id = apiFnIds.get(fn);
+  if (id === undefined) {
+    id = ++apiFnIdSeq;
+    apiFnIds.set(fn, id);
+  }
+  return id;
+}
 
 // --- 类型推导（由 apiFn / 响应类型反推记录类型） ---
 type InferApiParams<T> = T extends (params: infer P) => any ? P : never;
@@ -223,7 +244,7 @@ function useTableImpl<TApiFn extends (params: any) => Promise<any>>(
   /** KeepAlive 失活时不再发请求（组件侧 cancelRequest 会 abort） */
   let tableViewActive = true;
 
-  /** 稳定序列化请求参，供 in-flight 去重用 */
+  /** 稳定序列化 apiFn 身份 + 请求参，供 in-flight 去重用（缺了 apiFn 会导致跨接口串数据） */
   function stableDedupeKeyFromParams(params: TParams): string {
     const normalize = (input: unknown): unknown => {
       if (input === null || typeof input !== "object") return input;
@@ -238,7 +259,7 @@ function useTableImpl<TApiFn extends (params: any) => Promise<any>>(
       }
       return out;
     };
-    return JSON.stringify(normalize(toRaw(params) as unknown));
+    return `${apiFnId(apiFn)}|${JSON.stringify(normalize(toRaw(params) as unknown))}`;
   }
 
   // 缓存清理定时器
