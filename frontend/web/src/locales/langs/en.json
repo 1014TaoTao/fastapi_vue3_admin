@@ -461,7 +461,9 @@
   },
   "forgetPassword": {
     "title": "Forgot password?",
-    "subTitle": "Enter your username and set a new password",
+    "subTitle": "Enter your username. An administrator will reset the password.",
+    "hint": "Passwords cannot be changed with only a username. After submitting, ask an administrator to reset it.",
+    "submitted": "If the account exists, please contact an administrator to reset the password",
     "placeholder": "Please enter your email",
     "submitBtnText": "Submit",
     "backBtnText": "Back"

@@ -17,8 +17,6 @@ const submitting = ref(false)
 const forgetFormRef = ref()
 const forgetForm = reactive({
   username: '',
-  new_password: '',
-  confirmPassword: '',
 })
 
 /** 与后端 UserForgetPasswordSchema 一致：字母开头，3-32 位，仅允许字母、数字、_ . - */
@@ -29,20 +27,10 @@ const forgetSchema: FormSchema = {
   validate: (model) => {
     const errors: Array<{ path: Array<string | number>, message: string }> = []
     const username = String(model.username ?? '').trim()
-    const password = String(model.new_password ?? '')
-    const confirmPassword = String(model.confirmPassword ?? '')
     if (!username)
       errors.push({ path: ['username'], message: t('common.form.usernameRequired') })
     else if (!USERNAME_REG.test(username))
       errors.push({ path: ['username'], message: t('common.form.usernameFormat') })
-    if (!password)
-      errors.push({ path: ['new_password'], message: t('common.form.newPasswordRequired') })
-    else if (password.length < 6)
-      errors.push({ path: ['new_password'], message: t('common.form.passwordLength') })
-    if (!confirmPassword)
-      errors.push({ path: ['confirmPassword'], message: t('common.form.confirmNewRequired') })
-    else if (confirmPassword !== password)
-      errors.push({ path: ['confirmPassword'], message: t('common.form.mismatch') })
     return errors
   },
 }
@@ -58,7 +46,7 @@ async function handleSubmit() {
   const username = forgetForm.username.trim()
   submitting.value = true
   try {
-    await UserAPI.forgetPassword({ username, new_password: forgetForm.new_password })
+    await UserAPI.forgetPassword({ username })
     Storage.set(REMEMBER_ME_KEY, { username, remember: true })
     toast.success(t('forget.success'))
     uni.reLaunch({ url: '/pages/login/index' })
@@ -94,26 +82,7 @@ function goLogin() {
               prefix-icon="user"
             />
           </wd-form-item>
-          <wd-form-item prop="new_password" custom-style="margin-bottom: 14rpx; padding-left: 0; padding-right: 0;">
-            <wd-input
-              v-model="forgetForm.new_password"
-              :placeholder="t('common.form.newPasswordPlaceholder')"
-              show-password
-              clearable
-              :compact="false"
-              prefix-icon="lock"
-            />
-          </wd-form-item>
-          <wd-form-item prop="confirmPassword" custom-style="margin-bottom: 14rpx; padding-left: 0; padding-right: 0;">
-            <wd-input
-              v-model="forgetForm.confirmPassword"
-              :placeholder="t('common.form.confirmNewPlaceholder')"
-              show-password
-              clearable
-              :compact="false"
-              prefix-icon="lock"
-            />
-          </wd-form-item>
+          <wd-text class="forget-hint" :text="t('forget.hint')" />
         </wd-form>
         <wd-button type="primary" round block :loading="submitting" @click="handleSubmit">
           {{ submitting ? t('forget.submitting') : t('forget.submit') }}
@@ -218,6 +187,13 @@ function goLogin() {
   --wot-input-bg: var(--wot-coolgrey-8, var(--wot-filled-content));
   border-color: var(--wot-border-main, #2C2C2E);
   box-shadow: none;
+}
+
+.forget-hint {
+  display: block;
+  margin-bottom: 20rpx;
+  font-size: var(--font-sm, 24rpx);
+  line-height: 1.5;
 }
 
 .forget-footer {

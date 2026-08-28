@@ -131,10 +131,11 @@
   "forget": {
     "navTitle": "Forgot Password",
     "title": "Forgot Password",
-    "submit": "Reset Password",
+    "submit": "Submit request",
     "submitting": "Submitting...",
     "toLogin": "Back to Login",
-    "success": "Password reset, please log in again"
+    "hint": "Passwords cannot be changed with only a username. Contact an administrator to reset it.",
+    "success": "If the account exists, please contact an administrator to reset the password"
   },
   "setting": {
     "navTitle": "Settings",

@@ -71,15 +71,14 @@ async def reset_password_controller(
     return SuccessResponse(data=result_dict, msg="重置密码成功")
 
 
-@UserRouter.post("/password/forget", summary="忘记密码", response_model=ResponseSchema[UserOutSchema])
+@UserRouter.post("/password/forget", summary="忘记密码", response_model=ResponseSchema[None])
 async def forget_password_controller(
     db: Annotated[AsyncSession, Depends(db_getter)],
     data: Annotated[UserForgetPasswordSchema, Body(description="忘记密码参数")],
 ) -> JSONResponse:
     auth = AuthSchema()
-    user_forget_password_result = await UserService(auth, db).forget_password(data=data)
-    logger.info(f"{data.username} 重置密码成功")
-    return SuccessResponse(data=user_forget_password_result, msg="重置密码成功")
+    await UserService(auth, db).forget_password(data=data)
+    return SuccessResponse(msg="如果该账号存在，请联系管理员重置密码")
 
 
 @UserRouter.post("/register", summary="用户注册", response_model=ResponseSchema[UserOutSchema])

@@ -131,10 +131,11 @@
   "forget": {
     "navTitle": "忘记密码",
     "title": "忘记密码",
-    "submit": "重置密码",
+    "submit": "提交申请",
     "submitting": "提交中...",
     "toLogin": "返回登录",
-    "success": "密码重置成功，请重新登录"
+    "hint": "系统不会根据用户名直接改密，请联系管理员在后台重置。",
+    "success": "如果该账号存在，请联系管理员重置密码"
   },
   "setting": {
     "navTitle": "设置",

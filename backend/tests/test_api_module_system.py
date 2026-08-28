@@ -116,7 +116,7 @@ class TestUser:
             test_client,
             "POST",
             "/system/user/password/forget",
-            json={"username": "admin", "new_password": "newpass123"},
+            json={"username": "admin"},
         )
 
     def test_user_password_reset(self, test_client: TestClient, auth_headers: dict) -> None:

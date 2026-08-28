@@ -66,8 +66,7 @@ const UserAPI = {
    *
    * @param body 重置参数
    * @param body.username 用户名（字母开头，3-32 位）
-   * @param body.new_password 新密码（6-128 位）
-   * @returns 重置结果
+   * @returns 申请结果（不会直接改密）
    */
   forgetPassword(body: ForgetPasswordForm): Promise<void> {
     return http.Post(`${USER_BASE_URL}/password/forget`, body, { meta: { ignoreAuth: true } })
@@ -169,10 +168,9 @@ const UserAPI = {
 
 export default UserAPI
 
-/* 忘记密码表单（与后端 UserForgetPasswordSchema 一致，confirmPassword 为前端校验字段不提交） */
+/* 忘记密码申请（与后端 UserForgetPasswordSchema 一致，仅提交用户名） */
 export interface ForgetPasswordForm {
   username: string
-  new_password: string
 }
 
 /* 注册表单 */

@@ -461,7 +461,9 @@
   },
   "forgetPassword": {
     "title": "忘记密码？",
-    "subTitle": "请输入账号并设置新密码",
+    "subTitle": "请输入账号，由管理员重置密码",
+    "hint": "系统不会根据用户名直接改密。提交后请联系管理员在后台重置。",
+    "submitted": "如果该账号存在，请联系管理员重置密码",
     "placeholder": "请输入您的电子邮件",
     "submitBtnText": "提交",
     "backBtnText": "返回"

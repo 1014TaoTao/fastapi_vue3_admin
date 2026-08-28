@@ -381,8 +381,6 @@ const registerForm = reactive<RegisterForm>({
 
 const forgetForm = reactive<ForgetPasswordForm>({
   username: "",
-  new_password: "",
-  confirmPassword: "",
 });
 
 const validateRegisterPassword = (_rule: unknown, value: string, callback: (e?: Error) => void) => {
@@ -422,29 +420,8 @@ const registerRules = computed<FormRules<RegisterForm>>(() => ({
   ],
 }));
 
-const validateForgetConfirm = (_rule: unknown, value: string, callback: (e?: Error) => void) => {
-  if (!value) {
-    callback(new Error(t("login.message.password.required")));
-    return;
-  }
-  if (value !== forgetForm.new_password) {
-    callback(new Error(t("login.message.password.inconformity")));
-    return;
-  }
-  callback();
-};
-
 const forgetRules = computed<FormRules<ForgetPasswordForm>>(() => ({
   username: [{ required: true, message: t("login.message.username.required"), trigger: "blur" }],
-  new_password: [
-    { required: true, message: t("login.message.password.required"), trigger: "blur" },
-    { min: 6, message: t("login.message.password.min"), trigger: "blur" },
-  ],
-  confirmPassword: [
-    { required: true, message: t("login.message.password.required"), trigger: "blur" },
-    { min: 6, message: t("login.message.password.min"), trigger: "blur" },
-    { validator: validateForgetConfirm, trigger: "blur" },
-  ],
 }));
 
 const loginForm = reactive<LoginFormData>({
@@ -671,11 +648,9 @@ async function submitForget() {
     await forgetPanelRef.value.validate?.();
     forgetLoading.value = true;
     await UserAPI.forgetPassword(forgetForm);
+    ElMessage.success(t("forgetPassword.submitted"));
     loginForm.username = forgetForm.username;
-    loginForm.password = forgetForm.new_password;
     forgetForm.username = "";
-    forgetForm.new_password = "";
-    forgetForm.confirmPassword = "";
     setAuthPanel("login");
   } catch (error) {
     console.error("[Login] forget password:", error);
