@@ -1,10 +1,10 @@
 import json
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Awaitable, Callable
+from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import Depends, Request
+from fastapi import Depends, Request, WebSocket
 from redis.asyncio.client import Redis
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.common.enums import RET, RedisInitKeyConfig
@@ -15,6 +15,16 @@ from app.core.exceptions import CustomException
 from app.core.logger import logger
 from app.core.redis_crud import RedisCURD
 from app.core.security import OAuth2Schema, decode_access_token
+
+# 用户行加载由 api 层登记注入（core 不反向依赖 app.api.* 的 ORM 模型）
+UserRowLoader = Callable[[AsyncSession, int], Awaitable[Any]]
+_user_row_loader: UserRowLoader | None = None
+
+
+def set_user_loader(loader: UserRowLoader) -> None:
+    """登记用户行加载实现（应用启动时由 api 层调用）。"""
+    global _user_row_loader
+    _user_row_loader = loader
 
 
 async def db_getter() -> AsyncGenerator[AsyncSession, None]:
@@ -48,6 +58,44 @@ async def get_current_user(
     return await _authenticate(token, db, redis)
 
 
+WS_TOKEN_SUBPROTOCOL = "access_token"
+
+
+def get_websocket_token(websocket: WebSocket) -> tuple[str | None, str | None]:
+    """解析 WebSocket 握手携带的令牌。
+
+    优先读取 Sec-WebSocket-Protocol 中的 "access_token.<jwt>"：令牌不出现在 URL 中，
+    不会进入网关/服务的 access log。小程序等无法自定义子协议的客户端仍可用 ?token= 兜底。
+
+    参数:
+    - websocket (WebSocket): WebSocket 连接对象。
+
+    返回:
+    - tuple[str | None, str | None]: (令牌, 握手需回显的子协议)；无令牌时返回 (None, None)。
+    """
+    for proto in websocket.headers.get("sec-websocket-protocol", "").split(","):
+        proto = proto.strip()
+        if proto.startswith(f"{WS_TOKEN_SUBPROTOCOL}."):
+            token = proto[len(f"{WS_TOKEN_SUBPROTOCOL}.") :]
+            if token:
+                return token, WS_TOKEN_SUBPROTOCOL
+    return websocket.query_params.get("token"), None
+
+
+async def websocket_authenticate(websocket: WebSocket) -> tuple[AuthSchema, str | None]:
+    """WebSocket 握手认证：解析令牌并校验，失败抛 CustomException。
+
+    返回:
+    - tuple[AuthSchema, str | None]: (认证信息, 握手需回显的子协议)。
+    """
+    token, subprotocol = get_websocket_token(websocket)
+    if not token:
+        raise CustomException(msg="未提供认证令牌")
+    async with async_db_session() as db:
+        auth = await _authenticate(token, db, websocket.app.state.redis)
+    return auth, subprotocol
+
+
 async def _authenticate(
     token: str,
     db: AsyncSession,
@@ -57,9 +105,11 @@ async def _authenticate(
     if not token:
         raise CustomException(msg="认证已失效", code=RET.UNAUTHORIZED.code, status_code=401)
 
-    # 处理Bearer token
+    # 处理Bearer token（兼容无空格/无前缀输入，避免 IndexError）
     if token.startswith("Bearer"):
-        token = token.split(" ")[1]
+        token = token[len("Bearer") :].strip()
+        if not token:
+            raise CustomException(msg="认证已失效", code=RET.UNAUTHORIZED.code, status_code=401)
 
     # 滑动模式下跳过 JWT exp 校验，由 Redis session TTL 决定实际有效期
     payload = decode_access_token(token, verify_exp=not settings.TOKEN_SLIDING_EXPIRE)
@@ -70,7 +120,8 @@ async def _authenticate(
     if not session_id:
         raise CustomException(msg="认证已失效", code=RET.UNAUTHORIZED.code, status_code=401)
 
-    raw = await RedisCURD(redis).get(f"{RedisInitKeyConfig.USER_SESSION.key}:{session_id}")
+    session_key = f"{RedisInitKeyConfig.USER_SESSION.key}:{session_id}"
+    raw = await RedisCURD(redis).get(session_key)
     if not raw:
         raise CustomException(msg="认证已失效", code=RET.UNAUTHORIZED.code, status_code=401)
     user_info = json.loads(raw)
@@ -79,16 +130,36 @@ async def _authenticate(
     if not user_info.get("session_id"):
         raise CustomException(msg="认证已失效", code=RET.UNAUTHORIZED.code, status_code=401)
 
-    # 滑动过期续期
+    # 滑动过期续期：以 USER_SESSION 为存活判据与续期主体，且受绝对上限约束
     if settings.TOKEN_SLIDING_EXPIRE:
-        ttl = await RedisCURD(redis).ttl(key=f"{RedisInitKeyConfig.ACCESS_TOKEN.key}:{session_id}")
-        expire_seconds = settings.ACCESS_TOKEN_EXPIRE_SECONDS
-        if ttl > 0 and ttl < expire_seconds // 2:
-            await RedisCURD(redis).expire(
-                key=f"{RedisInitKeyConfig.ACCESS_TOKEN.key}:{session_id}",
-                expire=expire_seconds,
-            )
-            await RedisCURD(redis).expire(
+        crud = RedisCURD(redis)
+        session_ttl = await crud.ttl(key=session_key)
+        if session_ttl == -1:
+            # 历史数据无 TTL：补设兜底过期，防止永不过期的会话
+            await crud.expire(key=session_key, expire=settings.REFRESH_TOKEN_EXPIRE_SECONDS)
+        elif session_ttl > 0 and session_ttl < settings.REFRESH_TOKEN_EXPIRE_SECONDS // 2:
+            created_at = user_info.get("created_at")
+            expired = False
+            if created_at:
+                try:
+                    age = (datetime.now(UTC) - datetime.fromisoformat(str(created_at))).total_seconds()
+                    expired = age >= settings.SESSION_MAX_LIFETIME_SECONDS
+                except ValueError:
+                    expired = True
+            else:
+                # 存量会话无 created_at：补写当前时间作为兜底起点，不误杀在线用户
+                user_info["created_at"] = datetime.now(UTC).isoformat()
+                await crud.set(
+                    key=session_key,
+                    value=json.dumps(user_info, ensure_ascii=False, default=str),
+                    expire=settings.REFRESH_TOKEN_EXPIRE_SECONDS,
+                )
+            if expired:
+                await crud.delete(key=session_key)
+                raise CustomException(msg="会话超过最大存活时长，请重新登录", code=RET.UNAUTHORIZED.code, status_code=401)
+            # 续期必须落在存活判据（USER_SESSION）上，否则续期无效、判据形同虚设
+            await crud.expire(key=session_key, expire=settings.REFRESH_TOKEN_EXPIRE_SECONDS)
+            await crud.expire(
                 key=f"{RedisInitKeyConfig.REFRESH_TOKEN.key}:{session_id}",
                 expire=settings.REFRESH_TOKEN_EXPIRE_SECONDS,
             )
@@ -106,11 +177,9 @@ async def _authenticate(
     if not user_id:
         raise CustomException(msg="认证已失效", code=RET.UNAUTHORIZED.code, status_code=401)
 
-    from app.api.v1.module_system.user.model import UserModel
-
-    stmt = select(UserModel).where(UserModel.id == user_id, UserModel.is_deleted == False)
-    result = await db.execute(stmt)
-    user_obj = result.scalars().first()
+    if _user_row_loader is None:
+        raise CustomException(msg="认证服务未就绪", code=RET.SERVICE_UNAVAILABLE.code, status_code=503)
+    user_obj = await _user_row_loader(db, user_id)
     if not user_obj:
         raise CustomException(msg="用户不存在", code=RET.NOT_FOUND.code, status_code=401)
 

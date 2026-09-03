@@ -70,6 +70,7 @@ def run(
         host=settings.SERVER_HOST,
         port=settings.SERVER_PORT,
         reload=env.value == EnvironmentEnum.DEV.value,
+        workers=settings.WORKERS if env.value == EnvironmentEnum.PROD.value else 1,
         factory=True,
         log_config=None,
         timeout_graceful_shutdown=5,

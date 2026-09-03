@@ -104,7 +104,9 @@ async def export_operation_log_list_controller(
     search: Annotated[OperationLogQueryParam, Body()],
 ) -> StreamingResponse:
     operation_log_query_result = await OperationLogService(auth, db).get_list(search=search)
-    operation_log_export_result = OperationLogService.export_list(operation_log_list=[item.model_dump() for item in operation_log_query_result])
+    operation_log_export_result = await OperationLogService.export_list(
+        operation_log_list=[item.model_dump() for item in operation_log_query_result]
+    )
 
     return StreamResponse(
         data=bytes2file_response(operation_log_export_result),

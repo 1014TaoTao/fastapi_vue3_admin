@@ -98,7 +98,7 @@ async def export_obj_list_controller(
 ) -> StreamingResponse:
     service = DemoService(auth, db)
     result_dict_list = await service.get_list(search=search)
-    export_result = DemoService.batch_export(obj_list=[item.model_dump() for item in result_dict_list])
+    export_result = await DemoService.batch_export(obj_list=[item.model_dump() for item in result_dict_list])
 
     return StreamResponse(
         data=bytes2file_response(export_result),

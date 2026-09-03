@@ -15,7 +15,6 @@ from app.utils.common_util import search_to_dict
 from .model import GenTableColumnModel, GenTableModel
 from .schema import (
     GenDBTableSchema,
-    GenTableColumnOutSchema,
     GenTableColumnSchema,
     GenTableQueryParam,
     GenTableSchema,
@@ -130,11 +129,12 @@ class GenTableCRUD(CRUDBase[GenTableModel, GenTableSchema, GenTableSchema]):
         """
         await self.delete(ids=ids)
 
-    async def get_db_table_list(self, search: GenTableQueryParam | None = None) -> list[dict]:
+    async def get_db_table_list(self, table_name: str | None = None, table_comment: str | None = None) -> list[dict]:
         """根据查询参数获取数据库表列表信息。
 
         参数:
-        - search (GenTableQueryParam | None): 查询参数对象。
+        - table_name (str | None): 表名关键字（模糊匹配）。
+        - table_comment (str | None): 表注释关键字（模糊匹配）。
 
         返回:
         - list[dict]: 数据库表列表信息（已转为可序列化字典）。
@@ -144,6 +144,9 @@ class GenTableCRUD(CRUDBase[GenTableModel, GenTableSchema, GenTableSchema]):
 
         inspector: Inspector = inspect(engine)
         table_names = inspector.get_table_names()
+
+        name_kw = table_name.strip() if table_name else ""
+        comment_kw = table_comment.strip() if table_comment else ""
 
         dict_data = []
         for table_name in table_names:
@@ -155,14 +158,12 @@ class GenTableCRUD(CRUDBase[GenTableModel, GenTableSchema, GenTableSchema]):
                 logger.warning(f"获取表 {table_name} 的注释失败: {e}")
                 table_comment = ""
 
-            # 统一处理 search 为 None 的情况，避免重复判断
-            if search:
-                # 表名过滤：忽略大小写，支持模糊匹配
-                if search.table_name and search.table_name[1] and search.table_name[1].lower() not in table_name.lower():
-                    continue
-                # 表注释过滤：忽略大小写，支持模糊匹配；table_comment 为 None 时视为空字符串
-                if search.table_comment and search.table_comment[1] and search.table_comment[1] not in table_comment:
-                    continue
+            # 表名过滤：忽略大小写，支持模糊匹配
+            if name_kw and name_kw.lower() not in table_name.lower():
+                continue
+            # 表注释过滤：忽略大小写，支持模糊匹配；table_comment 为 None 时视为空字符串
+            if comment_kw and comment_kw not in table_comment:
+                continue
 
             table_info = {
                 "database_name": database_name,
@@ -177,9 +178,10 @@ class GenTableCRUD(CRUDBase[GenTableModel, GenTableSchema, GenTableSchema]):
 
     async def get_db_table_page(
         self,
-        search: GenTableQueryParam | None,
-        offset: int,
-        limit: int,
+        table_name: str | None = None,
+        table_comment: str | None = None,
+        offset: int = 0,
+        limit: int = 10,
     ) -> tuple[list[dict], int]:
         """数据库侧分页获取物理表列表（用于导入表弹窗）。
 
@@ -189,7 +191,8 @@ class GenTableCRUD(CRUDBase[GenTableModel, GenTableSchema, GenTableSchema]):
         - 若方言不支持，则回退到旧的全量遍历。
 
         参数:
-        - search (GenTableQueryParam | None): 表名/注释过滤条件。
+        - table_name (str | None): 表名关键字（模糊匹配）。
+        - table_comment (str | None): 表注释关键字（模糊匹配）。
         - offset (int): 偏移量。
         - limit (int): 每页条数。
 
@@ -199,19 +202,8 @@ class GenTableCRUD(CRUDBase[GenTableModel, GenTableSchema, GenTableSchema]):
         database_name = settings.DATABASE_NAME
         db_type = (settings.DATABASE_TYPE or "").lower()
 
-        # 解析 like 关键字（GenTableQueryParam 把字段包装成 ("like", value)）
-        name_kw = None
-        comment_kw = None
-        if search:
-            try:
-                if search.table_name and search.table_name[1]:
-                    name_kw = str(search.table_name[1]).strip()
-                if search.table_comment and search.table_comment[1]:
-                    comment_kw = str(search.table_comment[1]).strip()
-            except Exception:
-                # 兜底：参数结构异常时忽略过滤
-                name_kw = None
-                comment_kw = None
+        name_kw = table_name.strip() if table_name else None
+        comment_kw = table_comment.strip() if table_comment else None
 
         # MySQL / MariaDB
         if db_type in {"mysql", "mariadb"}:
@@ -277,7 +269,7 @@ class GenTableCRUD(CRUDBase[GenTableModel, GenTableSchema, GenTableSchema]):
             return items, total
 
         # Fallback：回退旧逻辑（全量遍历再分页由上层处理）
-        all_items = await self.get_db_table_list(search)
+        all_items = await self.get_db_table_list(table_name=name_kw, table_comment=comment_kw)
         total = len(all_items)
         return all_items[offset : offset + limit], total
 
@@ -493,14 +485,17 @@ class GenTableColumnCRUD(CRUDBase[GenTableColumnModel, GenTableColumnSchema, Gen
         """
         return await self.get_list(search={"table_id": table_id}, order_by=order_by, preload=preload)
 
-    async def get_gen_db_table_columns_by_name(self, table_name: str | None) -> list[GenTableColumnOutSchema]:
-        """根据业务表名称获取业务表字段列表信息。
+    async def get_gen_db_table_columns_by_name(self, table_name: str | None) -> list[dict]:
+        """获取物理数据库表的列信息（原始字典）。
+
+        说明:
+        - 仅返回 DB 元信息的原生字典，模型转换（OutSchema）由 Service 层完成。
 
         参数:
-        - table_name (str | None): 业务表名称。
+        - table_name (str | None): 物理表名称。
 
         返回:
-        - list[GenTableColumnOutSchema]: 业务表字段列表信息对象。
+        - list[dict]: 列信息字典列表。
         """
         # 检查表名是否为空
         if not table_name:
@@ -508,19 +503,13 @@ class GenTableColumnCRUD(CRUDBase[GenTableColumnModel, GenTableColumnSchema, Gen
 
         try:
             # 在线程池中执行同步 inspect 操作，避免阻塞事件循环
-            columns_info = await asyncio.to_thread(
+            return await asyncio.to_thread(
                 GenTableColumnCRUD._sync_get_table_columns,
                 settings.DATABASE_TYPE,
                 table_name,
             )
-
-            # 转换为GenTableColumnOutSchema对象列表
-            columns_list = [GenTableColumnOutSchema(**column_info) for column_info in columns_info]
-
-            return columns_list
         except Exception as e:
             logger.error(f"获取表{table_name}的字段列表时出错: {e!s}")
-            # 确保即使出错也返回空列表而不是None
             raise
 
     async def list_gen_table_column_crud(

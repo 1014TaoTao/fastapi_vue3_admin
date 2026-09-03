@@ -1,6 +1,5 @@
 from sqlalchemy import Boolean, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
-from sqlalchemy.sql import expression
 
 from app.config.setting import settings
 from app.core.base_model import ModelMixin, UserMixin
@@ -54,16 +53,16 @@ class GenTableColumnModel(ModelMixin, UserMixin):
     column_type: Mapped[str] = mapped_column(String(100), nullable=False, comment="列类型")
     column_length: Mapped[str | None] = mapped_column(String(50), nullable=True, comment="列长度")
     column_default: Mapped[str | None] = mapped_column(String(200), nullable=True, comment="列默认值")
-    is_pk: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=expression.false(), comment="是否主键")
-    is_increment: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=expression.false(), comment="是否自增")
-    is_nullable: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=expression.true(), comment="是否允许为空")
-    is_unique: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=expression.false(), comment="是否唯一")
+    is_pk: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=SqlalchemyUtil.get_boolean_server_default(settings.DATABASE_TYPE, False), comment="是否主键")
+    is_increment: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=SqlalchemyUtil.get_boolean_server_default(settings.DATABASE_TYPE, False), comment="是否自增")
+    is_nullable: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=SqlalchemyUtil.get_boolean_server_default(settings.DATABASE_TYPE, True), comment="是否允许为空")
+    is_unique: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=SqlalchemyUtil.get_boolean_server_default(settings.DATABASE_TYPE, False), comment="是否唯一")
     python_type: Mapped[str | None] = mapped_column(String(100), nullable=True, comment="Python类型")
     python_field: Mapped[str | None] = mapped_column(String(200), nullable=True, comment="Python字段名")
-    is_insert: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=expression.true(), comment="是否为新增字段")
-    is_edit: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=expression.true(), comment="是否编辑字段")
-    is_list: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=expression.true(), comment="是否列表字段")
-    is_query: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=expression.false(), comment="是否查询字段")
+    is_insert: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=SqlalchemyUtil.get_boolean_server_default(settings.DATABASE_TYPE, True), comment="是否为新增字段")
+    is_edit: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=SqlalchemyUtil.get_boolean_server_default(settings.DATABASE_TYPE, True), comment="是否编辑字段")
+    is_list: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=SqlalchemyUtil.get_boolean_server_default(settings.DATABASE_TYPE, True), comment="是否列表字段")
+    is_query: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=SqlalchemyUtil.get_boolean_server_default(settings.DATABASE_TYPE, False), comment="是否查询字段")
     query_type: Mapped[str | None] = mapped_column(String(50), nullable=True, default=None, comment="查询方式")
     html_type: Mapped[str | None] = mapped_column(String(100), nullable=True, default="input", comment="前端显示类型")
     dict_type: Mapped[str | None] = mapped_column(String(200), nullable=True, default="", comment="前端对应字典类型")

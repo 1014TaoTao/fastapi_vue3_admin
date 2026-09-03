@@ -92,7 +92,7 @@ class PositionService:
         await PositionCRUD(self.auth, self.db).set(ids=data.ids, status=data.status)
 
     @staticmethod
-    def export_list(position_list: list[dict]) -> bytes:
+    async def export_list(position_list: list[dict]) -> bytes:
         mapping_dict = {
             "id": "编号",
             "name": "岗位名称",
@@ -108,4 +108,4 @@ class PositionService:
         for item in data:
             item["status"] = "启用" if item.get("status") == 0 else "停用"
             item["creator"] = item.get("created_by", {}).get("name", "未知") if isinstance(item.get("created_by"), dict) else "未知"
-        return ExcelUtil.export_list2excel(list_data=data, mapping_dict=mapping_dict)
+        return await ExcelUtil.aexport_list2excel(list_data=data, mapping_dict=mapping_dict)

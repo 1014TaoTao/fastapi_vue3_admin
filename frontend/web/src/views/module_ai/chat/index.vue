@@ -97,9 +97,10 @@ const connectWebSocket = () => {
   try {
     const url = new URL("/api/v1/ai/chat/ws", WS_URL);
     const token = Auth.getAccessToken();
-    if (token) url.searchParams.append("token", token);
-
-    ws = new WebSocket(url.toString());
+    // 令牌经 Sec-WebSocket-Protocol 传递，避免出现在 URL 与服务端 access log 中
+    ws = token
+      ? new WebSocket(url.toString(), ["access_token", `access_token.${token}`])
+      : new WebSocket(url.toString());
 
     ws.onopen = () => {
       isConnected.value = true;

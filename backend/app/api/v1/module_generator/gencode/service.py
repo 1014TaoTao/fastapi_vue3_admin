@@ -232,7 +232,7 @@ class GenTableService:
         return gen_table
 
     @handle_service_exception
-    async def get_gen_table_list(self, search: GenTableQueryParam) -> list[dict]:
+    async def get_gen_table_list(self, search: GenTableQueryParam) -> list[GenTableOutSchema]:
         """获取代码生成业务表列表信息。
 
         参数:
@@ -240,10 +240,10 @@ class GenTableService:
         - search (GenTableQueryParam): 查询参数模型。
 
         返回:
-        - list[dict]: 包含业务表列表信息的字典列表。
+        - list[GenTableOutSchema]: 包含业务表列表信息的模型列表。
         """
         gen_table_list_result = await GenTableCRUD(self.auth, self.db).get_gen_table_list(search, preload=["columns"])
-        return [GenTableOutSchema.model_validate(obj).model_dump() for obj in gen_table_list_result]
+        return [GenTableOutSchema.model_validate(obj) for obj in gen_table_list_result]
 
     @handle_service_exception
     async def get_gen_table_page(
@@ -287,7 +287,7 @@ class GenTableService:
         返回:
         - list[Any]: 包含数据库表列表信息的任意类型列表。
         """
-        gen_db_table_list_result = await GenTableCRUD(self.auth, self.db).get_db_table_list(search)
+        gen_db_table_list_result = await GenTableCRUD(self.auth, self.db).get_db_table_list(table_name=search.table_name, table_comment=search.table_comment)
         return gen_db_table_list_result
 
     @handle_service_exception
@@ -309,7 +309,12 @@ class GenTableService:
         - dict[str, Any]: 含 items、total、has_next 等字段。
         """
         offset = (page_no - 1) * page_size
-        items, total = await GenTableCRUD(self.auth, self.db).get_db_table_page(search=search, offset=offset, limit=page_size)
+        items, total = await GenTableCRUD(self.auth, self.db).get_db_table_page(
+            table_name=search.table_name,
+            table_comment=search.table_comment,
+            offset=offset,
+            limit=page_size,
+        )
         return {
             "items": items,
             "total": total,
@@ -335,6 +340,11 @@ class GenTableService:
         result = [GenTableOutSchema(**gen_table.model_dump()) for gen_table in gen_db_table_list_result]
 
         return result
+
+    async def _get_db_table_columns(self, table_name: str) -> list[GenTableColumnOutSchema]:
+        """读取物理库表字段并转换为输出模型（供导入/同步/预览使用）。"""
+        columns_info = await GenTableColumnCRUD(self.auth, self.db).get_gen_db_table_columns_by_name(table_name)
+        return [GenTableColumnOutSchema(**column_info) for column_info in columns_info]
 
     @handle_service_exception
     async def import_gen_table(self, gen_table_list: list[GenTableOutSchema]) -> bool:
@@ -363,7 +373,7 @@ class GenTableService:
                 if not table.columns:
                     table.columns = []
                 add_gen_table = await GenTableCRUD(self.auth, self.db).add_gen_table(GenTableSchema.model_validate(table.model_dump()))
-                gen_table_columns = await GenTableColumnCRUD(self.auth, self.db).get_gen_db_table_columns_by_name(table_name)
+                gen_table_columns = await self._get_db_table_columns(table_name)
                 if len(gen_table_columns) > 0:
                     table.id = add_gen_table.id
                     for column in gen_table_columns:
@@ -938,11 +948,10 @@ class GenTableService:
         table_columns = table.columns or []
         table_column_map = {column.column_name: column for column in table_columns}
         # 确保db_table_columns始终是列表类型，避免None值
-        db_table_columns = await GenTableColumnCRUD(self.auth, self.db).get_gen_db_table_columns_by_name(table_name) or []
+        db_table_columns = await self._get_db_table_columns(table_name)
         db_table_columns = [col for col in db_table_columns if col is not None]
         db_table_column_names = [column.column_name for column in db_table_columns]
         try:
-            # 参考 RuoYi：同步 DB 元信息，但尽量保留用户“生成配置”字段（dict/html/query/python_field...）
             preserve_keys = {
                 "dict_type",
                 "query_type",
@@ -1065,9 +1074,9 @@ class GenTableService:
 
         # 2) 回退：仅从 DB 读取结构（只读，无法配置子表字段）
         try:
-            gen_table_columns = await GenTableColumnCRUD(self.auth, self.db).get_gen_db_table_columns_by_name(sub_name_raw)
+            gen_table_columns = await self._get_db_table_columns(sub_name_raw)
         except Exception as e:
-            logger.warning(f"获取子表 {sub_name_raw} 字段失败: {e!s}")
+            gen_table_columns = await GenTableColumnCRUD(self.auth, self.db).get_gen_db_table_columns_by_name(sub_name_raw)
             gen_table.sub = False
             gen_table.sub_table = None
             gen_table.master_sub_hint = f"无法读取子表结构：{e!s}"
@@ -1188,9 +1197,9 @@ class GenTableService:
         if not table.id:
             raise CustomException(msg="业务表ID不能为空")
 
-        db_cols = await GenTableColumnCRUD(self.auth, self.db).get_gen_db_table_columns_by_name(table_name)
+        db_cols = await self._get_db_table_columns(table_name)
         added, removed, changed, unchanged = self._sync_preview_diff(
-            current_cols=table.columns or [],
+        db_cols = await GenTableColumnCRUD(self.auth, self.db).get_gen_db_table_columns_by_name(table_name)
             db_cols=db_cols or [],
         )
         preview = GenSyncPreviewSchema(
@@ -1212,9 +1221,9 @@ class GenTableService:
                 cur_sub_cols = GenTableOutSchema.model_validate(sub_cfg).columns or []
             else:
                 cur_sub_cols = []
-            db_sub_cols = await GenTableColumnCRUD(self.auth, self.db).get_gen_db_table_columns_by_name(sn)
+            db_sub_cols = await self._get_db_table_columns(sn)
             s_added, s_removed, s_changed, s_unchanged = self._sync_preview_diff(
-                current_cols=cur_sub_cols,
+            db_sub_cols = await GenTableColumnCRUD(self.auth, self.db).get_gen_db_table_columns_by_name(sn)
                 db_cols=db_sub_cols or [],
             )
             preview.sub = GenSyncPreviewSchema(

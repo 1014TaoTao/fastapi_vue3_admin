@@ -182,7 +182,7 @@ async def export_user_list_controller(
     search: Annotated[UserQueryParam, Body()],
 ) -> StreamingResponse:
     user_list = await UserService(auth, db).get_list(search=search, order_by=page.order_by)
-    user_export_result = UserService.export_list(user_list=[item.model_dump() for item in user_list])
+    user_export_result = await UserService.export_list(user_list=[item.model_dump() for item in user_list])
 
     return StreamResponse(
         data=bytes2file_response(user_export_result),

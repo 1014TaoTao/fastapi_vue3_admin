@@ -97,7 +97,7 @@ Add an A record pointing to your server IP.
 cd FastapiAdmin/backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp env/.env.dev.example env/.env.prod     # Edit as needed
+cp env/.env.example env/.env.prod     # Edit as needed
 
 # Start with Gunicorn + Uvicorn
 pip install gunicorn uvloop

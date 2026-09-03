@@ -178,20 +178,29 @@ export class ChatSocket {
   private heartbeatTimer: ReturnType<typeof setTimeout> | null = null;
   private attempt = 0;
   private stopped = false;
-  private handlers: { onMessage: (msg: ChatPushMessage) => void; onStatus: (connected: boolean) => void };
+  private handlers: {
+    onMessage: (msg: ChatPushMessage) => void;
+    onStatus: (connected: boolean) => void;
+  };
 
-  constructor(handlers: { onMessage: (msg: ChatPushMessage) => void; onStatus: (connected: boolean) => void }) {
+  constructor(handlers: {
+    onMessage: (msg: ChatPushMessage) => void;
+    onStatus: (connected: boolean) => void;
+  }) {
     this.handlers = handlers;
   }
 
   connect() {
-    if (this.ws?.readyState === WebSocket.OPEN || this.ws?.readyState === WebSocket.CONNECTING) return;
+    if (this.ws?.readyState === WebSocket.OPEN || this.ws?.readyState === WebSocket.CONNECTING)
+      return;
     this.stopped = false;
     try {
       const url = new URL("/api/v1/system/chat/ws", import.meta.env.VITE_APP_WS_ENDPOINT);
       const token = Auth.getAccessToken();
-      if (token) url.searchParams.append("token", token);
-      this.ws = new WebSocket(url.toString());
+      // 令牌经 Sec-WebSocket-Protocol 传递，避免出现在 URL 与服务端 access log 中
+      this.ws = token
+        ? new WebSocket(url.toString(), ["access_token", `access_token.${token}`])
+        : new WebSocket(url.toString());
       this.ws.onopen = () => this.handleOpen();
       this.ws.onmessage = (event) => this.handleMessage(event);
       this.ws.onclose = (event) => this.handleClose(event);

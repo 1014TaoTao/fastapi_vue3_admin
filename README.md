@@ -57,7 +57,7 @@
 git clone https://gitee.com/fastapiadmin/FastapiAdmin.git
 
 # 2. 配置环境
-cp backend/env/.env.dev.example backend/env/.env.dev
+cp backend/env/.env.example backend/env/.env.dev
 cp frontend/web/.env.development.example frontend/web/.env.development
 
 # 3. 启动后端（首次自动建表 + 初始化数据）

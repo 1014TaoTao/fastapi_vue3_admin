@@ -19,7 +19,12 @@
       @reset="onResetSearch"
     />
 
-    <ElSegmented class="mt-3" v-model="menuClientTab" :options="menuSegmentedOptions" @change="handleMenuClientTabChange" />
+    <ElSegmented
+      class="mt-3"
+      v-model="menuClientTab"
+      :options="menuSegmentedOptions"
+      @change="handleMenuClientTabChange"
+    />
 
     <ElCard
       class="fa-table-card"
@@ -1080,13 +1085,39 @@ const rules = reactive({
     { required: true, message: "请输入菜单名称", trigger: "blur" },
     { min: 2, max: 50, message: "长度 2 到 50 个字符", trigger: "blur" },
   ],
-  parent_id: [{ required: true, message: "请选择父级菜单", trigger: "blur" }],
+  // 父级菜单：顶级节点允许为空（后端 parent_id 可空），无需强制必填
   type: [{ required: true, message: "请选择菜单类型", trigger: "blur" }],
   order: [{ required: true, message: "请输入排序", trigger: "blur" }],
-  permission: [{ required: true, message: "请输入权限标识", trigger: "blur" }],
+  permission: [
+    {
+      validator: (_rule: unknown, value: string | undefined, callback: (e?: Error) => void) => {
+        // 仅按钮/菜单类型需要权限标识，目录/外链不校验（与表单 hidden 条件一致）
+        const t = formData.value.type as MenuTypeEnum;
+        if ((t === MenuTypeEnum.BUTTON || t === MenuTypeEnum.MENU) && !String(value ?? "").trim()) {
+          callback(new Error("请输入权限标识"));
+          return;
+        }
+        callback();
+      },
+      trigger: "blur",
+    },
+  ],
   route_name: [{ required: true, message: "请输入路由名称", trigger: "blur" }],
   route_path: [{ required: true, message: "请输入路由路径", trigger: "blur" }],
-  component_path: [{ required: true, message: "请输入组件路径", trigger: "blur" }],
+  component_path: [
+    {
+      validator: (_rule: unknown, value: string | undefined, callback: (e?: Error) => void) => {
+        // 仅菜单类型需要组件路径，目录/按钮/外链不校验（与表单 hidden 条件一致）
+        const t = formData.value.type as MenuTypeEnum;
+        if (t === MenuTypeEnum.MENU && !String(value ?? "").trim()) {
+          callback(new Error("请输入组件路径"));
+          return;
+        }
+        callback();
+      },
+      trigger: "blur",
+    },
+  ],
   title: [
     { required: true, message: "请输入菜单标题", trigger: "blur" },
     { min: 2, max: 50, message: "长度 2 到 50 个字符", trigger: "blur" },

@@ -5,25 +5,29 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.module_system.chat.schema import (
+    ChatConversationSchema,
     ChatGroupCreateSchema,
+    ChatGroupDetailSchema,
     ChatGroupMemberSchema,
     ChatGroupUpdateSchema,
     ChatMessageCreateSchema,
+    ChatMessageOutSchema,
+    ChatMessagePageSchema,
     ChatReadSchema,
+    ChatUserItemSchema,
 )
 from app.api.v1.module_system.chat.service import ChatService
 from app.api.v1.module_system.chat.ws_manager import chat_ws_manager
 from app.common.response import ResponseSchema, SuccessResponse
 from app.core.base_schema import AuthSchema
-from app.core.database import async_db_session
-from app.core.dependencies import _authenticate, db_getter, get_current_user
+from app.core.dependencies import db_getter, get_current_user, websocket_authenticate
 from app.core.logger import logger
 from app.core.router_class import OperationLogRoute
 
 ChatRouter = APIRouter(route_class=OperationLogRoute, prefix="/chat", tags=["系统聊天"])
 
 
-@ChatRouter.get("/conversations", summary="会话列表", response_model=ResponseSchema[list])
+@ChatRouter.get("/conversations", summary="会话列表", response_model=ResponseSchema[list[ChatConversationSchema]])
 async def get_conversations_controller(
     auth: Annotated[AuthSchema, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(db_getter)],
@@ -32,7 +36,7 @@ async def get_conversations_controller(
     return SuccessResponse(data=result, msg="获取会话列表成功")
 
 
-@ChatRouter.get("/messages", summary="历史消息", response_model=ResponseSchema[dict])
+@ChatRouter.get("/messages", summary="历史消息", response_model=ResponseSchema[ChatMessagePageSchema])
 async def get_messages_controller(
     auth: Annotated[AuthSchema, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(db_getter)],
@@ -50,7 +54,7 @@ async def get_messages_controller(
     return SuccessResponse(data=result, msg="获取历史消息成功")
 
 
-@ChatRouter.post("/messages", summary="发送消息", response_model=ResponseSchema[dict])
+@ChatRouter.post("/messages", summary="发送消息", response_model=ResponseSchema[ChatMessageOutSchema])
 async def send_message_controller(
     auth: Annotated[AuthSchema, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(db_getter)],
@@ -70,7 +74,7 @@ async def mark_read_controller(
     return SuccessResponse(msg="标记已读成功")
 
 
-@ChatRouter.get("/users", summary="用户选择器", response_model=ResponseSchema[list])
+@ChatRouter.get("/users", summary="用户选择器", response_model=ResponseSchema[list[ChatUserItemSchema]])
 async def get_chat_users_controller(
     auth: Annotated[AuthSchema, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(db_getter)],
@@ -80,7 +84,7 @@ async def get_chat_users_controller(
     return SuccessResponse(data=result, msg="获取用户列表成功")
 
 
-@ChatRouter.post("/groups", summary="创建群组", response_model=ResponseSchema[dict])
+@ChatRouter.post("/groups", summary="创建群组", response_model=ResponseSchema[ChatGroupDetailSchema])
 async def create_group_controller(
     auth: Annotated[AuthSchema, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(db_getter)],
@@ -90,7 +94,7 @@ async def create_group_controller(
     return SuccessResponse(data=result, msg="创建群组成功")
 
 
-@ChatRouter.get("/groups/{group_id}", summary="群组详情", response_model=ResponseSchema[dict])
+@ChatRouter.get("/groups/{group_id}", summary="群组详情", response_model=ResponseSchema[ChatGroupDetailSchema])
 async def get_group_detail_controller(
     auth: Annotated[AuthSchema, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(db_getter)],
@@ -154,18 +158,18 @@ async def quit_group_controller(
 
 
 @ChatRouter.websocket("/ws")
-async def chat_ws_endpoint(ws: WebSocket, token: str = Query(..., description="登录令牌")) -> None:
-    """聊天实时通道：?token=xxx 连接，发送走 REST、接收走推送。"""
-    async with async_db_session() as db:
-        try:
-            auth = await _authenticate(token, db, ws.app.state.redis)
-        except Exception:
-            await ws.close(code=4001, reason="无效令牌")
-            return
-        user_id = auth.user.id
+async def chat_ws_endpoint(ws: WebSocket) -> None:
+    """聊天实时通道：令牌通过 Sec-WebSocket-Protocol 携带（小程序可用 ?token=），发送走 REST、接收走推送。"""
+    try:
+        auth, subprotocol = await websocket_authenticate(ws)
+    except Exception as e:
+        logger.warning("聊天 WebSocket 认证失败: {}", e)
+        await ws.close(code=4001, reason="无效令牌")
+        return
+    user_id = auth.user.id
 
-    await chat_ws_manager.connect(user_id, ws)
-    await chat_ws_manager.broadcast_presence(user_id, True)
+    await chat_ws_manager.connect(user_id, ws, subprotocol=subprotocol)
+    await _broadcast_presence(user_id, True)
     logger.info("聊天 WebSocket 已连接: user={}", user_id)
     try:
         while True:
@@ -174,9 +178,14 @@ async def chat_ws_endpoint(ws: WebSocket, token: str = Query(..., description="�
                 await ws.send_text("pong")
     except WebSocketDisconnect:
         pass
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("聊天 WebSocket 异常断开: user={}, err={}", user_id, e)
     finally:
         chat_ws_manager.disconnect(user_id, ws)
-        await chat_ws_manager.broadcast_presence(user_id, False)
+        await _broadcast_presence(user_id, False)
         logger.info("聊天 WebSocket 已断开: user={}", user_id)
+
+
+async def _broadcast_presence(user_id: int, online: bool) -> None:
+    """向所有在线用户广播某用户的上线/离线状态"""
+    await chat_ws_manager.broadcast({"type": "presence", "user_id": user_id, "online": online})

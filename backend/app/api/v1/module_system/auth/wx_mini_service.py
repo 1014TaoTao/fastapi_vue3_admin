@@ -5,6 +5,7 @@
 2. get_phone_number — 用 getPhoneNumber 回调返回的 code 换取手机号（2023+ 新 API，无需 AES 解密）
 3. get_qrcode — 调用 getwxacodeunlimit 生成小程序码
 4. ensure_wx_user — 通过 openid 查找或自动注册用户
+5. wx_mini_login / wx_mini_phone_login — 登录编排（code → openid/手机号 → 用户 → JWT）
 
 所有微信 API 调用统一走 httpx.AsyncClient，access_token 通过 Redis 缓存（TTL < 7200s）。
 """
@@ -15,19 +16,21 @@ from typing import Any
 from urllib.parse import urlencode
 
 import httpx
+from fastapi import BackgroundTasks, Request
 from redis.asyncio.client import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.module_system.user.crud import UserCRUD
 from app.api.v1.module_system.user.model import UserModel
-from app.api.v1.module_system.user.schema import UserCreateSchema
-from app.api.v1.module_system.user.service import UserService
 from app.common.enums import RedisInitKeyConfig
 from app.config.setting import settings
 from app.core.base_schema import AuthSchema
 from app.core.exceptions import CustomException
 from app.core.logger import logger
 from app.core.redis_crud import RedisCURD
+
+from .schema import LoginOutSchema
+from .service import LoginService, auto_register_login_user, sanitize_login_name
 
 # 微信 API 基础地址
 _WX_API_BASE = "https://api.weixin.qq.com"
@@ -223,15 +226,9 @@ async def get_qrcode(redis: Redis, scene: str, page: str | None = None, width: i
 
 
 def _username_for_wx_mini(openid: str) -> str:
-    """生成符合注册规则的登录名：wxmini_{openid前20位}。"""
-    # openid 取前 20 位，确保总长度在 32 以内
-    raw = f"wxmini_{openid[:20]}"
-    raw = "".join(c if c.isalnum() or c in "_-." else "_" for c in raw)[:32]
-    if len(raw) < 3:
-        raw = (raw + "usr")[:32]
-    if not raw[0].isalpha():
-        raw = "w" + raw[:31]
-    return raw
+    """生成符合注册规则的登录名：wxmini_{openid前20位}（清洗规则与 OAuth 共用）。"""
+    # openid 取前 20 位，保证长度在 32 以内且生成规则长期稳定
+    return sanitize_login_name(f"wxmini_{openid[:20]}")
 
 
 async def ensure_wx_user(
@@ -277,30 +274,101 @@ async def ensure_wx_user(
             await db.flush()
         return existing
 
-    # 自动注册新用户
-    display_name = (nickname or username)[:32]
-    reg = UserCreateSchema(
+    # 自动注册新用户（随机密码 + 默认角色，与 OAuth 注册共用同一入口）
+    user = await auto_register_login_user(
+        db=db,
         username=username,
-        password=secrets.token_urlsafe(24),
-        name=display_name,
-        avatar=avatar,
+        display_name=nickname or username,
         mobile=mobile,
-        role_ids=list(settings.OAUTH_DEFAULT_ROLE_IDS),
+        avatar=avatar,
+        fail_msg="微信小程序用户注册失败",
     )
-    try:
-        await UserService(auth, db).create(data=reg)
-    except Exception:
-        # 并发创建可能触发唯一约束冲突，回退到再次查询
-        existing = await UserCRUD(auth, db).get(username=username)
-        if existing:
-            return existing
-        raise CustomException(msg="微信小程序用户注册失败")
-
-    user = await UserCRUD(auth, db).get(username=username)
-    if not user:
-        raise CustomException(msg="微信小程序用户注册失败")
     logger.info(f"微信小程序自动注册用户: {username}")
     return user
+
+
+async def get_wx_login_user(
+    *,
+    db: AsyncSession,
+    openid: str,
+    nickname: str | None = None,
+    avatar: str | None = None,
+) -> UserModel:
+    """小程序登录用户准备入口：查找/注册用户 + 状态校验 + 更新最后登录时间。"""
+    user = await ensure_wx_user(db=db, openid=openid, nickname=nickname, avatar=avatar)
+    return await LoginService.prepare_user_for_login(db=db, user=user)
+
+
+async def get_wx_phone_login_user(*, db: AsyncSession, phone: str) -> UserModel:
+    """手机号登录用户准备入口：查找用户（不存在则自动注册）+ 状态校验 + 更新最后登录时间。"""
+    user = await UserCRUD(AuthSchema(), db).get(mobile=phone)
+
+    if not user:
+        # 未找到用户 → 自动注册（以手机号派生唯一登录名）
+        username = sanitize_login_name(f"wxphone_{phone[-4:]}_{secrets.token_hex(4)}")
+        user = await auto_register_login_user(
+            db=db,
+            username=username,
+            display_name=f"用户{phone[-4:]}",
+            mobile=phone,
+            fail_msg="手机号用户注册失败",
+        )
+        logger.info(f"微信手机号自动注册用户: {username}")
+
+    return await LoginService.prepare_user_for_login(db=db, user=user)
+
+
+async def wx_mini_login(
+    *,
+    request: Request,
+    redis: Redis,
+    db: AsyncSession,
+    code: str,
+    nickname: str | None = None,
+    avatar: str | None = None,
+    background_tasks: BackgroundTasks,
+) -> LoginOutSchema:
+    """小程序登录编排：code → openid → 查找/自动注册用户 → 签发 JWT。
+
+    登录类型记为 wx_mini；归属地为待解析时由后台任务补全会话登录地点。
+    """
+    session_data = await code2session(code=code)
+    openid = session_data["openid"]
+    user = await get_wx_login_user(db=db, openid=openid, nickname=nickname, avatar=avatar)
+    token = await LoginService.create_token(
+        request=request,
+        redis=redis,
+        user=user,
+        login_type="wx_mini",
+        background_tasks=background_tasks,
+    )
+    logger.info(f"微信小程序用户登录成功: {user.username}")
+    return LoginService.build_login_out(token=token, user=user)
+
+
+async def wx_mini_phone_login(
+    *,
+    request: Request,
+    redis: Redis,
+    db: AsyncSession,
+    code: str,
+    background_tasks: BackgroundTasks,
+) -> LoginOutSchema:
+    """小程序手机号登录编排：code → 手机号 → 查找/自动注册用户 → 签发 JWT。
+
+    登录类型记为 wx_mini_phone；响应额外携带手机号字段 mobile。
+    """
+    phone = await get_phone_number(redis=redis, code=code)
+    user = await get_wx_phone_login_user(db=db, phone=phone)
+    token = await LoginService.create_token(
+        request=request,
+        redis=redis,
+        user=user,
+        login_type="wx_mini_phone",
+        background_tasks=background_tasks,
+    )
+    logger.info(f"微信手机号用户登录成功: {user.username}")
+    return LoginService.build_login_out(token=token, user=user, with_mobile=True)
 
 
 # =================================================== #
@@ -322,7 +390,7 @@ def extract_openid_from_username(username: str) -> str | None:
     """
     prefix = "wxmini_"
     if username and username.startswith(prefix):
-        return username[len(prefix):]
+        return username[len(prefix) :]
     return None
 
 

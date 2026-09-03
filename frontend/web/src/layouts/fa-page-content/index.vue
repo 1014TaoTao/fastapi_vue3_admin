@@ -61,7 +61,7 @@
  */
 import type { CSSProperties } from "vue";
 import { useMediaQuery } from "@vueuse/core";
-import { useRoute, type RouteLocationNormalizedLoaded } from "vue-router";
+import { useRoute, useRouter, type RouteLocationNormalizedLoaded } from "vue-router";
 import { useSettingsStore, useWorktabStore } from "@stores";
 
 defineOptions({ name: "FaPageContent" });
@@ -83,6 +83,7 @@ function routeLeafCacheKey(r: RouteLocationNormalizedLoaded): string {
 }
 
 const route = useRoute();
+const router = useRouter();
 /** 动态菜单 meta.keepAlive（后端 keep_alive）；仅显式 false 时不包 KeepAlive */
 const wrapPageWithKeepAlive = computed(() => route.meta.keepAlive !== false);
 
@@ -93,12 +94,32 @@ const backtopTargetKey = computed(() => (isNarrowViewport.value ? "win" : "main"
 const { pageTransition, containerWidth, refresh, showWorkTab } = storeToRefs(useSettingsStore());
 const { keepAliveExclude, opened } = storeToRefs(useWorktabStore());
 
-/** 多标签开启时：仅已打开且允许缓存的标签组件名进入 include；关闭多标签时不传 include，避免 opened 过窄误伤缓存。 */
+/** 嵌套路由壳组件名：内层叶子缓存依赖壳实例存活，include 需一并纳入（对应 routes.ts 的 NestedRouterParent） */
+const NESTED_PARENT_COMPONENT_NAME = "NestedRouterParent";
+
+/** 判断路径是否命中嵌套路由（匹配链上存在 NestedRouterParent 壳） */
+function isNestedRoutePath(path: string): boolean {
+  try {
+    return router
+      .resolve({ path })
+      .matched.some((m) => m.components?.default?.name === NESTED_PARENT_COMPONENT_NAME);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 多标签开启时：仅已打开且允许缓存的标签组件名进入 include；关闭多标签时不传 include，避免 opened 过窄误伤缓存。
+ * 嵌套路由额外把壳组件 NestedRouterParent 纳入 include，否则内层叶子缓存会随壳销毁而失效。
+ */
 const keepAliveInclude = computed(() => {
   if (!showWorkTab.value) return undefined;
   const names = new Set<string>();
   for (const t of opened.value) {
     if (t.name && t.keepAlive !== false) names.add(String(t.name));
+    if (t.keepAlive !== false && isNestedRoutePath(t.path)) {
+      names.add(NESTED_PARENT_COMPONENT_NAME);
+    }
   }
   return names.size ? Array.from(names) : undefined;
 });

@@ -1,11 +1,27 @@
+from collections.abc import Awaitable, Callable
 from typing import Any
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 
 from app.core.base_schema import AuthSchema
-from app.utils.common_util import get_child_id_map, get_child_recursion
+from app.core.logger import logger
+
+# 数据权限所需的角色范围 / 子部门查询由 api 层登记注入（core 不反向依赖 app.api.* 的 ORM 模型）。
+# 注入点必须可 await：RoleScopesLoader 返回当前用户的 data_scope 集合；
+# DeptChildrenLoader 返回某部门「含自身」的后代部门 ID 集合。
+RoleScopesLoader = Callable[[AsyncSession, int], Awaitable[set[int]]]
+DeptChildrenLoader = Callable[[AsyncSession, int], Awaitable[set[int]]]
+
+_user_role_scopes_loader: RoleScopesLoader | None = None
+_dept_children_loader: DeptChildrenLoader | None = None
+
+
+def set_data_scope_loaders(user_role_scopes: RoleScopesLoader, dept_children: DeptChildrenLoader) -> None:
+    """登记数据权限查询实现（应用启动时由 api 层调用）。"""
+    global _user_role_scopes_loader, _dept_children_loader
+    _user_role_scopes_loader = user_role_scopes
+    _dept_children_loader = dept_children
 
 
 class Permission:
@@ -35,25 +51,12 @@ class Permission:
         return await self._filter_by_data_scope()
 
     async def _filter_by_data_scope(self) -> ColumnElement | None:
-        from app.api.v1.module_system.role.model import RoleModel
-        from app.api.v1.module_system.user.model import UserModel
-
         if not hasattr(self.model, "created_id"):
             return None
-
-        stmt = select(RoleModel).join(
-            RoleModel.users
-        ).where(UserModel.id == self.auth.user.id)
-        result = await self.db.execute(stmt)
-        roles = result.scalars().all()
-
-        if not roles:
-            created_id_attr = getattr(self.model, "created_id", None)
-            if created_id_attr is not None and self.auth.user and self.auth.user.id:
-                return created_id_attr == self.auth.user.id
+        if not self.auth.user or not self.auth.user.id:
             return None
 
-        data_scopes = {role.data_scope for role in roles}
+        data_scopes = await self._load_user_data_scopes()
 
         if self.DATA_SCOPE_ALL in data_scopes:
             return None
@@ -67,8 +70,9 @@ class Permission:
                     return dept_id_attr.in_(list(accessible_dept_ids))
 
             creator_rel = getattr(self.model, "created_by", None)
-            if creator_rel is not None and hasattr(UserModel, "dept_id"):
-                return creator_rel.has(UserModel.dept_id.in_(list(accessible_dept_ids)))
+            creator_dept_col = Permission._relationship_column(creator_rel, "dept_id")
+            if creator_rel is not None and creator_dept_col is not None:
+                return creator_rel.has(creator_dept_col.in_(list(accessible_dept_ids)))
 
             created_id_attr = getattr(self.model, "created_id", None)
             if created_id_attr is not None and self.auth.user and self.auth.user.id:
@@ -90,21 +94,41 @@ class Permission:
             return created_id_attr == self.auth.user.id
         return None
 
+    @staticmethod
+    def _relationship_column(rel: Any, column: str) -> Any | None:
+        """取关系目标映射上的列对象（core 不 import 业务模型，走 mapper 反射）。"""
+        try:
+            target_model = rel.property.mapper.class_
+        except (AttributeError, TypeError):
+            return None
+        if not hasattr(target_model, column):
+            return None
+        try:
+            return getattr(target_model, column)
+        except Exception:
+            return None
+
+    async def _load_user_data_scopes(self) -> set[int]:
+        """读取当前用户角色的数据权限范围集合（未登记时按最小范围"仅本人"降级）。"""
+        if _user_role_scopes_loader is None:
+            logger.error("用户数据权限加载器未登记（set_data_scope_loaders）")
+            return set()
+        return await _user_role_scopes_loader(self.db, self.auth.user.id)
+
     async def _get_accessible_dept_ids(self, data_scopes: set) -> set[int]:
         accessible_dept_ids = set()
         user_dept_id = getattr(self.auth.user, "dept_id", None)
 
         if self.DATA_SCOPE_DEPT_AND_CHILD in data_scopes and user_dept_id is not None:
-            try:
-                from app.api.v1.module_system.dept.model import DeptModel
-
-                dept_sql = select(DeptModel)
-                dept_result = await self.db.execute(dept_sql)
-                dept_objs = dept_result.scalars().all()
-                id_map = get_child_id_map(dept_objs)
-                dept_with_children_ids = get_child_recursion(id=user_dept_id, id_map=id_map)
-                accessible_dept_ids.update(dept_with_children_ids)
-            except Exception:
+            if _dept_children_loader is None:
+                logger.error("子部门数据权限加载器未登记（set_data_scope_loaders）")
                 accessible_dept_ids.add(user_dept_id)
+            else:
+                try:
+                    accessible_dept_ids.update(await _dept_children_loader(self.db, user_dept_id))
+                except Exception as e:
+                    # 降级为「仅本部门」（最小授权），留日志避免子部门越权范围被静默扩大/缩小不可见
+                    logger.warning(f"子部门数据权限计算失败，降级为本部门范围: {e}")
+                    accessible_dept_ids.add(user_dept_id)
 
         return accessible_dept_ids

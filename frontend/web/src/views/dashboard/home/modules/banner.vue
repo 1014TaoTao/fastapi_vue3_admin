@@ -38,7 +38,8 @@
           <div>
             <div class="text-base font-semibold text-g-800">{{ currentUser.name }}</div>
             <div class="text-xs text-g-600">
-              {{ currentUser.dept_name }} · {{ currentUser.description }} · {{ currentUser.last_login }}
+              {{ currentUser.dept_name }} · {{ currentUser.description }} ·
+              {{ currentUser.last_login }}
             </div>
           </div>
         </div>
@@ -66,7 +67,7 @@
           text: '开始探索',
           color: 'var(--fa-success)',
           textColor: '#fff',
-          radius: '6px'
+          radius: '6px',
         }"
         @buttonClick="handleBannerClick"
       />
@@ -82,10 +83,10 @@
           show: true,
           text: '立即参与',
           color: '#FF5A89',
-          textColor: '#fff'
+          textColor: '#fff',
         }"
         :imageConfig="{
-          src: icon3
+          src: icon3,
         }"
       />
     </ElCarouselItem>
@@ -95,7 +96,7 @@
         height="100%"
         boxStyle="!bg-[#70B1FF]"
         :imageConfig="{
-          src: icon5
+          src: icon5,
         }"
       >
         <template #title>
@@ -104,9 +105,9 @@
 
         <template #subtitle>
           <div style="margin-top: 12px">
-            <p style="position: relative; z-index: 10; font-style: italic"
-              >灵活配置，强大扩展，支持自定义插槽内容</p
-            >
+            <p style="position: relative; z-index: 10; font-style: italic">
+              灵活配置，强大扩展，支持自定义插槽内容
+            </p>
           </div>
         </template>
 
@@ -126,7 +127,6 @@
       <FaBasicBanner v-bind="PresetBanners.info" height="100%" />
     </ElCarouselItem>
   </ElCarousel>
-
 </template>
 
 <script setup lang="ts">
@@ -135,8 +135,8 @@ import bannerCover from "@imgs/login/lf_icon2.webp";
 import { useUserStore } from "@stores";
 import { greetings } from "@utils";
 import { UserFilled } from "@element-plus/icons-vue";
-import icon3 from '@imgs/3d/icon3.webp'
-import icon5 from '@imgs/3d/icon7.webp'
+import icon3 from "@imgs/3d/icon3.webp";
+import icon5 from "@imgs/3d/icon7.webp";
 
 const userStore = useUserStore();
 
@@ -144,7 +144,7 @@ const userInfo = computed(() => userStore.basicInfo);
 
 const handleBannerClick = (): void => {
   // TODO: 接入真实跳转或路由
-  console.log('banner clicked')
+  console.log("banner clicked");
 };
 
 const timefix = greetings();
@@ -168,32 +168,32 @@ const bannerSubtitle = `基于 FastAPI + Vue3 + TypeScript 构建的企业级中
  */
 const PresetBanners = {
   marketing: {
-    title: '限时优惠活动',
-    subtitle: '精选商品 48 小时闪购，最高享受 7 折优惠，数量有限！',
-    titleColor: 'var(--fa-gray-900)',
-    subtitleColor: 'var(--fa-gray-900)',
-    boxStyle: '!bg-success/15',
+    title: "限时优惠活动",
+    subtitle: "精选商品 48 小时闪购，最高享受 7 折优惠，数量有限！",
+    titleColor: "var(--fa-gray-900)",
+    subtitleColor: "var(--fa-gray-900)",
+    boxStyle: "!bg-success/15",
     meteorConfig: { enabled: true, count: 15 },
     buttonConfig: {
       show: true,
-      text: '立即抢购',
-      color: 'var(--fa-success)',
-      textColor: '#fff'
-    }
+      text: "立即抢购",
+      color: "var(--fa-success)",
+      textColor: "#fff",
+    },
   },
   info: {
-    title: '服务到期提醒',
-    subtitle: '您的高级服务将在 7 天后到期，请及时续费以继续享受完整功能。',
-    titleColor: 'var(--fa-gray-900)',
-    subtitleColor: 'var(--fa-gray-900)',
-    boxStyle: '!bg-theme/15',
+    title: "服务到期提醒",
+    subtitle: "您的高级服务将在 7 天后到期，请及时续费以继续享受完整功能。",
+    titleColor: "var(--fa-gray-900)",
+    subtitleColor: "var(--fa-gray-900)",
+    boxStyle: "!bg-theme/15",
     meteorConfig: { enabled: true, count: 15 },
     buttonConfig: {
       show: true,
-      text: '立即续费',
-      color: 'var(--fa-secondary)',
-      textColor: '#fff'
-    }
-  }
-} as const
+      text: "立即续费",
+      color: "var(--fa-secondary)",
+      textColor: "#fff",
+    },
+  },
+} as const;
 </script>

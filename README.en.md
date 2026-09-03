@@ -57,7 +57,7 @@ English | [简体中文](./README.md)
 git clone https://github.com/fastapiadmin/FastapiAdmin.git
 
 # 2. Configure environments
-cp backend/env/.env.dev.example backend/env/.env.dev
+cp backend/env/.env.example backend/env/.env.dev
 cp frontend/web/.env.development.example frontend/web/.env.development
 
 # 3. Start backend (auto-creates tables + seed data on first run)

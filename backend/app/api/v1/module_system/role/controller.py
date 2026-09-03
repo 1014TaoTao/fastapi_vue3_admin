@@ -109,7 +109,7 @@ async def export_role_list_controller(
     search: Annotated[RoleQueryParam, Body()],
 ) -> StreamingResponse:
     role_query_result = await RoleService(auth, db).get_list(search=search)
-    role_export_result = RoleService.export_list(role_list=[item.model_dump() for item in role_query_result])
+    role_export_result = await RoleService.export_list(role_list=[item.model_dump() for item in role_query_result])
 
     return StreamResponse(
         data=bytes2file_response(role_export_result),

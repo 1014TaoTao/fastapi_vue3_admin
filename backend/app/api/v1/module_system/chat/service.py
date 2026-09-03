@@ -10,10 +10,15 @@ from app.core.base_schema import AuthSchema
 from .crud import ChatGroupCRUD, ChatGroupMemberCRUD, ChatGroupReadCRUD, ChatMessageCRUD
 from .model import ChatGroupMemberModel, ChatGroupModel, ChatGroupReadModel, ChatMessageModel
 from .schema import (
+    ChatConversationSchema,
     ChatGroupCreateSchema,
+    ChatGroupDetailSchema,
     ChatGroupUpdateSchema,
     ChatMessageCreateSchema,
+    ChatMessageOutSchema,
+    ChatMessagePageSchema,
     ChatReadSchema,
+    ChatUserItemSchema,
 )
 
 PAGE_SIZE = 20
@@ -36,15 +41,15 @@ class ChatService:
 
     # ── 会话列表 ──────────────────────────────────────────────────
 
-    async def conversations(self) -> list[dict]:
+    async def conversations(self) -> list[ChatConversationSchema]:
         me = self._user_id
-        conversations: list[dict] = []
+        conversations: list[ChatConversationSchema] = []
         conversations.extend(await self._private_conversations(me))
         conversations.extend(await self._group_conversations(me))
-        conversations.sort(key=lambda item: item["last_time"] or "", reverse=True)
+        conversations.sort(key=lambda item: item.last_time or "", reverse=True)
         return conversations
 
-    async def _private_conversations(self, me: int) -> list[dict]:
+    async def _private_conversations(self, me: int) -> list[ChatConversationSchema]:
         peer_expr = case(
             (ChatMessageModel.sender_id == me, ChatMessageModel.receiver_id),
             else_=ChatMessageModel.sender_id,
@@ -97,28 +102,28 @@ class ChatService:
         )
         user_by_id = {u.id: u for u in users}
 
-        items: list[dict] = []
+        items: list[ChatConversationSchema] = []
         for peer_id in peer_ids:
             user = user_by_id.get(peer_id)
             if user is None:
                 continue
             last = msg_by_id.get(last_by_peer[peer_id])
             items.append(
-                {
-                    "id": peer_id,
-                    "conversation_type": 1,
-                    "name": user.name,
-                    "avatar": user.avatar,
-                    "online": chat_ws_manager.is_online(peer_id),
-                    "member_count": 0,
-                    "last_message": last.content if last else None,
-                    "last_time": last.created_time.isoformat() if last else None,
-                    "unread": unread_by_peer.get(peer_id, 0),
-                }
+                ChatConversationSchema(
+                    id=peer_id,
+                    conversation_type=1,
+                    name=user.name,
+                    avatar=user.avatar,
+                    online=chat_ws_manager.is_online(peer_id),
+                    member_count=0,
+                    last_message=last.content if last else None,
+                    last_time=last.created_time.isoformat() if last else None,
+                    unread=unread_by_peer.get(peer_id, 0),
+                )
             )
         return items
 
-    async def _group_conversations(self, me: int) -> list[dict]:
+    async def _group_conversations(self, me: int) -> list[ChatConversationSchema]:
         groups = (
             (
                 await self.db.execute(
@@ -201,28 +206,28 @@ class ChatService:
         ).all()
         unread_by_group = {int(group_id): int(count) for group_id, count in unread_rows}
 
-        items: list[dict] = []
+        items: list[ChatConversationSchema] = []
         for group_id in group_ids:
             group = group_by_id[group_id]
             last = msg_by_id.get(last_by_group.get(group_id, 0))
             items.append(
-                {
-                    "id": group_id,
-                    "conversation_type": 2,
-                    "name": group.name,
-                    "avatar": group.avatar,
-                    "online": False,
-                    "member_count": count_by_group.get(group_id, 0),
-                    "last_message": last.content if last else None,
-                    "last_time": last.created_time.isoformat() if last else None,
-                    "unread": unread_by_group.get(group_id, 0),
-                }
+                ChatConversationSchema(
+                    id=group_id,
+                    conversation_type=2,
+                    name=group.name,
+                    avatar=group.avatar,
+                    online=False,
+                    member_count=count_by_group.get(group_id, 0),
+                    last_message=last.content if last else None,
+                    last_time=last.created_time.isoformat() if last else None,
+                    unread=unread_by_group.get(group_id, 0),
+                )
             )
         return items
 
     # ── 历史消息 ──────────────────────────────────────────────────
 
-    async def messages(self, conversation_type: int, receiver_id: int, before_id: int | None, page_size: int) -> dict:
+    async def messages(self, conversation_type: int, receiver_id: int, before_id: int | None, page_size: int) -> ChatMessagePageSchema:
         me = self._user_id
         stmt = select(ChatMessageModel).where(ChatMessageModel.is_deleted == False)  # noqa: E712
         if conversation_type == 1:
@@ -253,27 +258,18 @@ class ChatService:
         )
         sender_by_id = {u.id: u for u in senders}
 
-        items = []
+        items: list[ChatMessageOutSchema] = []
         for m in rows:
             sender = sender_by_id.get(m.sender_id)
-            items.append(
-                {
-                    "id": m.id,
-                    "conversation_type": m.conversation_type,
-                    "sender_id": m.sender_id,
-                    "sender_name": sender.name if sender else "",
-                    "sender_avatar": sender.avatar if sender else None,
-                    "receiver_id": m.receiver_id,
-                    "content": m.content,
-                    "status": m.status,
-                    "created_time": m.created_time.isoformat(),
-                }
-            )
-        return {"items": items, "has_more": has_more}
+            out = ChatMessageOutSchema.model_validate(m)
+            out.sender_name = sender.name if sender else ""
+            out.sender_avatar = sender.avatar if sender else None
+            items.append(out)
+        return ChatMessagePageSchema(items=items, has_more=has_more)
 
     # ── 发送消息 ──────────────────────────────────────────────────
 
-    async def send_message(self, data: ChatMessageCreateSchema) -> dict:
+    async def send_message(self, data: ChatMessageCreateSchema) -> ChatMessageOutSchema:
         me = self._user_id
         if data.conversation_type == 1:
             if data.receiver_id == me:
@@ -327,21 +323,15 @@ class ChatService:
                 "content": data.content.strip(),
             }
         )
-        message = self._to_message_dict(obj)
-        await chat_ws_manager.send_to_users(target_ids, {"type": "message", "data": message})
+        message = self._to_message(obj)
+        await chat_ws_manager.send_to_users(target_ids, {"type": "message", "data": message.model_dump(mode="json")})
         return message
 
-    @staticmethod
-    def _to_message_dict(m: ChatMessageModel) -> dict:
-        return {
-            "id": m.id,
-            "conversation_type": m.conversation_type,
-            "sender_id": m.sender_id,
-            "receiver_id": m.receiver_id,
-            "content": m.content,
-            "status": m.status,
-            "created_time": m.created_time.isoformat(),
-        }
+    def _to_message(self, m: ChatMessageModel) -> ChatMessageOutSchema:
+        out = ChatMessageOutSchema.model_validate(m)
+        out.sender_name = self.auth.user.name
+        out.sender_avatar = self.auth.user.avatar
+        return out
 
     # ── 标记已读 ──────────────────────────────────────────────────
 
@@ -358,7 +348,6 @@ class ChatService:
                 )
                 .values(status=1)
             )
-            await self.db.commit()
             await chat_ws_manager.send_to_user(
                 data.receiver_id,
                 {"type": "read", "conversation_type": 1, "peer_id": me, "target_id": me},
@@ -387,7 +376,6 @@ class ChatService:
             )
             if existing:
                 existing.last_read_msg_id = max_id
-                await self.db.commit()
             else:
                 await self.read_crud.create(
                     data={"user_id": me, "group_id": data.receiver_id, "last_read_msg_id": max_id}
@@ -395,21 +383,17 @@ class ChatService:
 
     # ── 用户选择器 ──────────────────────────────────────────────────
 
-    async def users(self, keyword: str | None) -> list[dict]:
+    async def users(self, keyword: str | None) -> list[ChatUserItemSchema]:
         me = self._user_id
         stmt = select(UserModel).where(UserModel.is_deleted == False)  # noqa: E712
         if keyword:
             stmt = stmt.where(or_(UserModel.name.like(f"%{keyword}%"), UserModel.username.like(f"%{keyword}%")))
         rows = (await self.db.execute(stmt.order_by(UserModel.id).limit(100))).scalars().all()
-        return [
-            {"id": u.id, "name": u.name, "username": u.username, "avatar": u.avatar}
-            for u in rows
-            if u.id != me
-        ]
+        return [ChatUserItemSchema.model_validate(u) for u in rows if u.id != me]
 
     # ── 群管理 ──────────────────────────────────────────────────
 
-    async def create_group(self, data: ChatGroupCreateSchema) -> dict:
+    async def create_group(self, data: ChatGroupCreateSchema) -> ChatGroupDetailSchema:
         me = self._user_id
         member_ids = {int(uid) for uid in data.member_ids if int(uid) != me}
         if member_ids:
@@ -437,10 +421,10 @@ class ChatService:
             await self.member_crud.create(data={"group_id": group.id, "user_id": uid})
         return await self._group_detail(group.id)
 
-    async def group_detail(self, group_id: int) -> dict:
+    async def group_detail(self, group_id: int) -> ChatGroupDetailSchema:
         return await self._group_detail(group_id)
 
-    async def _group_detail(self, group_id: int) -> dict:
+    async def _group_detail(self, group_id: int) -> ChatGroupDetailSchema:
         group = (
             (
                 await self.db.execute(
@@ -468,17 +452,15 @@ class ChatService:
             .scalars()
             .all()
         )
-        return {
-            "id": group.id,
-            "name": group.name,
-            "avatar": group.avatar,
-            "announcement": group.announcement,
-            "owner_id": group.owner_id,
-            "member_count": len(members),
-            "members": [
-                {"id": u.id, "name": u.name, "username": u.username, "avatar": u.avatar} for u in members
-            ],
-        }
+        return ChatGroupDetailSchema(
+            id=group.id,
+            name=group.name,
+            avatar=group.avatar,
+            announcement=group.announcement,
+            owner_id=group.owner_id,
+            member_count=len(members),
+            members=[ChatUserItemSchema.model_validate(u) for u in members],
+        )
 
     async def update_group(self, group_id: int, data: ChatGroupUpdateSchema) -> None:
         group = await self._get_group_or_404(group_id)
@@ -489,7 +471,6 @@ class ChatService:
             group.avatar = data.avatar
         if data.announcement is not None:
             group.announcement = data.announcement
-        await self.db.commit()
 
     async def delete_group(self, group_id: int) -> None:
         group = await self._get_group_or_404(group_id)

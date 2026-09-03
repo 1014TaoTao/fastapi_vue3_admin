@@ -1,9 +1,9 @@
+from collections.abc import Sequence
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.module_system.position.crud import PositionCRUD
-from app.api.v1.module_system.role.crud import RoleCRUD
 from app.core.base_crud import CRUDBase
 from app.core.base_schema import AuthSchema
 
@@ -36,21 +36,15 @@ class UserCRUD(CRUDBase[UserModel, UserCreateSchema, UserUpdateSchema]):
         """
         await self.set([id], last_login=datetime.now())
 
-    async def set_user_roles(self, user_ids: list[int], role_ids: list[int]) -> None:
-        """批量设置用户角色"""
-        user_objs = await self.get_list(search={"id": ("in", user_ids)}, preload=["roles"])
-        role_objs = [] if not role_ids else await RoleCRUD(self.auth, self.db).get_list(search={"id": ("in", role_ids)})
-
+    async def set_user_roles(self, user_objs: Sequence[UserModel], role_objs: Sequence[Any]) -> None:
+        """替换用户的角色关联（纯数据操作；目标对象加载与校验由 Service 完成）"""
         for obj in user_objs:
             obj.roles.clear()
             obj.roles.extend(role_objs)
         await self.db.flush()
 
-    async def set_user_positions(self, user_ids: list[int], position_ids: list[int]) -> None:
-        """批量设置用户岗位"""
-        user_objs = await self.get_list(search={"id": ("in", user_ids)}, preload=["positions"])
-        position_objs = [] if not position_ids else await PositionCRUD(self.auth, self.db).get_list(search={"id": ("in", position_ids)})
-
+    async def set_user_positions(self, user_objs: Sequence[UserModel], position_objs: Sequence[Any]) -> None:
+        """替换用户的岗位关联（纯数据操作；目标对象加载与校验由 Service 完成）"""
         for obj in user_objs:
             obj.positions.clear()
             obj.positions.extend(position_objs)

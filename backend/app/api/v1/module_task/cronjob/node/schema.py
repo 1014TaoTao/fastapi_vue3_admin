@@ -69,6 +69,14 @@ class NodeQueryParam(BaseQueryParam, UserByQueryParam):
     status: int | None = Field(None, ge=0, le=1, description="状态(0:启动 1:停用)", json_schema_extra={"q": "eq"})
 
 
+class NodeExecuteResultSchema(BaseModel):
+    """调试节点执行结果"""
+
+    job_id: int = Field(..., description="任务ID")
+    status: str = Field(..., description="执行状态")
+    trigger: str = Field(..., description="触发方式")
+
+
 class NodeExecuteSchema(BaseModel):
     """节点执行参数"""
 

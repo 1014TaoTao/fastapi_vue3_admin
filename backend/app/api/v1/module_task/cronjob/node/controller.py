@@ -9,13 +9,13 @@ from app.core.base_schema import AuthSchema, BatchSetAvailable, PageResultSchema
 from app.core.dependencies import AuthPermission, db_getter
 from app.core.router_class import OperationLogRoute
 
-from .schema import NodeCreateSchema, NodeExecuteSchema, NodeOutSchema, NodeQueryParam, NodeUpdateSchema
+from .schema import NodeCreateSchema, NodeExecuteResultSchema, NodeExecuteSchema, NodeOutSchema, NodeQueryParam, NodeUpdateSchema
 from .service import NodeService
 
 NodeRouter = APIRouter(route_class=OperationLogRoute, prefix="/cronjob/node", tags=["定时任务节点管理"])
 
 
-@NodeRouter.get("/options", summary="获取定时任务节点列表", response_model=ResponseSchema[list[dict]])
+@NodeRouter.get("/options", summary="获取定时任务节点列表", response_model=ResponseSchema[list[NodeOutSchema]])
 async def get_node_options_controller(
     auth: Annotated[AuthSchema, Security(AuthPermission(["module_task:cronjob:node:query"]))],
     db: Annotated[AsyncSession, Depends(db_getter)],
@@ -97,7 +97,7 @@ async def clear_obj_controller(
     return SuccessResponse(msg="清空节点成功")
 
 
-@NodeRouter.post("/execute/{id}", summary="调试节点", response_model=ResponseSchema[dict])
+@NodeRouter.post("/execute/{id}", summary="调试节点", response_model=ResponseSchema[NodeExecuteResultSchema])
 async def execute_job_controller(
     auth: Annotated[AuthSchema, Security(AuthPermission(["module_task:cronjob:node:execute"]))],
     id: Annotated[int, Path(description="节点ID")],

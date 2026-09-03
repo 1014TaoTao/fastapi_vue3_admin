@@ -12,8 +12,14 @@ from pydantic import (
 
 from app.api.v1.module_system.menu.schema import MenuTreeOutSchema
 from app.api.v1.module_system.role.schema import RoleOutSchema
+from app.config.setting import settings
 from app.core.base_schema import BaseQueryParam, BaseSchema, CommonSchema, CoreUserSchema, UserByQueryParam, UserBySchema
-from app.core.validator import DateTimeStr, email_validator, mobile_validator
+from app.core.validator import DateTimeStr, email_validator, mobile_validator, password_validator
+
+PASSWORD_FIELD_DESC = (
+    f"密码（{settings.PASSWORD_MIN_LENGTH}-{settings.PASSWORD_MAX_LENGTH} 位，"
+    "需包含字母、数字、符号中的至少两类）"
+)
 
 
 class CurrentUserUpdateSchema(BaseModel):
@@ -24,6 +30,7 @@ class CurrentUserUpdateSchema(BaseModel):
     email: EmailStr | None = Field(default=None, description="邮箱")
     gender: str | None = Field(default=None, max_length=1, description="性别(0:男 1:女 2:未知)")
     avatar: str | None = Field(default=None, max_length=255, description="头像")
+    description: str | None = Field(default=None, max_length=500, description="描述")
 
     @field_validator("mobile")
     @classmethod
@@ -70,7 +77,7 @@ class UserForgetPasswordSchema(BaseModel):
     """忘记密码"""
 
     username: str = Field(..., min_length=3, max_length=32, description="用户名")
-    new_password: str = Field(..., min_length=6, max_length=128, description="新密码")
+    new_password: str = Field(..., description=PASSWORD_FIELD_DESC)
 
     @field_validator("username")
     @classmethod
@@ -87,46 +94,40 @@ class UserForgetPasswordSchema(BaseModel):
     @field_validator("new_password")
     @classmethod
     def validate_new_password(cls, value: str):
-        """校验密码：6-128 位"""
-        if len(value) < 6:
-            raise ValueError("密码长度不能少于 6 位")
-        if len(value) > 128:
-            raise ValueError("密码长度不能超过 128 位")
-        return value
+        """校验新密码：长度与复杂度"""
+        return password_validator(value)
 
 
 class UserChangePasswordSchema(BaseModel):
     """修改密码"""
 
-    old_password: str = Field(..., min_length=6, max_length=128, description="旧密码")
-    new_password: str = Field(..., min_length=6, max_length=128, description="新密码")
+    old_password: str = Field(..., description="旧密码")
+    new_password: str = Field(..., description=PASSWORD_FIELD_DESC)
+
+    @field_validator("old_password")
+    @classmethod
+    def validate_old_password(cls, value: str):
+        """校验旧密码：只校验长度，避免历史弱口令用户无法主动换掉弱口令"""
+        return password_validator(value, check_strength=False)
 
     @field_validator("new_password")
     @classmethod
     def validate_new_password(cls, value: str):
-        """校验新密码：6-128 位"""
-        if len(value) < 6:
-            raise ValueError("新密码长度不能少于 6 位")
-        if len(value) > 128:
-            raise ValueError("新密码长度不能超过 128 位")
-        return value
+        """校验新密码：长度与复杂度"""
+        return password_validator(value, label="新密码")
 
 
 class ResetPasswordSchema(BaseModel):
     """重置密码"""
 
     id: int = Field(default=0, description="主键ID（已弃用，由路径参数传入）")
-    password: str = Field(..., min_length=6, max_length=128, description="新密码")
+    password: str = Field(..., description=PASSWORD_FIELD_DESC)
 
     @field_validator("password")
     @classmethod
     def validate_password(cls, value: str):
-        """校验新密码：6-128 位"""
-        if len(value) < 6:
-            raise ValueError("新密码长度不能少于 6 位")
-        if len(value) > 128:
-            raise ValueError("新密码长度不能超过 128 位")
-        return value
+        """校验新密码：长度与复杂度"""
+        return password_validator(value, label="新密码")
 
 
 class UserCreateSchema(CurrentUserUpdateSchema):
@@ -134,7 +135,7 @@ class UserCreateSchema(CurrentUserUpdateSchema):
     """
 
     username: str | None = Field(default=None, max_length=32, description="用户名")
-    password: str | None = Field(default=None, min_length=6, max_length=128, description="密码")
+    password: str | None = Field(default=None, description=PASSWORD_FIELD_DESC)
     status: int = Field(default=0, ge=0, le=1, description="状态(0:启动 1:停用)")
     description: str | None = Field(default=None, max_length=255, description="备注")
     is_superuser: bool | None = Field(default=False, description="是否超管")
@@ -165,19 +166,15 @@ class UserCreateSchema(CurrentUserUpdateSchema):
     @field_validator("password")
     @classmethod
     def validate_password(cls, value: str | None):
-        """校验密码：6-128 位"""
-        if value and len(value) < 6:
-            raise ValueError("密码长度不能少于 6 位")
-        if value and len(value) > 128:
-            raise ValueError("密码长度不能超过 128 位")
-        return value
+        """校验密码：长度与复杂度（未填写则跳过）"""
+        return password_validator(value)
 
 
 class UserRegisterSchema(BaseModel):
     """用户注册"""
 
     username: str = Field(..., min_length=3, max_length=32, description="用户名")
-    password: str = Field(..., min_length=6, max_length=128, description="密码")
+    password: str = Field(..., description=PASSWORD_FIELD_DESC)
     email: EmailStr | None = Field(default=None, description="邮箱")
     name: str | None = Field(default=None, max_length=32, description="名称")
 
@@ -196,12 +193,8 @@ class UserRegisterSchema(BaseModel):
     @field_validator("password")
     @classmethod
     def validate_password(cls, value: str):
-        """校验密码：6-128 位"""
-        if len(value) < 6:
-            raise ValueError("密码长度不能少于 6 位")
-        if len(value) > 128:
-            raise ValueError("密码长度不能超过 128 位")
-        return value
+        """校验密码：长度与复杂度"""
+        return password_validator(value)
 
 
 class UserUpdateSchema(CurrentUserUpdateSchema):
@@ -210,7 +203,7 @@ class UserUpdateSchema(CurrentUserUpdateSchema):
     model_config = ConfigDict(from_attributes=True)
 
     username: str | None = Field(default=None, max_length=32, description="用户名")
-    password: str | None = Field(default=None, min_length=6, max_length=128, description="密码")
+    password: str | None = Field(default=None, description=PASSWORD_FIELD_DESC)
     status: int | None = Field(default=None, ge=0, le=1, description="状态(0:启动 1:停用)")
     description: str | None = Field(default=None, max_length=255, description="备注")
     dept_id: int | None = Field(default=None, description="部门ID")
@@ -224,6 +217,12 @@ class UserUpdateSchema(CurrentUserUpdateSchema):
         if value is not None and value not in {0, 1}:
             raise ValueError("状态仅支持 0(正常) 或 1(禁用)")
         return value
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, value: str | None):
+        """校验密码：长度与复杂度（未填写表示不改密码）"""
+        return password_validator(value)
 
     @field_validator("username")
     @classmethod

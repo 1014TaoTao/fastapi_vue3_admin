@@ -1,9 +1,11 @@
 import asyncio
-from logging.config import fileConfig
+import warnings
 
 from alembic import context
-from sqlalchemy import pool
+from alembic.runtime.migration import MigrationContext
+from sqlalchemy import pool, text
 from sqlalchemy.engine import Connection
+from sqlalchemy.exc import SAWarning
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.config.path_conf import ALEMBIC_VERSION_DIR
@@ -11,58 +13,26 @@ from app.config.setting import settings
 from app.core.base_model import MappedBase
 from app.utils.import_util import ImportUtil
 
-# 确保 alembic 版本目录存在
 ALEMBIC_VERSION_DIR.mkdir(parents=True, exist_ok=True)
 
-# 清除MappedBase.metadata中的表定义，避免重复注册
-if hasattr(MappedBase, "metadata") and MappedBase.metadata.tables:
-    print(f"🧹 清除已存在的表定义，当前有 {len(MappedBase.metadata.tables)} 个表")
-    # 创建一个新的空metadata对象
-    from sqlalchemy import MetaData
-
-    MappedBase.metadata = MetaData()
-    print("✅️ 已重置metadata")
-
-# 自动查找所有模型
 print("🔍 开始查找模型...")
 found_models = ImportUtil.find_models(MappedBase)
 print(f"📊 找到 {len(found_models)} 个有效模型")
 
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
 alembic_config = context.config
 
-# Interpret the config file for Python logging.
-# This line sets up loggers basically.
-if alembic_config.config_file_name is not None:
-    fileConfig(alembic_config.config_file_name)
+warnings.filterwarnings(
+    "ignore",
+    message=r"Cannot correctly sort tables.*",
+    category=SAWarning,
+)
 
-# add your model's MetaData object here
-# for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
 target_metadata = MappedBase.metadata
-
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
 alembic_config.set_main_option("sqlalchemy.url", settings.ASYNC_DB_URI)
 
 
 def run_migrations_offline() -> None:
-    """Run migrations in 'offline' mode.
-
-    This configures the context with just a URL
-    and not an Engine, though an Engine is acceptable
-    here as well.  By skipping the Engine creation
-    we don't even need a DBAPI to be available.
-
-    Calls to context.execute() here emit the given string to the
-    script output.
-
-    返回:
-    - None
+    """离线模式运行迁移
     """
     url = alembic_config.get_main_option("sqlalchemy.url")
     # 确保URL不为None
@@ -81,13 +51,7 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    """Run migrations in 'online' mode.
-
-    In this scenario we need to create an Engine
-    and associate a connection with the context.
-
-    返回:
-    - None
+    """异步模式运行迁移
     """
     url = alembic_config.get_main_option("sqlalchemy.url")
     # 确保URL不为None
@@ -102,7 +66,13 @@ def run_migrations_online() -> None:
         await connectable.dispose()
 
     def do_run_migrations(connection: Connection) -> None:
-        def process_revision_directives(context, revision, directives) -> None:
+        # MySQL 建表时外键引用的表必须已存在；sys_dept/sys_user 循环外键（互相引用）无法顺序建表，
+        # PG/SQLite 支持 forward reference 无此限制。执行迁移时对 MySQL 临时关闭外键检查，
+        # 该变量为会话级，连接关闭后自动恢复，不影响运行时。
+        if connection.dialect.name == "mysql":
+            connection.execute(text("SET FOREIGN_KEY_CHECKS=0"))
+
+        def process_revision_directives(context: MigrationContext, revision: str, directives: list) -> None:
             script = directives[0]
 
             # 检查所有操作集是否为空
@@ -115,17 +85,28 @@ def run_migrations_online() -> None:
             else:
                 print("✅️ 检测到模型变更，生成迁移文件")
 
+        def include_name(name, type_, parent_names) -> bool:
+            # 只对 MappedBase 中存在的表做 autogenerate 对比，自动忽略数据库中的非模型表
+            # （apscheduler_jobs、alembic_version 及未来新增的任何非模型表），
+            # 避免被误判为多余表而生成 DROP。官方推荐范式（include_name 过滤表名），
+            # 优于逐个硬编码排除。
+            if type_ == "table":
+                return name in target_metadata.tables
+            return True
+
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
             compare_type=True,
             compare_server_default=True,
             transaction_per_migration=True,
+            include_name=include_name,
             process_revision_directives=process_revision_directives,
         )
 
-        with context.begin_transaction():
-            context.run_migrations()
+
+        context.run_migrations()
+        connection.commit()
 
     asyncio.run(run_async_migrations())
 

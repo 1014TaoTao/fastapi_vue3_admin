@@ -82,7 +82,7 @@ python main.py upgrade --env=dev
 
 | 文件 | 说明 |
 |------|------|
-| `env/.env.dev.example` | 开发环境模板 |
+| `env/.env.example` | 开发环境模板 |
 | `env/.env.dev` | 开发环境（需自行创建） |
 | `env/.env.prod.example` | 生产环境模板 |
 

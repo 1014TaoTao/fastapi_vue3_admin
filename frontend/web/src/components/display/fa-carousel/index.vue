@@ -14,11 +14,7 @@
           :style="{ backgroundColor: item.color || '#f0f0f0' }"
         >
           <template v-if="item.image">
-            <img
-              :src="item.image"
-              :alt="item.label"
-              class="max-h-full max-w-full object-contain"
-            />
+            <img :src="item.image" :alt="item.label" class="max-h-full max-w-full object-contain" />
           </template>
           <template v-else>
             <div class="fa-carousel__content text-center px-4">

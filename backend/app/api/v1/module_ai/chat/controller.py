@@ -8,8 +8,7 @@ from redis.asyncio import Redis
 
 from app.common.response import ResponseSchema, SuccessResponse
 from app.core.base_schema import AuthSchema, PaginationQueryParam
-from app.core.database import async_db_session
-from app.core.dependencies import AuthPermission, _authenticate, redis_getter
+from app.core.dependencies import AuthPermission, redis_getter, websocket_authenticate
 from app.core.exceptions import CustomException
 from app.core.logger import logger
 from app.core.router_class import OperationLogRoute
@@ -114,7 +113,7 @@ async def list_model_config_controller(
     auth: Annotated[AuthSchema, Security(AuthPermission(["module_ai:chat:query"]))],
 ) -> JSONResponse:
     service = AiModelConfigService(auth, redis)
-    result = await service.list()
+    result = await service.list_configs()
     return SuccessResponse(data=result, msg="获取模型配置列表成功")
 
 
@@ -186,37 +185,21 @@ async def websocket_chat_controller(websocket: WebSocket) -> None:
     - 对话：{"message": "...", "session_id": "...", "files": [...]}
     - 停止：{"action": "stop", "session_id": "..."}
 
-    ws://127.0.0.1:8001/api/v1/ai/chat/ws?token=xxx
-    """
-    # 接收客户端 subprotocol：约定客户端在 Sec-WebSocket-Protocol 中以 "access_token.<jwt>" 携带
-    # 推荐方式：subprotocol 不会进 URL，不出现在 Nginx access log / 浏览器历史 / 抓包日志
-    # 同时兼容旧版：用 query_params 传 token（不推荐，仅作向后兼容）
-    #
-    # 浏览器侧示例：
-    #   new WebSocket(url, ["access_token", "access_token." + jwt])
-    # Python websocket-client 示例：
-    #   websockets.connect(url, subprotocols=["access_token", f"access_token.{jwt}"])
-    token = None
-    use_subprotocol = False
-    if websocket.headers.get("sec-websocket-protocol"):
-        for proto in websocket.headers["sec-websocket-protocol"].split(","):
-            proto = proto.strip()
-            if proto.startswith("access_token."):
-                token = proto[len("access_token.") :]
-                use_subprotocol = True
-                break
-    if not token:
-        # 旧版/非浏览器客户端兼容：保留 query ?token=
-        token = websocket.query_params.get("token")
+    ws://127.0.0.1:8001/api/v1/ai/chat/ws
 
-    if not token:
-        await _send_error_and_close(websocket, "未提供认证token，请重新登录")
+    令牌优先通过 Sec-WebSocket-Protocol 携带（不会进入网关/服务的 access log）：
+      new WebSocket(url, ["access_token", "access_token." + jwt])
+    小程序等无法自定义子协议的客户端，可用 ?token= 兜底。
+    """
+    # 握手阶段完成认证；未 accept 前无法发送业务报文，失败直接关闭
+    try:
+        auth, subprotocol = await websocket_authenticate(websocket)
+    except Exception as e:
+        logger.warning("WebSocket认证失败: {}", e)
+        await websocket.close(code=4001, reason="无效令牌")
         return
 
-    if use_subprotocol:
-        await websocket.accept(subprotocol="access_token")
-    else:
-        await websocket.accept()
+    await websocket.accept(subprotocol=subprotocol)
 
     # 跨消息循环共享的停止信号：客户端发送 stop 时 set，生成器检测到后退出
     stop_event = asyncio.Event()
@@ -225,76 +208,73 @@ async def websocket_chat_controller(websocket: WebSocket) -> None:
 
     try:
         redis = websocket.app.state.redis
-        async with async_db_session() as db:
-            auth = await _authenticate(token, db, redis)
+        logger.info("WebSocket连接已建立: {} - 用户: {}", websocket.client, auth.user.username or "未认证")
 
-            logger.info("WebSocket连接已建立: {} - 用户: {}", websocket.client, auth.user.username or "未认证")
+        chat_service = ChatService(auth)
 
-            chat_service = ChatService(auth)
-
-            # 消息循环
-            while True:
+        # 消息循环
+        while True:
+            try:
+                data = await websocket.receive_text()
                 try:
-                    data = await websocket.receive_text()
-                    try:
-                        message_data = json.loads(data)
-                        query = ChatQuerySchema(**message_data)
-                    except json.JSONDecodeError:
-                        logger.warning("收到非JSON消息: {}", data)
-                        await websocket.send_text("消息格式错误，请发送JSON格式的消息")
-                        continue
-                    except Exception as e:
-                        logger.warning("消息校验失败: {}", e)
-                        await websocket.send_text(f"消息格式错误: {e}")
-                        continue
+                    message_data = json.loads(data)
+                    query = ChatQuerySchema(**message_data)
+                except json.JSONDecodeError:
+                    logger.warning("收到非JSON消息: {}", data)
+                    await websocket.send_text("消息格式错误，请发送JSON格式的消息")
+                    continue
+                except Exception as e:
+                    logger.warning("消息校验失败: {}", e)
+                    await websocket.send_text(f"消息格式错误: {e}")
+                    continue
 
-                    # 处理停止指令
-                    if query.action == "stop":
-                        if is_generating.is_set():
-                            stop_event.set()
-                            logger.info("收到停止指令: session={}", query.session_id)
-                            await websocket.send_text("[STOPPED]")
-                        else:
-                            await websocket.send_text("当前没有正在进行的生成任务")
-                        continue
+                # 处理停止指令
+                if query.action == "stop":
+                    if is_generating.is_set():
+                        stop_event.set()
+                        logger.info("收到停止指令: session={}", query.session_id)
+                        await websocket.send_text("[STOPPED]")
+                    else:
+                        await websocket.send_text("当前没有正在进行的生成任务")
+                    continue
 
-                    # 对话指令
-                    logger.info("收到聊天查询: session_id={}", query.session_id)
+                # 对话指令
+                logger.info("收到聊天查询: session_id={}", query.session_id)
 
-                    is_generating.set()
+                is_generating.set()
+                stop_event.clear()
+                # 读取用户的 AI 模型配置（每次可动态切换）
+                model_config = await get_user_model_config(redis, auth.user.id)
+                try:
+                    async for chunk in chat_service.chat_query(
+                        query=query,
+                        stop_event=stop_event,
+                        model_config=model_config,
+                    ):
+                        if not chunk:
+                            continue
+                        try:
+                            await websocket.send_text(chunk)
+                        except RuntimeError:
+                            logger.warning("WebSocket连接已关闭，停止发送消息")
+                            return
+                finally:
+                    is_generating.clear()
                     stop_event.clear()
-                    # 读取用户的 AI 模型配置（每次可动态切换）
-                    model_config = await get_user_model_config(redis, auth.user.id)
-                    try:
-                        async for chunk in chat_service.chat_query(
-                            query=query,
-                            stop_event=stop_event,
-                            model_config=model_config,
-                        ):
-                            if not chunk:
-                                continue
-                            try:
-                                await websocket.send_text(chunk)
-                            except RuntimeError:
-                                logger.warning("WebSocket连接已关闭，停止发送消息")
-                                return
-                    finally:
-                        is_generating.clear()
-                        stop_event.clear()
 
-                    # 告知前端生成结束
-                    try:
-                        await websocket.send_text("[DONE]")
-                    except RuntimeError:
-                        return
-
-                except WebSocketDisconnect:
-                    logger.info("WebSocket连接已断开: {}", websocket.client)
+                # 告知前端生成结束
+                try:
+                    await websocket.send_text("[DONE]")
+                except RuntimeError:
                     return
 
+            except WebSocketDisconnect:
+                logger.info("WebSocket连接已断开: {}", websocket.client)
+                return
+
     except CustomException as e:
-        # 认证失败等业务异常
-        logger.warning("WebSocket认证失败: {}", e.msg)
+        # 业务异常（认证已前置，多为会话/模型配置异常）
+        logger.warning("WebSocket业务异常: {}", e.msg)
         await _send_error_and_close(websocket, e.msg)
     except Exception as e:
         # 未知异常

@@ -40,7 +40,7 @@ git clone https://gitee.com/fastapiadmin/FastApiAdmin.git
 
 ```bash
 cd FastapiAdmin/backend
-cp env/.env.dev.example env/.env.dev
+cp env/.env.example env/.env.dev
 # 编辑 env/.env.dev，填写数据库连接、Redis、JWT 密钥等
 ```
 

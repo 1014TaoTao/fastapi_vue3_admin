@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     # ================================================= #
     SERVER_HOST: str = "0.0.0.0"  # 允许访问的IP地址
     SERVER_PORT: int = 8001  # 服务端口
+    WORKERS: int = 1  # uvicorn worker 进程数（prod 环境可调大；>1 时需确保 Redis 共享 jobstore 不重复调度）
 
     # ================================================= #
     # ******************* API文档配置 ****************** #
@@ -71,6 +72,17 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_SECONDS: int = 60 * 60 * 12  # refresh_token过期时间(秒)12 小时
     TOKEN_TYPE: str = "Bearer"  # token类型（RFC 6750 标准大小写）
     TOKEN_SLIDING_EXPIRE: bool = True  # 是否启用滑动过期(用户操作时自动续期)
+    SESSION_MAX_LIFETIME_SECONDS: int = 60 * 60 * 24 * 7  # 会话绝对存活上限(秒)，滑动续期不得超过该上限
+    LOGIN_RATE_LIMIT_WINDOW_SECONDS: int = 60  # 登录限流窗口(秒)
+    LOGIN_RATE_LIMIT_MAX_ATTEMPTS: int = 10  # 限流窗口内单 IP 最大登录尝试次数
+
+    # ================================================= #
+    #  ****************** 数据加密配置 ***************** #
+    # ================================================= #
+    # 静态数据(存储源口令、AI 密钥)使用独立密钥加密，避免与 JWT 签名密钥同源：
+    # 泄露 SECRET_KEY 时只能伪造令牌，不能顺带解密库里所有敏感字段。
+    DATA_ENCRYPTION_KEY: str | None = None  # 数据加密主密钥(建议 openssl rand -hex 32)；未配置时由 SECRET_KEY 经 HKDF 派生
+    DATA_ENCRYPTION_OLD_KEYS: str = ""  # 轮换后的旧主密钥列表(逗号分隔)，仅用于解密历史数据
 
     # ================================================= #
     # ******************** 数据库配置 ******************* #
@@ -113,6 +125,25 @@ class Settings(BaseSettings):
     # ================================================= #
     CAPTCHA_ENABLE: bool = True  # 是否启用验证码
     CAPTCHA_EXPIRE_SECONDS: int = 60 * 1  # 验证码过期时间(秒) 1分钟
+    # 滑块从签发到「验证完成」允许的最小间隔（秒）。真人完成一次拖动需要数百毫秒，
+    # 低于该阈值必然脚本；设得过大会误伤快速登录的用户，0.2s 是保守值。
+    CAPTCHA_MIN_VERIFY_SECONDS: float = 0.2
+
+    # ================================================= #
+    # ******************* 任务调度配置 ****************** #
+    # ================================================= #
+    SCHEDULER_ALLOW_CODE_EXEC: bool = True  # 是否允许定时任务执行用户提交的代码块(exec)。等同远程代码执行能力，生产环境强烈建议设为 False
+
+    # ================================================= #
+    # ******************* 口令策略配置 ****************** #
+    # ================================================= #
+    # 长度区间为接口字段约束；复杂度（字母/数字/符号至少两类）固定写在 PwdUtil，
+    # 不作为开关——纯字母的 6 位口令没有任何配置下可以被接受的理由。
+    PASSWORD_MIN_LENGTH: int = 6
+    PASSWORD_MAX_LENGTH: int = 128
+    # 批量导入时，模板未填「密码」列的用户使用的初始口令。导入出的账号都能登录，
+    # 留一个硬编码的 "123456" 等于把口令写进源码；部署时应改成一次性口令并通知用户修改。
+    PASSWORD_IMPORT_DEFAULT: str = "123456"
 
     # ================================================= #
     # ***************** 第三方 OAuth 登录（可选）********* #
@@ -275,7 +306,8 @@ class Settings(BaseSettings):
         elif self.DATABASE_TYPE == "postgres":
             db_connect = f"postgresql+asyncpg://{self.DATABASE_USER}:{quote_plus(self.DATABASE_PASSWORD)}@{self.DATABASE_HOST}:{self.DATABASE_PORT}/{self.DATABASE_NAME}"
         else:
-            db_connect = f"sqlite+aiosqlite:///{self.DATABASE_NAME}.db"
+            name = self.DATABASE_NAME if self.DATABASE_NAME.endswith(".db") else f"{self.DATABASE_NAME}.db"
+            db_connect = f"sqlite+aiosqlite:///{name}"
         return db_connect
 
     @property
@@ -288,7 +320,8 @@ class Settings(BaseSettings):
         elif self.DATABASE_TYPE == "postgres":
             db_connect = f"postgresql+psycopg://{self.DATABASE_USER}:{quote_plus(self.DATABASE_PASSWORD)}@{self.DATABASE_HOST}:{self.DATABASE_PORT}/{self.DATABASE_NAME}"
         else:
-            db_connect = f"sqlite:///{self.DATABASE_NAME}.db"
+            name = self.DATABASE_NAME if self.DATABASE_NAME.endswith(".db") else f"{self.DATABASE_NAME}.db"
+            db_connect = f"sqlite:///{name}"
         return db_connect
 
     @property

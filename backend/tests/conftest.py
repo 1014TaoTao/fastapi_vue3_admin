@@ -29,6 +29,7 @@ os.environ["DATABASE_TYPE"] = "sqlite"
 os.environ["DATABASE_NAME"] = _TEST_DB_PATH
 os.environ["POOL_SIZE"] = "1"
 os.environ["MAX_OVERFLOW"] = "1"
+os.environ["SECRET_KEY"] = "unit-test-secret-key-not-a-real-secret"  # Settings 必填项，固定注入保证测试确定性
 
 from app.config.setting import settings
 

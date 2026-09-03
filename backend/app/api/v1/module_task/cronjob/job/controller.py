@@ -5,24 +5,29 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.common.response import ResponseSchema, SuccessResponse
-from app.core.ap_scheduler import SchedulerUtil
 from app.core.base_schema import AuthSchema, PageResultSchema, PaginationQueryParam
 from app.core.dependencies import AuthPermission, db_getter
 from app.core.router_class import OperationLogRoute
 
-from .schema import JobOutSchema, JobQueryParam
+from .schema import (
+    JobOutSchema,
+    JobQueryParam,
+    SchedulerJobModifySchema,
+    SchedulerJobSchema,
+    SchedulerStatusSchema,
+)
 from .service import JobService
 
 JobRouter = APIRouter(route_class=OperationLogRoute, prefix="/cronjob/job", tags=["定时任务管理"])
 
 
-@JobRouter.get("/scheduler/status", summary="获取调度器状态", response_model=ResponseSchema[dict], dependencies=[Security(AuthPermission(["module_task:cronjob:job:query"]))])
+@JobRouter.get("/scheduler/status", summary="获取调度器状态", response_model=ResponseSchema[SchedulerStatusSchema], dependencies=[Security(AuthPermission(["module_task:cronjob:job:query"]))])
 async def get_scheduler_status_controller() -> JSONResponse:
     data = JobService.get_scheduler_status()
     return SuccessResponse(data=data, msg="获取调度器状态成功")
 
 
-@JobRouter.get("/scheduler/jobs", summary="获取调度器任务列表", response_model=ResponseSchema[list[dict]], dependencies=[Security(AuthPermission(["module_task:cronjob:job:query"]))])
+@JobRouter.get("/scheduler/jobs", summary="获取调度器任务列表", response_model=ResponseSchema[list[SchedulerJobSchema]], dependencies=[Security(AuthPermission(["module_task:cronjob:job:query"]))])
 async def get_scheduler_jobs_controller() -> JSONResponse:
     data = JobService.get_scheduler_jobs()
     return SuccessResponse(data=data, msg="获取调度器任务列表成功")
@@ -30,37 +35,37 @@ async def get_scheduler_jobs_controller() -> JSONResponse:
 
 @JobRouter.post("/scheduler/start", summary="启动调度器", response_model=ResponseSchema[None], dependencies=[Security(AuthPermission(["module_task:cronjob:job:scheduler"]))])
 async def start_scheduler_controller() -> JSONResponse:
-    SchedulerUtil.start()
+    await JobService.start_scheduler()
     return SuccessResponse(msg="调度器已启动")
 
 
 @JobRouter.post("/scheduler/pause", summary="暂停调度器", response_model=ResponseSchema[None], dependencies=[Security(AuthPermission(["module_task:cronjob:job:scheduler"]))])
 async def pause_scheduler_controller() -> JSONResponse:
-    SchedulerUtil.pause()
+    JobService.pause_scheduler()
     return SuccessResponse(msg="调度器已暂停")
 
 
 @JobRouter.post("/scheduler/resume", summary="恢复调度器", response_model=ResponseSchema[None], dependencies=[Security(AuthPermission(["module_task:cronjob:job:scheduler"]))])
 async def resume_scheduler_controller() -> JSONResponse:
-    SchedulerUtil.resume()
+    JobService.resume_scheduler()
     return SuccessResponse(msg="调度器已恢复")
 
 
 @JobRouter.post("/scheduler/shutdown", summary="关闭调度器", response_model=ResponseSchema[None], dependencies=[Security(AuthPermission(["module_task:cronjob:job:scheduler"]))])
 async def shutdown_scheduler_controller() -> JSONResponse:
-    SchedulerUtil.shutdown()
+    JobService.shutdown_scheduler()
     return SuccessResponse(msg="调度器已关闭")
 
 
 @JobRouter.delete("/scheduler/jobs/clear", summary="清空所有任务", response_model=ResponseSchema[None], dependencies=[Security(AuthPermission(["module_task:cronjob:job:task"]))])
 async def clear_jobs_controller() -> JSONResponse:
-    SchedulerUtil.clear_jobs()
+    JobService.clear_scheduler_jobs()
     return SuccessResponse(msg="已清空所有任务")
 
 
 @JobRouter.get("/scheduler/console", summary="获取调度器控制台信息", response_model=ResponseSchema[str], dependencies=[Security(AuthPermission(["module_task:cronjob:job:query"]))])
 async def get_scheduler_console_controller() -> JSONResponse:
-    console_output = SchedulerUtil.print_jobs()
+    console_output = JobService.get_scheduler_console()
     return SuccessResponse(data=console_output, msg="获取控制台信息成功")
 
 
@@ -68,7 +73,7 @@ async def get_scheduler_console_controller() -> JSONResponse:
 async def pause_job_controller(
     job_id: Annotated[str, Path(description="调度器任务ID")],
 ) -> JSONResponse:
-    SchedulerUtil.pause_job(job_id=job_id)
+    JobService.pause_job(job_id=job_id)
     return SuccessResponse(msg="暂停任务成功")
 
 
@@ -76,7 +81,7 @@ async def pause_job_controller(
 async def resume_job_controller(
     job_id: Annotated[str, Path(description="调度器任务ID")],
 ) -> JSONResponse:
-    SchedulerUtil.resume_job(job_id=job_id)
+    JobService.resume_job(job_id=job_id)
     return SuccessResponse(msg="恢复任务成功")
 
 
@@ -84,16 +89,16 @@ async def resume_job_controller(
 async def run_job_controller(
     job_id: Annotated[str, Path(description="调度器任务ID")],
 ) -> JSONResponse:
-    SchedulerUtil.run_job_now(job_id=job_id)
+    JobService.run_job_now(job_id=job_id)
     return SuccessResponse(msg="立即执行任务成功")
 
 
 @JobRouter.put("/task/modify/{job_id}", summary="修改任务", response_model=ResponseSchema[None], dependencies=[Security(AuthPermission(["module_task:cronjob:job:task"]))])
 async def modify_job_controller(
     job_id: Annotated[str, Path(description="调度器任务ID")],
-    changes: Annotated[dict, Body(description="要修改的任务属性，如 name、coalesce、max_instances 等")],
+    data: Annotated[SchedulerJobModifySchema, Body(description="要修改的任务属性，如 name、coalesce、max_instances 等")],
 ) -> JSONResponse:
-    SchedulerUtil.modify_job(job_id=job_id, **changes)
+    JobService.modify_job(job_id=job_id, data=data)
     return SuccessResponse(msg="修改任务成功")
 
 
@@ -101,7 +106,7 @@ async def modify_job_controller(
 async def remove_job_controller(
     job_id: Annotated[str, Path(description="调度器任务ID")],
 ) -> JSONResponse:
-    SchedulerUtil.remove_job(job_id=job_id)
+    JobService.remove_job(job_id=job_id)
     return SuccessResponse(msg="移除任务成功")
 
 

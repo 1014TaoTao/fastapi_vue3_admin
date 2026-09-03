@@ -9,6 +9,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from croniter import croniter
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config.setting import settings
 from app.core.ap_scheduler import (
     SchedulerUtil,
     scheduler,
@@ -22,6 +23,7 @@ from .crud import NodeCRUD
 from .model import NodeModel
 from .schema import (
     NodeCreateSchema,
+    NodeExecuteResultSchema,
     NodeExecuteSchema,
     NodeOutSchema,
     NodeQueryParam,
@@ -36,19 +38,9 @@ class NodeService:
         self.auth = auth
         self.db = db
 
-    async def options(self) -> list[dict]:
+    async def options(self) -> list[NodeOutSchema]:
         obj_list = await NodeCRUD(self.auth, self.db).get_obj_list_crud()
-        return [
-            {
-                "id": obj.id,
-                "name": obj.name,
-                "code": obj.code,
-                "func": obj.func,
-                "args": obj.args,
-                "kwargs": obj.kwargs,
-            }
-            for obj in obj_list
-        ]
+        return [NodeOutSchema.model_validate(obj) for obj in obj_list]
 
     async def detail(self, id: int) -> NodeOutSchema:
         obj = await NodeCRUD(self.auth, self.db).get_obj_by_id_crud(id=id)
@@ -115,7 +107,7 @@ class NodeService:
         SchedulerUtil.clear_jobs()
         await NodeCRUD(self.auth, self.db).clear_obj_crud()
 
-    async def execute(self, id: int, execute_data: NodeExecuteSchema) -> dict:
+    async def execute(self, id: int, execute_data: NodeExecuteSchema) -> NodeExecuteResultSchema:
         obj = await NodeCRUD(self.auth, self.db).get_obj_by_id_crud(id=id)
         if not obj:
             raise CustomException(msg="调试失败，该节点不存在")
@@ -156,7 +148,7 @@ class NodeService:
         else:
             raise CustomException(msg=f"不支持的触发方式: {trigger}")
 
-        return {"job_id": id, "status": "executed", "trigger": trigger}
+        return NodeExecuteResultSchema(job_id=id, status="executed", trigger=trigger)
 
     async def batch_set_status(self, ids: list[int], status: int) -> None:
         if not ids:
@@ -176,6 +168,8 @@ def _add_job_with_trigger(job_info: NodeModel, trigger) -> Job:
     code_block = job_info.func
     if not code_block or not code_block.strip():
         raise ValueError("任务代码块不能为空")
+    if not settings.SCHEDULER_ALLOW_CODE_EXEC:
+        raise CustomException(msg="服务已禁用定时任务代码执行（SCHEDULER_ALLOW_CODE_EXEC=False），无法注册代码块任务")
 
     jobstore = job_info.jobstore or "sqlalchemy"
     executor = job_info.executor or "threadpool"
@@ -194,8 +188,6 @@ def _add_job_with_trigger(job_info: NodeModel, trigger) -> Job:
                 job_kwargs = json.loads(kwargs_str)
             except json.JSONDecodeError:
                 raise ValueError(f"关键字参数JSON格式无效: {kwargs_str}")
-
-    SchedulerUtil.job_name_cache[str(job_info.id)] = job_info.name or ""
 
     try:
         job = scheduler.add_job(

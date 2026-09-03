@@ -40,7 +40,7 @@ git clone https://gitee.com/fastapiadmin/FastApiAdmin.git
 
 ```bash
 cd FastapiAdmin/backend
-cp env/.env.dev.example env/.env.dev
+cp env/.env.example env/.env.dev
 # Edit env/.env.dev with your database, Redis, JWT secret, etc.
 ```
 

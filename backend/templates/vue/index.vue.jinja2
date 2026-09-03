@@ -154,7 +154,7 @@ import type { IContentConfig, IObject } from "@/components/modal/types";
 import type { AuditSearchFormParams } from "@/components/forms/fa-search-bar/auditSearchFormItems";
 import type { FormItem } from "@/components/forms/fa-form/index.vue";
 import type { ColumnOption } from "@/types/component";
-import FaDescriptions from "@/components/others/fa-descriptions/index.vue";
+import FaDescriptions from "@/components/display/fa-descriptions/index.vue";
 import FaForm from "@/components/forms/fa-form/index.vue";
 import FaTableHeader from "@/components/tables/fa-table-header/index.vue";
 import {{ class_name }}API, {
@@ -163,7 +163,7 @@ import {{ class_name }}API, {
   type {{ class_name }}Table,
 } from "@/api/{{ package_name }}/{{ module_name }}";
 {% if has_dict_column %}
-import { useDictStore } from "@/stores/modules/dict";
+import { useDictStore } from "@stores";
 {% endif %}
 {% if has_image_column %}
 import { h } from "vue";
@@ -452,7 +452,7 @@ const { dialogVisible } = useCrudDialog();
 
 const detailFormData = ref<{{ class_name }}Table>({});
 
-const detailItems: import("@/components/others/fa-descriptions/index.vue").DescriptionsItem[] = [
+const detailItems: import("@/components/display/fa-descriptions/index.vue").DescriptionsItem[] = [
   {% for column in columns %}
   {% if column.is_list and column.column_name not in ['is_deleted', 'deleted_time', 'deleted_id'] %}
   {% set column_comment = column.column_comment if column.column_comment else '' %}

@@ -133,7 +133,7 @@ class OperationLogService:
         return [OperationLogOutSchema.model_validate(obj) for obj in obj_list]
 
     @staticmethod
-    def export_list(operation_log_list: list[dict[str, Any]]) -> bytes:
+    async def export_list(operation_log_list: list[dict[str, Any]]) -> bytes:
         """导出操作日志列表"""
         mapping_dict = {
             "id": "日志编号",
@@ -146,4 +146,4 @@ class OperationLogService:
             "created_time": "操作时间",
             "created_id": "操作用户ID",
         }
-        return ExcelUtil.export_list2excel(list_data=operation_log_list, mapping_dict=mapping_dict)
+        return await ExcelUtil.aexport_list2excel(list_data=operation_log_list, mapping_dict=mapping_dict)

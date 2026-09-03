@@ -34,6 +34,15 @@ class ChatMessageOutSchema(BaseSchema):
     receiver_id: int = Field(description="接收人ID(私聊:对方用户,群聊:群ID)")
     content: str = Field(description="消息内容")
     status: int = Field(description="消息状态(0:未读 1:已读,私聊使用)")
+    sender_name: str | None = Field(default=None, description="发送人昵称")
+    sender_avatar: str | None = Field(default=None, description="发送人头像URL")
+
+
+class ChatMessagePageSchema(BaseModel):
+    """历史消息分页结果"""
+
+    items: list[ChatMessageOutSchema] = Field(default_factory=list, description="消息列表")
+    has_more: bool = Field(default=False, description="是否还有更早的消息")
 
 
 class ChatReadSchema(BaseModel):

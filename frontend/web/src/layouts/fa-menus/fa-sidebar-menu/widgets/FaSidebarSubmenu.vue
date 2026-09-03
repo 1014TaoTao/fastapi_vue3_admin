@@ -12,7 +12,11 @@
         <span class="menu-name">
           {{ formatMenuTitle(item.meta.title) }}
         </span>
-        <div v-if="item.meta.showBadge && !item.meta.showTextBadge" class="fa-badge" :style="'right: 10px'" />
+        <div
+          v-if="item.meta.showBadge && !item.meta.showTextBadge"
+          class="fa-badge"
+          :style="'right: 10px'"
+        />
       </template>
 
       <FaSidebarSubmenu
@@ -47,7 +51,10 @@
           {{ formatMenuTitle(item.meta.title) }}
         </span>
         <div v-if="item.meta.showBadge && !item.meta.showTextBadge" class="fa-badge" />
-        <div v-if="item.meta.showBadge && item.meta.showTextBadge && (level > 0 || menuOpen)" class="fa-text-badge">
+        <div
+          v-if="item.meta.showBadge && item.meta.showTextBadge && (level > 0 || menuOpen)"
+          class="fa-text-badge"
+        >
           {{ item.meta.showTextBadge }}
         </div>
       </template>

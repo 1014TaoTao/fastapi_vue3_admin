@@ -1,3 +1,4 @@
+import asyncio
 import io
 from typing import Any
 
@@ -30,6 +31,15 @@ class ExcelUtil:
                 result.append(row_dict)
         wb.close()
         return result
+
+    @staticmethod
+    async def aread_excel_to_dicts(contents: bytes) -> list[dict[str, Any]]:
+        """read_excel_to_dicts 的异步版本：解析在线程池中执行。
+
+        openpyxl 解析上传文件（含 zip 解压与逐单元格构建）是纯同步 CPU +
+        内存操作，大文件会在事件循环里独占数秒，async 调用点必须使用本方法。
+        """
+        return await asyncio.to_thread(ExcelUtil.read_excel_to_dicts, contents)
 
     @classmethod
     def __mapping_list(cls, list_data: list[dict[str, Any]], mapping_dict: dict) -> list[dict[str, Any]]:
@@ -128,3 +138,12 @@ class ExcelUtil:
         wb.save(buffer)
         buffer.seek(0)
         return buffer.getvalue()
+
+    @classmethod
+    async def aexport_list2excel(cls, list_data: list[dict[str, Any]], mapping_dict: dict) -> bytes:
+        """export_list2excel 的异步版本：构建与序列化在线程池中执行。
+
+        导出最多 10 万行，逐单元格写入 + ZIP 压缩为纯同步 CPU 操作，
+        千行以上即会明显卡住事件循环，async 调用点必须使用本方法。
+        """
+        return await asyncio.to_thread(cls.export_list2excel, list_data, mapping_dict)

@@ -105,6 +105,35 @@ class RedisCURD:
             logger.error(f"设置缓存失败: {e!s}")
             return False
 
+    async def compare_and_set(self, key: str, expected: str, value: str, expire: int) -> bool:
+        """原子替换：仅当键当前值与 expected 完全一致时写入 value。
+
+        用于「读-改-写」场景：键被并发修改、删除（如已登出的会话）时写入会被跳过，
+        既不会覆盖他人更新，也不会让已删除的键复活。
+
+        参数:
+        - key (str): 缓存键名
+        - expected (str): 读取到的原值
+        - value (str): 待写入的新值
+        - expire (int): 新值的过期时间(秒)
+
+        返回:
+        - bool: 写入成功返回True，键已变化/不存在或出错返回False
+        """
+        try:
+            script = """
+            if redis.call('get', KEYS[1]) ~= ARGV[1] then
+                return 0
+            end
+            redis.call('set', KEYS[1], ARGV[2], 'EX', tonumber(ARGV[3]))
+            return 1
+            """
+            result = await self.redis.eval(script, 1, key, expected, value, expire)  # pyright: ignore[reportGeneralTypeIssues]
+            return result == 1
+        except Exception as e:
+            logger.error(f"原子更新缓存失败: {key}: {e!s}")
+            return False
+
     async def lock(self, key: str, expire: int, value: str | None = None) -> tuple[bool, str]:
         """获取分布式锁
 

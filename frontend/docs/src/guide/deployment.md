@@ -99,7 +99,7 @@ python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
 # 配置环境
-cp env/.env.dev.example env/.env.prod
+cp env/.env.example env/.env.prod
 # 编辑 env/.env.prod
 
 # 启动（使用 Gunicorn + Uvicorn）

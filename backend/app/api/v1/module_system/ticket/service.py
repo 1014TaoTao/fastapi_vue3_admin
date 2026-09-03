@@ -156,7 +156,7 @@ class TicketService:
         return [TicketOutSchema.model_validate(obj) for obj in obj_list]
 
     @staticmethod
-    def export_list(ticket_list: list[dict[str, Any]]) -> bytes:
+    async def export_list(ticket_list: list[dict[str, Any]]) -> bytes:
         """导出工单列表"""
         mapping_dict = {
             "id": "工单编号",
@@ -168,7 +168,7 @@ class TicketService:
             "created_time": "创建时间",
             "updated_time": "更新时间",
         }
-        return ExcelUtil.export_list2excel(list_data=ticket_list, mapping_dict=mapping_dict)
+        return await ExcelUtil.aexport_list2excel(list_data=ticket_list, mapping_dict=mapping_dict)
 
 
 class TicketCommentService:

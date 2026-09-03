@@ -502,10 +502,11 @@ async function onAvatarCropConfirm(dataURL: string) {
   }
 }
 
-function normalizeGenderValue(v: string | number | undefined): number {
-  if (v === undefined || v === null || v === "") return 1;
+/** 性别统一为字符串，与后端 CurrentUserUpdateSchema(gender: str) 对齐 */
+function normalizeGenderValue(v: string | number | undefined): string {
+  if (v === undefined || v === null || v === "") return "1";
   const n = typeof v === "string" ? Number(v) : v;
-  return Number.isFinite(n) ? n : 1;
+  return Number.isFinite(n) ? String(n) : "1";
 }
 
 const initInfoForm = () => {
@@ -705,7 +706,15 @@ const handleSave = async () => {
     if (!valid) {
       return false;
     }
-    const response = await UserAPI.updateCurrentUserInfo({ ...infoFormState });
+    // 只提交后端可编辑字段，避免携带 dept/roles/positions 等冗余信息
+    const response = await UserAPI.updateCurrentUserInfo({
+      name: infoFormState.name,
+      gender: infoFormState.gender,
+      mobile: infoFormState.mobile,
+      email: infoFormState.email,
+      avatar: infoFormState.avatar,
+      description: infoFormState.description,
+    });
     await userStore.setUserInfo(response.data.data);
     initInfoForm();
     ElMessage.success("个人资料已保存");

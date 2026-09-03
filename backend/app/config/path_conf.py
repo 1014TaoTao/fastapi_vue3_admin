@@ -16,7 +16,7 @@ STATIC_DIR = BASE_DIR / "static"
 ENV_DIR = BASE_DIR / "env"
 
 # 初始化脚本
-SCRIPT_DIR: Path = BASE_DIR / "sql" / "data"
+SCRIPT_DIR: Path = BASE_DIR / "sql"
 
 # 模版文件配置（统一管理代码生成模板 + HTML 模板）
 TEMPLATE_DIR: Path = BASE_DIR / "templates"

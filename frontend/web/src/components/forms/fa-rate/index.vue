@@ -17,23 +17,23 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed } from "vue";
 
 defineOptions({
-  name: 'FaRate',
-})
+  name: "FaRate",
+});
 
 interface Props {
-  modelValue?: number
-  max?: number
-  disabled?: boolean
-  allowHalf?: boolean
-  showText?: boolean
-  showScore?: boolean
-  texts?: string[]
-  colors?: string[]
-  lowThreshold?: number
-  highThreshold?: number
+  modelValue?: number;
+  max?: number;
+  disabled?: boolean;
+  allowHalf?: boolean;
+  showText?: boolean;
+  showScore?: boolean;
+  texts?: string[];
+  colors?: string[];
+  lowThreshold?: number;
+  highThreshold?: number;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -47,18 +47,18 @@ const props = withDefaults(defineProps<Props>(), {
   colors: () => [],
   lowThreshold: 2,
   highThreshold: 4,
-})
+});
 
 const emit = defineEmits<{
-  'update:modelValue': [value: number]
-  change: [value: number]
-}>()
+  "update:modelValue": [value: number];
+  change: [value: number];
+}>();
 
 const rateValue = computed({
   get: () => props.modelValue,
   set: (val: number) => {
-    emit('update:modelValue', val)
-    emit('change', val)
+    emit("update:modelValue", val);
+    emit("change", val);
   },
-})
+});
 </script>

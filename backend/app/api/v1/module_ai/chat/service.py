@@ -1,6 +1,7 @@
 import asyncio
 import json
 from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any
 
@@ -17,6 +18,7 @@ from app.core.exceptions import CustomException
 from app.core.logger import logger
 from app.core.redis_crud import RedisCURD
 from app.utils.ai_factory import AgnoFactory
+from app.utils.crypto_util import CryptoUtil
 
 from .crud import ChatSessionCRUD
 from .schema import (
@@ -237,7 +239,7 @@ class ChatService:
                         if json_end > json_start:
                             json_str = response_text[json_start:json_end].strip()
                             action = json.loads(json_str)
-                except (json.JSONDecodeError, Exception):
+                except Exception:
                     pass
 
                 if not action:
@@ -348,6 +350,21 @@ class ChatService:
 
 
 _AI_MODEL_TTL = 604800  # AI 模型配置缓存 7 天，不活跃用户自动清理
+_AI_MODEL_LOCK_TTL = 10  # 读改写锁最长持有时间(秒)
+
+
+@asynccontextmanager
+async def _model_config_lock(redis: Redis, user_id: int) -> AsyncGenerator[None, None]:
+    """用户模型配置读改写的分布式锁：配置以 JSON list 整体存取，并发写会互相覆盖。"""
+    crud = RedisCURD(redis)
+    key = f"{RedisInitKeyConfig.AI_MODEL_CONFIG.key}:lock:{user_id}"
+    acquired, token = await crud.lock(key=key, expire=_AI_MODEL_LOCK_TTL)
+    if not acquired:
+        raise CustomException(msg="模型配置正在被修改，请稍后重试")
+    try:
+        yield
+    finally:
+        await crud.unlock(key=key, value=token)
 
 
 def _ai_model_items_key(user_id: int) -> str:
@@ -356,6 +373,26 @@ def _ai_model_items_key(user_id: int) -> str:
 
 def _ai_model_active_key(user_id: int) -> str:
     return f"{RedisInitKeyConfig.AI_MODEL_CONFIG.key}:active:{user_id}"
+
+
+# 配置项中需要静态加密的敏感字段：Redis 中的 api_key 一律以密文存储
+_SECRET_FIELD = "api_key"
+
+
+def _seal_item(item: dict[str, Any]) -> dict[str, Any]:
+    """落盘前加密 api_key，其余字段保持明文（用于展示与检索）。"""
+    sealed = dict(item)
+    if sealed.get(_SECRET_FIELD):
+        sealed[_SECRET_FIELD] = CryptoUtil.encrypt(sealed[_SECRET_FIELD])
+    return sealed
+
+
+def _open_item(item: dict[str, Any]) -> dict[str, Any]:
+    """读取后解密 api_key；加密能力上线前的历史明文原样返回。"""
+    opened = dict(item)
+    if opened.get(_SECRET_FIELD):
+        opened[_SECRET_FIELD] = CryptoUtil.decrypt_or_keep(opened[_SECRET_FIELD])
+    return opened
 
 
 async def get_user_model_config(redis: Redis, user_id: int) -> dict[str, Any] | None:
@@ -370,8 +407,8 @@ async def get_user_model_config(redis: Redis, user_id: int) -> dict[str, Any] | 
     return None
 
 
-async def list_user_model_configs(redis: Redis, user_id: int) -> list[dict[str, Any]]:
-    """列出用户的所有模型配置项。"""
+async def _read_raw_items(redis: Redis, user_id: int) -> list[dict[str, Any]]:
+    """读取存储层的原始配置项（api_key 为密文）。"""
     raw = await RedisCURD(redis).get(_ai_model_items_key(user_id))
     if not raw:
         return []
@@ -383,6 +420,20 @@ async def list_user_model_configs(redis: Redis, user_id: int) -> list[dict[str, 
     except (json.JSONDecodeError, TypeError):
         logger.warning("AI 模型配置列表 JSON 解析失败: user_id={}", user_id)
         return []
+
+
+async def _write_raw_items(redis: Redis, user_id: int, items: list[dict[str, Any]]) -> None:
+    """写入配置项：加密敏感字段后整体落盘（调用方需持有读改写锁）。"""
+    await RedisCURD(redis).set(
+        _ai_model_items_key(user_id),
+        json.dumps([_seal_item(it) for it in items], ensure_ascii=False),
+        expire=_AI_MODEL_TTL,
+    )
+
+
+async def list_user_model_configs(redis: Redis, user_id: int) -> list[dict[str, Any]]:
+    """列出用户的所有模型配置项（api_key 已解密为明文）。"""
+    return [_open_item(it) for it in await _read_raw_items(redis, user_id)]
 
 
 async def get_active_model_id(redis: Redis, user_id: int) -> str | None:
@@ -397,24 +448,20 @@ async def create_user_model_config(
 ) -> dict[str, Any]:
     """新增一个模型配置项。"""
     import uuid
-    from datetime import datetime
 
-    items = await list_user_model_configs(redis, user_id)
-    item = {
-        **config.model_dump(),
-        "id": uuid.uuid4().hex,
-        "created_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-    }
-    items.append(item)
-    await RedisCURD(redis).set(
-        _ai_model_items_key(user_id),
-        json.dumps(items, ensure_ascii=False),
-        expire=_AI_MODEL_TTL,
-    )
+    async with _model_config_lock(redis, user_id):
+        items = await list_user_model_configs(redis, user_id)
+        item = {
+            **config.model_dump(),
+            "id": uuid.uuid4().hex,
+            "created_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        }
+        items.append(item)
+        await _write_raw_items(redis, user_id, items)
 
-    # 若用户尚未激活任何配置，自动激活新增的
-    if not await get_active_model_id(redis, user_id):
-        await RedisCURD(redis).set(_ai_model_active_key(user_id), item["id"], expire=_AI_MODEL_TTL)
+        # 若用户尚未激活任何配置，自动激活新增的
+        if not await get_active_model_id(redis, user_id):
+            await RedisCURD(redis).set(_ai_model_active_key(user_id), item["id"], expire=_AI_MODEL_TTL)
 
     logger.info("已新增 AI 模型配置: user_id={} name={} id={}", user_id, config.name, item["id"])
     return item
@@ -427,34 +474,28 @@ async def update_user_model_config(
     config: AiModelConfigSchema,
 ) -> dict[str, Any] | None:
     """更新指定 ID 的模型配置项；不存在返回 None。"""
-    items = await list_user_model_configs(redis, user_id)
-    target = next((it for it in items if it.get("id") == config_id), None)
-    if not target:
-        return None
-    target.update(config.model_dump())
-    await RedisCURD(redis).set(
-        _ai_model_items_key(user_id),
-        json.dumps(items, ensure_ascii=False),
-        expire=_AI_MODEL_TTL,
-    )
+    async with _model_config_lock(redis, user_id):
+        items = await list_user_model_configs(redis, user_id)
+        target = next((it for it in items if it.get("id") == config_id), None)
+        if not target:
+            return None
+        target.update(config.model_dump())
+        await _write_raw_items(redis, user_id, items)
     logger.info("已更新 AI 模型配置: user_id={} id={}", user_id, config_id)
     return target
 
 
 async def delete_user_model_config(redis: Redis, user_id: int, config_id: str) -> bool:
     """删除指定 ID 的模型配置项；若该 ID 是当前激活则清空激活。"""
-    items = await list_user_model_configs(redis, user_id)
-    new_items = [it for it in items if it.get("id") != config_id]
-    if len(new_items) == len(items):
-        return False
-    await RedisCURD(redis).set(
-        _ai_model_items_key(user_id),
-        json.dumps(new_items, ensure_ascii=False),
-        expire=_AI_MODEL_TTL,
-    )
-    active_id = await get_active_model_id(redis, user_id)
-    if active_id == config_id:
-        await RedisCURD(redis).delete(_ai_model_active_key(user_id))
+    async with _model_config_lock(redis, user_id):
+        items = await list_user_model_configs(redis, user_id)
+        new_items = [it for it in items if it.get("id") != config_id]
+        if len(new_items) == len(items):
+            return False
+        await _write_raw_items(redis, user_id, new_items)
+        active_id = await get_active_model_id(redis, user_id)
+        if active_id == config_id:
+            await RedisCURD(redis).delete(_ai_model_active_key(user_id))
     logger.info("已删除 AI 模型配置: user_id={} id={}", user_id, config_id)
     return True
 
@@ -484,7 +525,7 @@ class AiModelConfigService:
     def _user_id(self) -> int:
         return self.auth.user.id
 
-    async def list(self) -> dict[str, Any]:
+    async def list_configs(self) -> dict[str, Any]:
         """获取配置列表 + 当前激活 ID。"""
         items = await list_user_model_configs(self.redis, self._user_id)
         active_id = await get_active_model_id(self.redis, self._user_id)

@@ -19,15 +19,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.module_system.user.crud import UserCRUD
 from app.api.v1.module_system.user.model import UserModel
-from app.api.v1.module_system.user.schema import UserCreateSchema
-from app.api.v1.module_system.user.service import UserService
 from app.config.setting import settings
 from app.core.base_schema import AuthSchema, JWTOutSchema
 from app.core.exceptions import CustomException
 from app.core.logger import logger
 from app.core.redis_crud import RedisCURD
 
-from .service import LoginService
+from .service import LoginService, auto_register_login_user, sanitize_login_name
 
 OAuthProvider = Literal["wechat", "qq", "github", "gitee"]
 
@@ -295,14 +293,8 @@ async def fetch_qq_profile(access_token: str, app_id: str, openid: str) -> tuple
 
 
 def _username_for_oauth(provider: OAuthProvider, unique_id: str) -> str:
-    """生成符合注册规则的登录名：oauth_{provider}_{id}。"""
-    raw = f"oauth_{provider}_{unique_id}"
-    raw = "".join(c if c.isalnum() or c in "_-." else "_" for c in raw)[:32]
-    if len(raw) < 3:
-        raw = (raw + "usr")[:32]
-    if not raw[0].isalpha():
-        raw = "o" + raw[:31]
-    return raw
+    """生成符合注册规则的登录名：oauth_{provider}_{id}（清洗规则与微信小程序共用）。"""
+    return sanitize_login_name(f"oauth_{provider}_{unique_id}")
 
 
 async def ensure_oauth_user(
@@ -317,24 +309,12 @@ async def ensure_oauth_user(
     existing = await UserCRUD(auth, db).get(username=username)
     if existing:
         return existing
-
-    reg = UserCreateSchema(
+    user = await auto_register_login_user(
+        db=db,
         username=username,
-        password=secrets.token_urlsafe(24),
-        name=(display_name or username)[:32],
-        role_ids=list(settings.OAUTH_DEFAULT_ROLE_IDS),
+        display_name=display_name,
+        fail_msg="OAuth 注册失败",
     )
-    try:
-        await UserService(auth, db).create(data=reg)
-    except Exception:
-        # 并发创建可能触发唯一约束冲突，回退到再次查询
-        existing = await UserCRUD(auth, db).get(username=username)
-        if existing:
-            return existing
-        raise CustomException(msg="OAuth 注册失败")
-    user = await UserCRUD(auth, db).get(username=username)
-    if not user:
-        raise CustomException(msg="OAuth 注册失败")
     logger.info(f"OAuth 自动注册用户: {username} ({provider})")
     return user
 
@@ -387,13 +367,7 @@ async def complete_oauth_login(
 
     user = await ensure_oauth_user(db=db, provider=provider, unique_id=uid, display_name=name)
     try:
-        if user.status == 1:
-            raise CustomException(msg="用户已被停用")
-
-        user = await UserCRUD(AuthSchema(), db).update_last_login(id=user.id)
-        if not user:
-            raise CustomException(msg="用户不存在")
-
+        user = await LoginService.prepare_user_for_login(db=db, user=user)
         login_type = f"oauth_{provider}"
         token = await LoginService.create_token(request=request, redis=redis, user=user, login_type=login_type, background_tasks=background_tasks)
         return token, frontend
@@ -418,26 +392,91 @@ async def save_oauth_state(
         raise CustomException(msg="缓存 OAuth 状态失败")
 
 
-def oauth_service_frontend_redirect_from_token(frontend_base: str, token: JWTOutSchema) -> str:
+async def _state_frontend_redirect(redis: Redis, state: str | None, fallback: str) -> str:
+    """从缓存的 OAuth state 中还原前端回调地址；state 缺失/过期/损坏时回退默认值。"""
+    if not state:
+        return fallback
+    raw = await RedisCURD(redis).get(f"{STATE_PREFIX}{state}")
+    if not raw:
+        return fallback
+    if isinstance(raw, bytes):
+        raw = raw.decode("utf-8")
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError:
+        return fallback
+    return str(payload.get("frontend_redirect") or fallback).strip() or fallback
+
+
+async def start_oauth_login(
+    *,
+    request: Request,
+    redis: Redis,
+    provider: OAuthProvider,
+    redirect_uri: str | None,
+) -> str:
+    """OAuth 发起编排：生成一次性 state 并返回第三方授权页跳转地址。
+
+    缺少 redirect_uri、渠道密钥未配置等异常时降级为错误重定向（回落到默认前端页），
+    保证端点永远返回可跳转地址。
+    """
+    fallback = settings.OAUTH_FRONTEND_FALLBACK
+    try:
+        if not redirect_uri:
+            raise CustomException(msg="缺少 redirect_uri 参数")
+        state = secrets.token_urlsafe(32)
+        await save_oauth_state(
+            redis=redis,
+            state=state,
+            provider=provider,
+            frontend_redirect=redirect_uri,
+        )
+        return build_authorize_url(
+            provider=provider,
+            callback_url=_callback_url(request, provider),
+            state=state,
+        )
+    except CustomException as e:
+        return _frontend_error_redirect(redirect_uri or fallback, e.msg)
+
+
+async def finish_oauth_login(
+    *,
+    request: Request,
+    redis: Redis,
+    db: AsyncSession,
+    provider: OAuthProvider,
+    code: str | None,
+    state: str | None,
+    background_tasks: BackgroundTasks | None = None,
+) -> str:
+    """OAuth 回调编排：校验参数与 state → 换取令牌 → 查找/自动注册用户 → 签发登录态。
+
+    返回浏览器最终跳转地址：成功回前端登录页并携带令牌；失败跳错误页
+    （尽力还原发起时的前端地址，取不到则用系统默认值）。
+    """
+    fallback = settings.OAUTH_FRONTEND_FALLBACK
+
+    async def _frontend() -> str:
+        return await _state_frontend_redirect(redis=redis, state=state, fallback=fallback)
+
+    if not code or not state:
+        return _frontend_error_redirect(await _frontend(), "授权被取消或参数不完整")
+    try:
+        token, frontend = await complete_oauth_login(
+            request=request,
+            redis=redis,
+            db=db,
+            provider=provider,
+            code=code,
+            state=state,
+            background_tasks=background_tasks,
+        )
+    except CustomException as e:
+        return _frontend_error_redirect(await _frontend(), e.msg)
     return _frontend_success_redirect(
-        frontend_base,
+        frontend,
         token.access_token,
         token.refresh_token,
         token.token_type,
     )
-
-
-def oauth_service_error_redirect(frontend_base: str, message: str) -> str:
-    return _frontend_error_redirect(frontend_base, message)
-
-
-__all__ = [
-    "STATE_PREFIX",
-    "OAuthProvider",
-    "_callback_url",
-    "build_authorize_url",
-    "complete_oauth_login",
-    "oauth_service_error_redirect",
-    "oauth_service_frontend_redirect_from_token",
-    "save_oauth_state",
-]

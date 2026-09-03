@@ -3,149 +3,160 @@
   <div :style="{ height: containerMinHeight }">
     <ElSplitter :style="'height: 100%'">
       <ElSplitterPanel size="360px" :min="260" :max="500">
-        <div
-          class="box-border h-full p-5"
-        >
-      <div class="pb-5 max-md:hidden!">
-        <div class="flex items-center gap-3">
-          <ElAvatar :size="50" :src="selectedPerson?.avatar" />
-          <div>
-            <div class="text-base font-medium">{{ selectedPerson?.name }}</div>
-            <div class="mt-1 text-xs text-g-500">{{ selectedPerson?.email }}</div>
-          </div>
-        </div>
-        <div class="mt-3">
-          <ElInput v-model="searchQuery" placeholder="搜索联系人" prefix-icon="Search" clearable />
-        </div>
-        <ElDropdown trigger="click" placement="bottom-start">
-          <span class="mt-5 cursor-pointer">
-            排序方式
-            <ElIcon class="el-icon--right">
-              <ArrowDown />
-            </ElIcon>
-          </span>
-          <template #dropdown>
-            <ElDropdownMenu>
-              <ElDropdownItem>按时间排序</ElDropdownItem>
-              <ElDropdownItem>按名称排序</ElDropdownItem>
-              <ElDropdownItem>全部标为已读</ElDropdownItem>
-            </ElDropdownMenu>
-          </template>
-        </ElDropdown>
-      </div>
-      <ElScrollbar>
-        <div
-          v-for="item in personList"
-          :key="item.id"
-          class="flex items-center p-3 cursor-pointer rounded-lg transition duration-200 hover:bg-active-color/30 mb-1"
-          :class="{ 'bg-active-color': selectedPerson?.id === item.id }"
-          @click="selectPerson(item)"
-        >
-          <div class="mr-3">
-            <ElBadge is-dot :color="item.online ? 'var(--el-color-success)' : 'var(--el-color-error)'">
-              <ElAvatar :size="40" :src="item.avatar">
-                {{ item.name.charAt(0) }}
-              </ElAvatar>
-            </ElBadge>
-          </div>
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center justify-between mb-1">
-              <span class="text-sm font-medium">{{ item.name }}</span>
-              <span class="text-xs text-g-600">{{ item.lastTime }}</span>
+        <div class="box-border h-full p-5">
+          <div class="pb-5 max-md:hidden!">
+            <div class="flex items-center gap-3">
+              <ElAvatar :size="50" :src="selectedPerson?.avatar" />
+              <div>
+                <div class="text-base font-medium">{{ selectedPerson?.name }}</div>
+                <div class="mt-1 text-xs text-g-500">{{ selectedPerson?.email }}</div>
+              </div>
             </div>
-            <div class="flex items-center justify-between">
-              <span class="overflow-hidden text-xs text-g-600 text-ellipsis whitespace-nowrap">
-                {{ item.email }}
+            <div class="mt-3">
+              <ElInput
+                v-model="searchQuery"
+                placeholder="搜索联系人"
+                prefix-icon="Search"
+                clearable
+              />
+            </div>
+            <ElDropdown trigger="click" placement="bottom-start">
+              <span class="mt-5 cursor-pointer">
+                排序方式
+                <ElIcon class="el-icon--right">
+                  <ArrowDown />
+                </ElIcon>
               </span>
-            </div>
+              <template #dropdown>
+                <ElDropdownMenu>
+                  <ElDropdownItem>按时间排序</ElDropdownItem>
+                  <ElDropdownItem>按名称排序</ElDropdownItem>
+                  <ElDropdownItem>全部标为已读</ElDropdownItem>
+                </ElDropdownMenu>
+              </template>
+            </ElDropdown>
           </div>
-        </div>
-      </ElScrollbar>
+          <ElScrollbar>
+            <div
+              v-for="item in personList"
+              :key="item.id"
+              class="flex items-center p-3 cursor-pointer rounded-lg transition duration-200 hover:bg-active-color/30 mb-1"
+              :class="{ 'bg-active-color': selectedPerson?.id === item.id }"
+              @click="selectPerson(item)"
+            >
+              <div class="mr-3">
+                <ElBadge
+                  is-dot
+                  :color="item.online ? 'var(--el-color-success)' : 'var(--el-color-error)'"
+                >
+                  <ElAvatar :size="40" :src="item.avatar">
+                    {{ item.name.charAt(0) }}
+                  </ElAvatar>
+                </ElBadge>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="text-sm font-medium">{{ item.name }}</span>
+                  <span class="text-xs text-g-600">{{ item.lastTime }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="overflow-hidden text-xs text-g-600 text-ellipsis whitespace-nowrap">
+                    {{ item.email }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </ElScrollbar>
         </div>
       </ElSplitterPanel>
 
       <ElSplitterPanel :min="300">
         <div class="box-border h-full">
-      <div class="flex items-center justify-between pt-4 px-4 pb-0 mb-5">
-        <div>
-          <span class="text-base font-medium">Art Bot</span>
-          <div class="flex items-center gap-1 mt-1.5">
-            <div class="w-2 h-2 rounded-full" :class="isOnline ? 'bg-success' : 'bg-danger'"></div>
-            <span class="text-xs text-g-600">{{ isOnline ? "在线" : "离线" }}</span>
+          <div class="flex items-center justify-between pt-4 px-4 pb-0 mb-5">
+            <div>
+              <span class="text-base font-medium">Art Bot</span>
+              <div class="flex items-center gap-1 mt-1.5">
+                <div
+                  class="w-2 h-2 rounded-full"
+                  :class="isOnline ? 'bg-success' : 'bg-danger'"
+                ></div>
+                <span class="text-xs text-g-600">{{ isOnline ? "在线" : "离线" }}</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <FaIconButton icon="ri:phone-line" circle class="size-11 text-g-600" />
+              <FaIconButton icon="ri:video-on-line" circle class="size-11 text-g-600" />
+              <FaIconButton icon="ri:more-2-fill" circle class="size-11 text-g-600" />
+            </div>
           </div>
-        </div>
-        <div class="flex items-center gap-2">
-          <FaIconButton icon="ri:phone-line" circle class="size-11 text-g-600" />
-          <FaIconButton icon="ri:video-on-line" circle class="size-11 text-g-600" />
-          <FaIconButton icon="ri:more-2-fill" circle class="size-11 text-g-600" />
-        </div>
-      </div>
-      <div class="flex flex-col h-[calc(100%-85px)]">
-        <!-- 聊天消息区域 -->
-        <ElScrollbar
-          ref="messageContainer"
-          class="flex-1 py-7.5 px-4 border-t border-(--default-border)"
-        >
-          <template v-for="message in messages" :key="message.id">
-            <div
-              :class="[
-                'flex gap-2 items-start w-full mb-7.5',
-                message.isMe ? 'flex-row-reverse' : 'flex-row justify-start',
-              ]"
+          <div class="flex flex-col h-[calc(100%-85px)]">
+            <!-- 聊天消息区域 -->
+            <ElScrollbar
+              ref="messageContainer"
+              class="flex-1 py-7.5 px-4 border-t border-(--default-border)"
             >
-              <ElAvatar :size="32" :src="message.avatar" class="shrink-0" />
-              <div
-                class="flex flex-col max-w-[70%]"
-                :class="message.isMe ? 'items-end' : 'items-start'"
-              >
+              <template v-for="message in messages" :key="message.id">
                 <div
-                  class="flex gap-2 mb-1 text-xs"
-                  :class="message.isMe ? 'flex-row-reverse' : 'flex-row'"
+                  :class="[
+                    'flex gap-2 items-start w-full mb-7.5',
+                    message.isMe ? 'flex-row-reverse' : 'flex-row justify-start',
+                  ]"
                 >
-                  <span class="font-medium">{{ message.sender }}</span>
-                  <span class="text-g-600">{{ message.time }}</span>
+                  <ElAvatar :size="32" :src="message.avatar" class="shrink-0" />
+                  <div
+                    class="flex flex-col max-w-[70%]"
+                    :class="message.isMe ? 'items-end' : 'items-start'"
+                  >
+                    <div
+                      class="flex gap-2 mb-1 text-xs"
+                      :class="message.isMe ? 'flex-row-reverse' : 'flex-row'"
+                    >
+                      <span class="font-medium">{{ message.sender }}</span>
+                      <span class="text-g-600">{{ message.time }}</span>
+                    </div>
+                    <div
+                      class="py-2.5 px-3.5 text-sm leading-[1.4] rounded-md"
+                      :class="message.isMe ? 'bg-theme/15!' : 'bg-active-color!'"
+                    >
+                      {{ message.content }}
+                    </div>
+                  </div>
                 </div>
-                <div
-                  class="py-2.5 px-3.5 text-sm leading-[1.4] rounded-md"
-                  :class="message.isMe ? 'bg-theme/15!' : 'bg-active-color!'"
-                >
-                  {{ message.content }}
-                </div>
-              </div>
-            </div>
-          </template>
-        </ElScrollbar>
+              </template>
+            </ElScrollbar>
 
-        <!-- 聊天输入区域 -->
-        <div class="p-4 shrink-0">
-          <ElInput
-            v-model="messageText"
-            type="textarea"
-            :rows="3"
-            placeholder="输入消息"
-            resize="none"
-            @keyup.enter.prevent="sendMessage"
-          >
-            <template #append>
-              <div class="flex gap-2 py-2">
-                <ElButton :icon="Paperclip" circle plain />
-                <ElButton :icon="Picture" circle plain />
-                <ElButton type="primary" @click="sendMessage" v-ripple>发送</ElButton>
+            <!-- 聊天输入区域 -->
+            <div class="p-4 shrink-0">
+              <ElInput
+                v-model="messageText"
+                type="textarea"
+                :rows="3"
+                placeholder="输入消息"
+                resize="none"
+                @keyup.enter.prevent="sendMessage"
+              >
+                <template #append>
+                  <div class="flex gap-2 py-2">
+                    <ElButton :icon="Paperclip" circle plain />
+                    <ElButton :icon="Picture" circle plain />
+                    <ElButton type="primary" @click="sendMessage" v-ripple>发送</ElButton>
+                  </div>
+                </template>
+              </ElInput>
+              <div class="flex items-center justify-between mt-3">
+                <div class="flex items-center">
+                  <FaSvgIcon icon="ri:image-line" class="mr-5 cursor-pointer text-g-600 text-lg" />
+                  <FaSvgIcon
+                    icon="ri:emotion-happy-line"
+                    class="mr-5 cursor-pointer text-g-600 text-lg"
+                  />
+                </div>
+                <ElButton type="primary" @click="sendMessage" v-ripple class="min-w-20"
+                  >发送</ElButton
+                >
               </div>
-            </template>
-          </ElInput>
-          <div class="flex items-center justify-between mt-3">
-            <div class="flex items-center">
-              <FaSvgIcon icon="ri:image-line" class="mr-5 cursor-pointer text-g-600 text-lg" />
-              <FaSvgIcon
-                icon="ri:emotion-happy-line"
-                class="mr-5 cursor-pointer text-g-600 text-lg"
-              />
             </div>
-            <ElButton type="primary" @click="sendMessage" v-ripple class="min-w-20">发送</ElButton>
           </div>
-        </div>
-      </div>
         </div>
       </ElSplitterPanel>
     </ElSplitter>

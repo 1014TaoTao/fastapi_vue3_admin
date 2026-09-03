@@ -160,7 +160,10 @@
             :lg="4"
             class="mb-4"
           >
-            <ElCard shadow="hover" :class="`fa-card job-card job-card--${getJobStatusClass(job.status)}`">
+            <ElCard
+              shadow="hover"
+              :class="`fa-card job-card job-card--${getJobStatusClass(job.status)}`"
+            >
               <template #header>
                 <div class="job-card-title">
                   <span
@@ -851,17 +854,18 @@ const logDetailDialog = reactive({
 });
 const logDetailFormData = ref<JobLogTable>({} as JobLogTable);
 
-const logDetailItems: import("@/components/display/fa-descriptions/index.vue").DescriptionsItem[] = [
-  { label: "任务ID", prop: "job_id" },
-  { label: "任务名称", prop: "job_name" },
-  { label: "触发方式", prop: "trigger_type" },
-  { label: "执行状态", prop: "status" },
-  { label: "下次执行时间", prop: "next_run_time" },
-  { label: "执行结果", prop: "result", span: 4 },
-  { label: "错误信息", prop: "error", span: 4 },
-  { label: "创建时间", prop: "created_time" },
-  { label: "更新时间", prop: "updated_time" },
-];
+const logDetailItems: import("@/components/display/fa-descriptions/index.vue").DescriptionsItem[] =
+  [
+    { label: "任务ID", prop: "job_id" },
+    { label: "任务名称", prop: "job_name" },
+    { label: "触发方式", prop: "trigger_type" },
+    { label: "执行状态", prop: "status" },
+    { label: "下次执行时间", prop: "next_run_time" },
+    { label: "执行结果", prop: "result", span: 4 },
+    { label: "错误信息", prop: "error", span: 4 },
+    { label: "创建时间", prop: "created_time" },
+    { label: "更新时间", prop: "updated_time" },
+  ];
 
 async function handleOpenLogDetail(row: JobLogTable) {
   if (row.id == null) return;

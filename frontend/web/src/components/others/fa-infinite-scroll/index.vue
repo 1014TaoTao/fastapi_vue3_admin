@@ -13,7 +13,10 @@
       </div>
     </template>
     <slot />
-    <div v-if="noMore && showNoMore" class="fa-infinite-scroll__empty text-center py-4 text-sm text-gray-400">
+    <div
+      v-if="noMore && showNoMore"
+      class="fa-infinite-scroll__empty text-center py-4 text-sm text-gray-400"
+    >
       {{ noMoreText }}
     </div>
   </div>

@@ -1,7 +1,9 @@
 <template>
   <div class="flex h-[calc(100vh-220px)] min-h-120 gap-3">
     <!-- 左：会话列表 -->
-    <div class="flex w-72 shrink-0 flex-col overflow-hidden rounded-xl border border-(--el-border-color-lighter) bg-(--el-bg-color)">
+    <div
+      class="flex w-72 shrink-0 flex-col overflow-hidden rounded-xl border border-(--el-border-color-lighter) bg-(--el-bg-color)"
+    >
       <div class="flex gap-2 border-b border-(--el-border-color-lighter) p-2.5">
         <ElInput v-model="searchKeyword" placeholder="搜索会话" clearable size="default">
           <template #prefix>
@@ -12,21 +14,30 @@
           <ElButton type="primary" :icon="Plus" />
           <template #dropdown>
             <ElDropdownMenu>
-              <ElDropdownItem command="private"><ElIcon><ChatLineRound /></ElIcon>发起私聊</ElDropdownItem>
-              <ElDropdownItem command="group"><ElIcon><UserFilled /></ElIcon>创建群聊</ElDropdownItem>
+              <ElDropdownItem command="private"
+                ><ElIcon><ChatLineRound /></ElIcon>发起私聊</ElDropdownItem
+              >
+              <ElDropdownItem command="group"
+                ><ElIcon><UserFilled /></ElIcon>创建群聊</ElDropdownItem
+              >
             </ElDropdownMenu>
           </template>
         </ElDropdown>
       </div>
       <ElScrollbar class="flex-1">
-        <div v-if="filteredConversations.length === 0" class="py-16 text-center text-xs text-(--el-text-color-secondary)">
+        <div
+          v-if="filteredConversations.length === 0"
+          class="py-16 text-center text-xs text-(--el-text-color-secondary)"
+        >
           暂无会话，点击右上角发起聊天
         </div>
         <div
           v-for="conv in filteredConversations"
           :key="conv.conversation_type + '-' + conv.id"
           class="mx-2 mb-1 flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-2.5 transition-colors"
-          :class="isActive(conv) ? 'bg-(--el-color-primary-light-9)' : 'hover:bg-(--el-fill-color-light)'"
+          :class="
+            isActive(conv) ? 'bg-(--el-color-primary-light-9)' : 'hover:bg-(--el-fill-color-light)'
+          "
           @click="openConversation(conv)"
         >
           <div class="relative shrink-0">
@@ -39,12 +50,22 @@
           </div>
           <div class="flex min-w-0 flex-1 flex-col">
             <div class="flex items-center justify-between gap-2">
-              <span class="truncate text-sm font-medium text-(--el-text-color-primary)">{{ conv.name }}</span>
-              <span class="shrink-0 text-[10px] text-(--el-text-color-secondary)">{{ formatTime(conv.last_time) }}</span>
+              <span class="truncate text-sm font-medium text-(--el-text-color-primary)">{{
+                conv.name
+              }}</span>
+              <span class="shrink-0 text-[10px] text-(--el-text-color-secondary)">{{
+                formatTime(conv.last_time)
+              }}</span>
             </div>
             <div class="mt-0.5 flex items-center justify-between gap-2">
-              <span class="truncate text-xs text-(--el-text-color-secondary)">{{ conv.last_message || (conv.conversation_type === 2 ? `群聊(${conv.member_count}人)` : "暂无消息") }}</span>
-              <span v-if="conv.unread > 0" class="shrink-0 rounded-full bg-(--el-color-danger) px-1.5 py-0.5 text-[10px] leading-none text-white">
+              <span class="truncate text-xs text-(--el-text-color-secondary)">{{
+                conv.last_message ||
+                (conv.conversation_type === 2 ? `群聊(${conv.member_count}人)` : "暂无消息")
+              }}</span>
+              <span
+                v-if="conv.unread > 0"
+                class="shrink-0 rounded-full bg-(--el-color-danger) px-1.5 py-0.5 text-[10px] leading-none text-white"
+              >
                 {{ conv.unread > 99 ? "99+" : conv.unread }}
               </span>
             </div>
@@ -54,26 +75,36 @@
     </div>
 
     <!-- 右：聊天窗 -->
-    <div class="flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-(--el-border-color-lighter) bg-(--el-bg-color)">
+    <div
+      class="flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-(--el-border-color-lighter) bg-(--el-bg-color)"
+    >
       <template v-if="currentConversation">
         <!-- 头部 -->
-        <div class="flex items-center justify-between border-b border-(--el-border-color-lighter) px-4 py-3">
+        <div
+          class="flex items-center justify-between border-b border-(--el-border-color-lighter) px-4 py-3"
+        >
           <div class="flex items-center gap-2.5">
-            <ElAvatar :size="36" :src="currentConversation.avatar || defaultAvatar" :icon="UserFilled" />
+            <ElAvatar
+              :size="36"
+              :src="currentConversation.avatar || defaultAvatar"
+              :icon="UserFilled"
+            />
             <div class="leading-tight">
-              <div class="text-sm font-medium text-(--el-text-color-primary)">{{ currentConversation.name }}</div>
+              <div class="text-sm font-medium text-(--el-text-color-primary)">
+                {{ currentConversation.name }}
+              </div>
               <div class="text-xs text-(--el-text-color-secondary)">
                 <template v-if="currentConversation.conversation_type === 1">
                   {{ currentConversation.online ? "在线" : "离线" }}
                 </template>
-                <template v-else>
-                  {{ currentConversation.member_count }} 名成员
-                </template>
+                <template v-else> {{ currentConversation.member_count }} 名成员 </template>
               </div>
             </div>
           </div>
           <div class="flex items-center gap-2">
-            <ElTag v-if="chatStore.wsConnected" type="success" effect="plain" size="small">实时连接</ElTag>
+            <ElTag v-if="chatStore.wsConnected" type="success" effect="plain" size="small"
+              >实时连接</ElTag
+            >
             <ElButton
               v-if="currentConversation.conversation_type === 2"
               size="small"
@@ -90,20 +121,54 @@
         <!-- 消息区 -->
         <ElScrollbar ref="messageScrollbarRef" class="flex-1 px-4 py-5">
           <div class="mb-3 text-center">
-            <ElButton v-if="hasMore" text type="primary" size="small" :loading="loadingHistory" @click="() => loadHistory()">
+            <ElButton
+              v-if="hasMore"
+              text
+              type="primary"
+              size="small"
+              :loading="loadingHistory"
+              @click="() => loadHistory()"
+            >
               加载更早的消息
             </ElButton>
           </div>
-          <div v-if="messages.length === 0" class="py-20 text-center text-xs text-(--el-text-color-secondary)">
+          <div
+            v-if="messages.length === 0"
+            class="py-20 text-center text-xs text-(--el-text-color-secondary)"
+          >
             暂无消息，打个招呼吧
           </div>
           <template v-for="msg in messages" :key="msg.id">
-            <div :class="['mb-5 flex w-full items-start gap-2.5', msg.sender_id === myId ? 'flex-row-reverse' : 'flex-row']">
-              <ElAvatar :size="32" :src="msg.sender_avatar || defaultAvatar" :icon="UserFilled" class="shrink-0" />
-              <div :class="['flex max-w-[70%] flex-col', msg.sender_id === myId ? 'items-end' : 'items-start']">
-                <div :class="['mb-1 flex items-center gap-2 text-xs', msg.sender_id === myId ? 'flex-row-reverse' : 'flex-row']">
-                  <span class="font-medium text-(--el-text-color-primary)">{{ msg.sender_id === myId ? "我" : msg.sender_name }}</span>
-                  <span class="text-(--el-text-color-secondary)">{{ formatTime(msg.created_time) }}</span>
+            <div
+              :class="[
+                'mb-5 flex w-full items-start gap-2.5',
+                msg.sender_id === myId ? 'flex-row-reverse' : 'flex-row',
+              ]"
+            >
+              <ElAvatar
+                :size="32"
+                :src="msg.sender_avatar || defaultAvatar"
+                :icon="UserFilled"
+                class="shrink-0"
+              />
+              <div
+                :class="[
+                  'flex max-w-[70%] flex-col',
+                  msg.sender_id === myId ? 'items-end' : 'items-start',
+                ]"
+              >
+                <div
+                  :class="[
+                    'mb-1 flex items-center gap-2 text-xs',
+                    msg.sender_id === myId ? 'flex-row-reverse' : 'flex-row',
+                  ]"
+                >
+                  <span class="font-medium text-(--el-text-color-primary)">{{
+                    msg.sender_id === myId ? "我" : msg.sender_name
+                  }}</span>
+                  <span class="text-(--el-text-color-secondary)">{{
+                    formatTime(msg.created_time)
+                  }}</span>
                 </div>
                 <div
                   :class="[
@@ -137,14 +202,22 @@
           </div>
         </div>
       </template>
-      <div v-else class="flex flex-1 flex-col items-center justify-center gap-3 text-(--el-text-color-secondary)">
+      <div
+        v-else
+        class="flex flex-1 flex-col items-center justify-center gap-3 text-(--el-text-color-secondary)"
+      >
         <ElIcon :size="56"><ChatDotRound /></ElIcon>
         <span class="text-sm">选择一个会话开始聊天</span>
       </div>
     </div>
 
     <!-- 发起聊天 / 创建群 -->
-    <ElDialog v-model="createDialogVisible" :title="createMode === 'group' ? '创建群聊' : '发起私聊'" width="460px" :close-on-click-modal="false">
+    <ElDialog
+      v-model="createDialogVisible"
+      :title="createMode === 'group' ? '创建群聊' : '发起私聊'"
+      width="460px"
+      :close-on-click-modal="false"
+    >
       <template v-if="createMode === 'group'">
         <div class="mb-3">
           <div class="mb-1.5 text-xs text-(--el-text-color-secondary)">群名称</div>
@@ -165,7 +238,12 @@
         placeholder="输入姓名或用户名搜索"
         class="w-full"
       >
-        <ElOption v-for="u in userOptions" :key="u.id" :label="u.name + '（' + u.username + '）'" :value="u.id" />
+        <ElOption
+          v-for="u in userOptions"
+          :key="u.id"
+          :label="u.name + '（' + u.username + '）'"
+          :value="u.id"
+        />
       </ElSelect>
       <template #footer>
         <ElButton @click="createDialogVisible = false">取消</ElButton>
@@ -180,18 +258,35 @@
           <ElAvatar :size="48" :src="groupDetail.avatar || defaultAvatar" :icon="UserFilled" />
           <div>
             <div class="text-sm font-medium">{{ groupDetail.name }}</div>
-            <div class="text-xs text-(--el-text-color-secondary)">{{ groupDetail.member_count }} 名成员</div>
+            <div class="text-xs text-(--el-text-color-secondary)">
+              {{ groupDetail.member_count }} 名成员
+            </div>
           </div>
         </div>
-        <div v-if="groupDetail.announcement" class="mb-4 rounded-lg bg-(--el-fill-color-light) p-3 text-xs text-(--el-text-color-secondary)">
+        <div
+          v-if="groupDetail.announcement"
+          class="mb-4 rounded-lg bg-(--el-fill-color-light) p-3 text-xs text-(--el-text-color-secondary)"
+        >
           公告：{{ groupDetail.announcement }}
         </div>
         <div class="mb-2 flex items-center justify-between">
           <span class="text-sm font-medium">成员列表</span>
-          <ElButton v-if="isOwner" size="small" type="primary" text :icon="Plus" @click="openAddMember">添加成员</ElButton>
+          <ElButton
+            v-if="isOwner"
+            size="small"
+            type="primary"
+            text
+            :icon="Plus"
+            @click="openAddMember"
+            >添加成员</ElButton
+          >
         </div>
         <ElScrollbar max-height="320px">
-          <div v-for="m in groupDetail.members" :key="m.id" class="mb-1 flex items-center justify-between rounded-lg px-2 py-2 hover:bg-(--el-fill-color-light)">
+          <div
+            v-for="m in groupDetail.members"
+            :key="m.id"
+            class="mb-1 flex items-center justify-between rounded-lg px-2 py-2 hover:bg-(--el-fill-color-light)"
+          >
             <div class="flex items-center gap-2.5">
               <ElAvatar :size="32" :src="m.avatar || defaultAvatar" :icon="UserFilled" />
               <div class="leading-tight">
@@ -200,8 +295,17 @@
               </div>
             </div>
             <div class="flex items-center gap-1.5">
-              <ElTag v-if="m.id === groupDetail.owner_id" size="small" type="warning" effect="light">群主</ElTag>
-              <ElButton v-if="isOwner && m.id !== groupDetail.owner_id" size="small" text type="danger" @click="removeMember(m)">移除</ElButton>
+              <ElTag v-if="m.id === groupDetail.owner_id" size="small" type="warning" effect="light"
+                >群主</ElTag
+              >
+              <ElButton
+                v-if="isOwner && m.id !== groupDetail.owner_id"
+                size="small"
+                text
+                type="danger"
+                @click="removeMember(m)"
+                >移除</ElButton
+              >
             </div>
           </div>
         </ElScrollbar>
@@ -223,7 +327,14 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { ChatDotRound, ChatLineRound, MoreFilled, Plus, Search, UserFilled } from "@element-plus/icons-vue";
+import {
+  ChatDotRound,
+  ChatLineRound,
+  MoreFilled,
+  Plus,
+  Search,
+  UserFilled,
+} from "@element-plus/icons-vue";
 import type { ElScrollbar as ElScrollbarType } from "element-plus";
 
 import ChatAPI, {
@@ -398,12 +509,12 @@ async function confirmCreate() {
         return;
       }
       const userId = selectedUserIds.value[0]!;
-      const exists = conversations.value.some(
-        (c) => c.conversation_type === 1 && c.id === userId
-      );
+      const exists = conversations.value.some((c) => c.conversation_type === 1 && c.id === userId);
       if (exists) {
         createDialogVisible.value = false;
-        openConversation(conversations.value.find((c) => c.conversation_type === 1 && c.id === userId)!);
+        openConversation(
+          conversations.value.find((c) => c.conversation_type === 1 && c.id === userId)!
+        );
         return;
       }
       const response = await ChatAPI.listUsers();
@@ -437,7 +548,9 @@ async function confirmCreate() {
       ElMessage.success("创建群聊成功");
       await loadConversations();
       if (detail?.id) {
-        const conv = conversations.value.find((c) => c.conversation_type === 2 && c.id === detail.id);
+        const conv = conversations.value.find(
+          (c) => c.conversation_type === 2 && c.id === detail.id
+        );
         if (conv) openConversation(conv);
       }
     }
@@ -475,9 +588,7 @@ async function openAddMember() {
   const members = (await ChatAPI.listUsers()).data?.data ?? [];
   const ids = keywords
     .flatMap((kw) =>
-      members
-        .filter((u) => u.name.includes(kw) || u.username.includes(kw))
-        .map((u) => u.id)
+      members.filter((u) => u.name.includes(kw) || u.username.includes(kw)).map((u) => u.id)
     )
     .filter((id, index, arr) => arr.indexOf(id) === index);
   if (ids.length === 0) {
@@ -509,7 +620,9 @@ async function saveAnnouncement() {
 async function confirmDeleteGroup() {
   const conv = currentConversation.value;
   if (!conv || conv.id == null) return;
-  await ElMessageBox.confirm("解散后群聊记录将无法继续查看，确定解散？", "解散群组", { type: "error" });
+  await ElMessageBox.confirm("解散后群聊记录将无法继续查看，确定解散？", "解散群组", {
+    type: "error",
+  });
   await ChatAPI.deleteGroup(conv.id);
   ElMessage.success("群组已解散");
   groupDetailVisible.value = false;

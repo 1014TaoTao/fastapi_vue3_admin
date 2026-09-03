@@ -3,7 +3,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.base_schema import AuthSchema, BatchSetAvailable, PageResultSchema
 from app.core.exceptions import CustomException
 from app.utils.common_util import search_to_dict
-from app.utils.excel_util import ExcelUtil
 
 from .crud import NoticeCRUD
 from .schema import NoticeCreateSchema, NoticeOutSchema, NoticeQueryParam, NoticeUpdateSchema
@@ -139,24 +138,3 @@ class NoticeService:
         - data (BatchSetAvailable): 批量设置状态模型
         """
         await NoticeCRUD(self.auth, self.db).set(ids=data.ids, status=data.status)
-
-    @staticmethod
-    def export(notice_list: list[dict]) -> bytes:
-        """导出公告列表为 Excel
-
-        参数:
-        - notice_list (list[dict]): 公告数据列表（英文字段名）
-
-        返回:
-        - bytes: Excel 文件字节流
-        """
-        mapping_dict = {
-            "id": "编号",
-            "notice_title": "公告标题",
-            "notice_type": "公告类型（1通知 2公告）",
-            "notice_content": "公告内容",
-            "status": "状态",
-            "description": "备注",
-            "created_time": "创建时间",
-        }
-        return ExcelUtil.export_list2excel(notice_list, mapping_dict)

@@ -139,12 +139,15 @@ async def drop_tables() -> None:
 async def redis_connect(app: FastAPI, status: bool) -> Redis | None:
     """创建或关闭Redis连接。
 
+    连接失败时直接抛出异常（fail-fast）：Redis 承载会话/参数缓存/调度 jobstore，
+    静默降级会导致应用带病运行、请求期随机 500，宁可启动即失败。
+
     参数:
     - app (FastAPI): FastAPI应用实例。
     - status (bool): 连接状态,True为创建连接,False为关闭连接。
 
     返回:
-    - Redis | None: Redis连接实例,如果连接失败则返回None。
+    - Redis | None: Redis连接实例（status=False 时返回 None）。
     """
     if status:
         try:
@@ -159,14 +162,10 @@ async def redis_connect(app: FastAPI, status: bool) -> Redis | None:
             app.state.redis = rd
             if await rd.ping():  # pyright: ignore[reportGeneralTypeIssues]
                 return rd
-        except exceptions.AuthenticationError as e:
-            logger.error(f"❌ 数据库 Redis 认证失败: {e}")
-            return None
-        except exceptions.TimeoutError as e:
-            logger.error(f"❌ 数据库 Redis 连接超时: {e}")
-            return None
+            msg = "Redis ping 返回 False，连接不可用"
+            raise exceptions.ConnectionError(msg)
         except exceptions.RedisError as e:
-            logger.error(f"❌ 数据库 Redis 连接错误: {e}")
+            logger.error(f"❌ Redis 连接失败: {e}")
             raise
     else:
         await app.state.redis.close()

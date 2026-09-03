@@ -90,7 +90,7 @@ async def ticket_export_controller(
     search: Annotated[TicketQueryParam, Body()],
 ) -> StreamingResponse:
     ticket_list = await TicketService(auth, db).get_list(search=search)
-    export_result = TicketService.export_list(ticket_list=[item.model_dump() for item in ticket_list])
+    export_result = await TicketService.export_list(ticket_list=[item.model_dump() for item in ticket_list])
 
     return StreamResponse(
         data=bytes2file_response(export_result),

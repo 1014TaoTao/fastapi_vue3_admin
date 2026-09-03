@@ -37,7 +37,10 @@
             >
               {{ item.formattedTitle }}
             </span>
-            <div v-if="item.meta.showBadge && !item.meta.showTextBadge" class="fa-badge fa-badge-mixed" />
+            <div
+              v-if="item.meta.showBadge && !item.meta.showTextBadge"
+              class="fa-badge fa-badge-mixed"
+            />
           </div>
         </template>
       </div>

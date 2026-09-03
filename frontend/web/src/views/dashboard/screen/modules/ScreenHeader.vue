@@ -12,17 +12,23 @@
     <div class="header-right">
       <ElTooltip :content="isFs ? '退出全屏' : '进入全屏'" placement="bottom">
         <button class="fullscreen-btn" @click="handleToggle">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="fs-icon">
-          <path
-            v-if="isFs"
-            d="M4 14h2v2h2v2H4v-4zm12 0h2v2h2v2h-4v-4zM4 4h4v2H6v2H4V4zm14 0h4v4h-2V6h-2V4z"
-          />
-          <path
-            v-else
-            d="M4 4h4v2H6v2H4V4zm14 0h4v4h-2V6h-2V4zM4 20h4v-2H6v-2H4v4zm14 0h4v-4h-2v2h-2v2z"
-          />
-        </svg>
-      </button>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            class="fs-icon"
+          >
+            <path
+              v-if="isFs"
+              d="M4 14h2v2h2v2H4v-4zm12 0h2v2h2v2h-4v-4zM4 4h4v2H6v2H4V4zm14 0h4v4h-2V6h-2V4z"
+            />
+            <path
+              v-else
+              d="M4 4h4v2H6v2H4V4zm14 0h4v4h-2V6h-2V4zM4 20h4v-2H6v-2H4v4zm14 0h4v-4h-2v2h-2v2z"
+            />
+          </svg>
+        </button>
       </ElTooltip>
       <span class="header-time font-mono text-sm">{{ currentTime }}</span>
     </div>

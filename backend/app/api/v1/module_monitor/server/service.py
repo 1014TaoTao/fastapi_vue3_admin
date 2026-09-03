@@ -1,3 +1,4 @@
+import asyncio
 import platform
 import socket
 import time
@@ -22,6 +23,12 @@ class ServerService:
 
     @staticmethod
     async def get_server_monitor_info() -> ServerMonitorSchema:
+        # 采样全部为同步阻塞调用（psutil.disk_usage 在网络盘/卸载中的挂载点上
+        # 可达秒级，socket.gethostbyname 依赖 DNS），放到工作线程执行避免拖慢事件循环
+        return await asyncio.to_thread(ServerService._collect_monitor_info)
+
+    @staticmethod
+    def _collect_monitor_info() -> ServerMonitorSchema:
         return ServerMonitorSchema(
             cpu=ServerService._get_cpu_info(),
             mem=ServerService._get_memory_info(),

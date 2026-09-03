@@ -88,7 +88,7 @@ class DemoService:
         await DemoCRUD(self.auth, self.db).set(ids=data.ids, status=data.status)
 
     @staticmethod
-    def batch_export(obj_list: list[dict[str, Any]]) -> bytes:
+    async def batch_export(obj_list: list[dict[str, Any]]) -> bytes:
         mapping_dict = {
             "id": "编号",
             "name": "名称",
@@ -108,14 +108,14 @@ class DemoService:
             else:
                 item["created_id"] = "未知"
 
-        return ExcelUtil.export_list2excel(list_data=data, mapping_dict=mapping_dict)
+        return await ExcelUtil.aexport_list2excel(list_data=data, mapping_dict=mapping_dict)
 
     async def batch_import(self, file: UploadFile, update_support: bool = False) -> str:
         header_dict = {"名称": "name", "状态": "status", "描述": "description"}
 
         try:
             contents = await file.read()
-            rows = ExcelUtil.read_excel_to_dicts(contents)
+            rows = await ExcelUtil.aread_excel_to_dicts(contents)
             await file.close()
 
             if not rows:

@@ -3,7 +3,10 @@
     <template #title>
       <FaMenuRouteIcon :icon="item.meta.icon" :color="theme?.iconColor" class="mr-1 text-lg" />
       <span class="text-md">{{ formatMenuTitle(item.meta.title) }}</span>
-      <div v-if="item.meta.showBadge && !item.meta.showTextBadge" class="fa-badge fa-badge-horizontal" />
+      <div
+        v-if="item.meta.showBadge && !item.meta.showTextBadge"
+        class="fa-badge fa-badge-horizontal"
+      />
       <div v-if="item.meta.showBadge && item.meta.showTextBadge" class="fa-text-badge">
         {{ item.meta.showTextBadge }}
       </div>
