@@ -75,12 +75,11 @@ def register_exceptions(app: FastAPI) -> None:
 
 def register_routers(app: FastAPI) -> None:
     from app.api.v1.ai import ai_router
-    from app.api.v1.file import file_router
+    from app.api.v1.common import file_router
     from app.api.v1.generator import generator_router
     from app.api.v1.monitor import monitor_router
     from app.api.v1.system import system_router
     from app.api.v1.task import task_router
-    from app.api.v1.workflow import workflow_router
 
     app.include_router(file_router)
     app.include_router(monitor_router)
@@ -88,7 +87,6 @@ def register_routers(app: FastAPI) -> None:
     app.include_router(ai_router)
     app.include_router(generator_router)
     app.include_router(task_router)
-    app.include_router(workflow_router)
 
     from app.core.discover import dynamic_router
     dynamic_router.init_app(app)

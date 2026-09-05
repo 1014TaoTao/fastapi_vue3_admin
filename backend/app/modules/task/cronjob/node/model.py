@@ -8,7 +8,7 @@ class NodeModel(ModelMixin, UserMixin):
     """节点类型模型 - 动态定义节点类型
     """
 
-    __tablename__: str = "task_node"
+    __tablename__: str = "task_cornjob_node"
     __table_args__: dict[str, str] = {"comment": "节点类型表"}
     
     name: Mapped[str] = mapped_column(String(64), nullable=False, index=True, comment="节点名称")

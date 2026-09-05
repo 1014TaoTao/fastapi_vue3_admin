@@ -8,7 +8,7 @@ class JobModel(ModelMixin):
     """任务执行日志表
     """
 
-    __tablename__: str = "task_job"
+    __tablename__: str = "task_corn_job"
     __table_args__: dict[str, str] = {"comment": "任务执行日志表"}
     
     job_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True, comment="任务ID")

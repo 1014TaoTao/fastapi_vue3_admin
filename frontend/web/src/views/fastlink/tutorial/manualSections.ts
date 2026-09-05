@@ -182,30 +182,30 @@ export const MANUAL_MODULES_AFTER_SYSTEM: ManualModuleSection[] = [
       },
       {
         anchor: "page-workflow",
-        title: "传输流程",
-        path: "module_task/workflow/flow/index.vue",
+        title: "流程管理",
+        path: "module_storage/workflow/index.vue",
         notes: [
           "检索：FaSearchBar（可展开）。",
           "工具栏：新增、批量删除、刷新、列配置。",
           "流程定义：源节点 + 目标节点列表（parallel 多目标 / chain 链式），目标路径随行配置。",
-          "权限：`module_task:workflow:flow:create|delete|update` + 行级操作。",
+          "权限：`module_storage:workflow:flow:create|delete|update` + 行级操作。",
         ],
       },
       {
         anchor: "page-workflow-node",
         title: "节点管理",
-        path: "module_task/workflow/node/index.vue",
+        path: "module_storage/node/index.vue",
         notes: [
           "检索：FaSearchBar（可展开）。",
           "节点即传输地址（存储源）：FTP/FTPS/SFTP/S3/OBS/OSS/COS/本地目录。",
           "行操作：打开（进入存储管理）、测试连接、详情、编辑、删除。",
-          "权限：`module_task:workflow:node:create|delete|update` + 行级操作。",
+          "权限：`module_storage:workflow:node:create|delete|update` + 行级操作。",
         ],
       },
       {
         anchor: "page-workflow-storage",
-        title: "存储管理",
-        path: "module_task/workflow/storage/index.vue",
+        title: "文件浏览",
+        path: "module_storage/browse/index.vue",
         notes: [
           "多节点标签浏览各节点内部文件（类似 IDE 标签栏）。",
           "文件操作：上传、新建目录、下载、复制/移动、重命名、分享、删除。",
@@ -215,7 +215,7 @@ export const MANUAL_MODULES_AFTER_SYSTEM: ManualModuleSection[] = [
       {
         anchor: "page-workflow-transfer",
         title: "传输任务",
-        path: "module_task/workflow/transfer/index.vue",
+        path: "module_storage/transfer/index.vue",
         notes: [
           "创建传输任务：可选「从流程自动填充」源节点与多目标，或手动指定。",
           "实时进度：WebSocket 推送任务/步骤状态与速度。",

@@ -1,8 +1,0 @@
-# 见 docs/PLUGIN_ARCHITECTURE.md
-
-name = "workflow"
-title = "工作流"
-version = "1.0.0"
-description = "存储源管理、对象存储适配（OSS/COS/OBS/S3/SFTP/FTP）、文件浏览、传输任务与流程编排。"
-optional = true
-tags = ["workflow", "storage", "transfer"]
