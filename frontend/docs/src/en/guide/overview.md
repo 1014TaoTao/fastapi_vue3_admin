@@ -89,7 +89,7 @@ This is about **source directory organization**, separate from the MVC/Controlle
 | Approach | Organization | Typical Structure |
 |----------|-------------|-------------------|
 | **Layer-First** | Group by technical layer | Top-level `models/`, `schemas/`, `services/`, `controllers/` |
-| **Vertical Slice** (this project) | Group by business domain | `api/v1/module_*/` with `controller.py`, `service.py`, `crud.py`, `model.py`, `schema.py` |
+| **Vertical Slice** (this project) | Group by business domain | `modules/*/` packages with `controller.py`, `service.py`, `crud.py`, `model.py`, `schema.py` (route manifests in `app/api/v1/`) |
 
 **This project uses vertical slice by domain.**
 

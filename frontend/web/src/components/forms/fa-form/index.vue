@@ -226,6 +226,9 @@ import {
   useSanitizeOutputOptions,
   type SanitizeOutputOptions,
 } from "../composables/useFormBase";
+import FaFileUpload from "@/components/forms/fa-file-upload/index.vue";
+import FaUpload from "@/components/actions/fa-upload/index.vue";
+import FaWangEditor from "@/components/forms/fa-wang-editor/index.vue";
 
 defineOptions({ name: "FaForm" });
 
@@ -252,6 +255,9 @@ const componentMap = {
   timepicker: ElTimePicker, // 时间选择器
   timeselect: ElTimeSelect, // 时间选择
   treeselect: ElTreeSelect, // 树选择器
+  editor: FaWangEditor, // 富文本编辑器
+  imageupload: FaUpload, // 单图上传
+  fileupload: FaFileUpload, // 单文件上传
 };
 
 const { t } = useI18n();

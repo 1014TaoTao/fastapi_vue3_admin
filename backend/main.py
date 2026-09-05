@@ -6,41 +6,17 @@ import uvicorn
 from alembic import command
 from alembic.config import Config
 from fastapi import FastAPI
+from typer.main import Typer
 
 from app.common.enums import EnvironmentEnum
 from app.config.setting import settings
+from app.init_app import create_app
 from app.utils.banner import worship
 
-fastapiadmin_cli = typer.Typer()
-alembic_cfg = Config("alembic.ini")
+fastapiadmin_cli: Typer = typer.Typer()
+alembic_cfg: Config = Config(file_="alembic.ini")
+app: FastAPI = create_app()
 
-
-def create_app() -> FastAPI:
-    """创建 FastAPI 应用实例并完成日志、中间件、路由与静态资源注册。
-
-    返回:
-    - FastAPI: 已配置生命周期的应用对象。
-    """
-    from app.init_app import lifespan, register_docs, register_exceptions, register_frontend, register_middlewares, register_routers, register_static
-
-    # 创建FastAPI应用
-    app = FastAPI(**settings.FASTAPI_CONFIG, lifespan=lifespan)
-    # 注册异常处理器
-    register_exceptions(app)
-    # 注册中间件
-    register_middlewares(app)
-    # 注册路由
-    register_routers(app)
-    # 注册静态文件
-    register_static(app)
-    # 注册API文档（豁免限流）
-    register_docs(app)
-    # 注册前端
-    register_frontend(app)
-    return app
-
-
-# typer.Option是非必填；typer.Argument是必填
 @fastapiadmin_cli.command(
     name="run",
     help="启动 FastapiAdmin 服务, 运行 uv run main.py run --env=dev 不加参数默认 dev 环境",
@@ -56,7 +32,8 @@ def run(
     返回:
     - None
     """
-    # 设置环境变量（必须在 import settings 之前，确保加载正确环境）
+    # 设置环境变量：本进程的 settings 已在模块导入时固化，此处由 uvicorn 子进程继承
+    # ENVIRONMENT 后重新 import main，使 --env 真正生效（revision/upgrade 另用 cache_clear 处理）
     os.environ["ENVIRONMENT"] = env.value
 
     typer.secho(
@@ -64,9 +41,10 @@ def run(
         fg=typer.colors.GREEN,
     )
 
-    # 启动uvicorn服务
+    # 启动uvicorn服务（传 import string 而非实例：reload/多 worker 模式要求子进程重新 import，
+    # 且 os.environ 的环境设置由子进程继承后，settings 才能按 --env 正确加载）
     uvicorn.run(
-        app="main:create_app",
+        app=app,
         host=settings.SERVER_HOST,
         port=settings.SERVER_PORT,
         reload=env.value == EnvironmentEnum.DEV.value,
@@ -96,8 +74,8 @@ def revision(
     from app.config.setting import get_settings
 
     get_settings.cache_clear()
-    command.revision(alembic_cfg, autogenerate=True, message="迁移脚本")
-    typer.echo("迁移脚本已生成")
+    command.revision(config=alembic_cfg, autogenerate=True, message="迁移脚本")
+    typer.echo(message="迁移脚本已生成")
 
 
 @fastapiadmin_cli.command(
@@ -119,8 +97,8 @@ def upgrade(
     from app.config.setting import get_settings
 
     get_settings.cache_clear()
-    command.upgrade(alembic_cfg, "head")
-    typer.echo("所有迁移已应用。")
+    command.upgrade(config=alembic_cfg, revision="head")
+    typer.echo(message="所有迁移已应用。")
 
 
 if __name__ == "__main__":

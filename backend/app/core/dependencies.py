@@ -1,10 +1,11 @@
 import json
-from collections.abc import AsyncGenerator, Awaitable, Callable
+from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import Depends, Request, WebSocket
 from redis.asyncio.client import Redis
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.common.enums import RET, RedisInitKeyConfig
@@ -15,16 +16,6 @@ from app.core.exceptions import CustomException
 from app.core.logger import logger
 from app.core.redis_crud import RedisCURD
 from app.core.security import OAuth2Schema, decode_access_token
-
-# 用户行加载由 api 层登记注入（core 不反向依赖 app.api.* 的 ORM 模型）
-UserRowLoader = Callable[[AsyncSession, int], Awaitable[Any]]
-_user_row_loader: UserRowLoader | None = None
-
-
-def set_user_loader(loader: UserRowLoader) -> None:
-    """登记用户行加载实现（应用启动时由 api 层调用）。"""
-    global _user_row_loader
-    _user_row_loader = loader
 
 
 async def db_getter() -> AsyncGenerator[AsyncSession, None]:
@@ -155,7 +146,7 @@ async def _authenticate(
                     expire=settings.REFRESH_TOKEN_EXPIRE_SECONDS,
                 )
             if expired:
-                await crud.delete(key=session_key)
+                await crud.delete(session_key)
                 raise CustomException(msg="会话超过最大存活时长，请重新登录", code=RET.UNAUTHORIZED.code, status_code=401)
             # 续期必须落在存活判据（USER_SESSION）上，否则续期无效、判据形同虚设
             await crud.expire(key=session_key, expire=settings.REFRESH_TOKEN_EXPIRE_SECONDS)
@@ -177,9 +168,16 @@ async def _authenticate(
     if not user_id:
         raise CustomException(msg="认证已失效", code=RET.UNAUTHORIZED.code, status_code=401)
 
-    if _user_row_loader is None:
-        raise CustomException(msg="认证服务未就绪", code=RET.SERVICE_UNAVAILABLE.code, status_code=503)
-    user_obj = await _user_row_loader(db, user_id)
+    # 每请求查库校验用户仍存在且未删除：token 只证明签发时身份，不证明现在。
+    from app.modules.system.user.model import UserModel  # 延迟导入：core 导入期不依赖业务层（守卫不变式 3）
+
+    user_obj = (
+        (
+            await db.execute(select(UserModel).where(UserModel.id == user_id, UserModel.is_deleted == False))  # noqa: E712
+        )
+        .scalars()
+        .first()
+    )
     if not user_obj:
         raise CustomException(msg="用户不存在", code=RET.NOT_FOUND.code, status_code=401)
 
@@ -205,7 +203,7 @@ class AuthPermission:
         """
         self.permissions = permissions or []
 
-    async def __call__(self, auth: AuthSchema = Depends(get_current_user), db: AsyncSession = Depends(db_getter)) -> AuthSchema:
+    async def __call__(self, auth: AuthSchema = Depends(get_current_user)) -> AuthSchema:
         """调用权限验证
 
         参数:
@@ -231,6 +229,6 @@ class AuthPermission:
 
         if not any(perm in user_permissions for perm in self.permissions):
             logger.error(f"用户缺少任何所需的权限: {self.permissions}")
-            raise CustomException(msg="无权限操作", code=10403, status_code=403)
+            raise CustomException(msg="无权限操作", code=RET.NO_PERMISSION.code, status_code=403)
 
         return auth

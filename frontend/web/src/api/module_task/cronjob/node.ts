@@ -64,11 +64,10 @@ const NodeAPI = {
     });
   },
 
-  executeNode(id: number, params: ExecuteNodeParams = { trigger: "now" }) {
+  executeNode(id: number) {
     return request<ApiResponse<ExecuteNodeResult>>({
       url: `${API_PATH}/execute/${id}`,
       method: "post",
-      data: params,
     });
   },
 };
@@ -81,19 +80,13 @@ export interface NodePageQuery extends PageQuery, UserByQueryParams {
   status?: number;
 }
 
-export type TriggerType = "now" | "cron" | "interval" | "date";
-
-export interface ExecuteNodeParams {
-  trigger: TriggerType;
-  trigger_args?: string;
-  start_date?: string;
-  end_date?: string;
-}
+/** 正式排程的触发器类型（空 = 不排程，仅手动执行一次） */
+export type TriggerType = "cron" | "interval" | "date";
 
 export interface ExecuteNodeResult {
-  job_id: number;
-  status: number;
-  trigger: TriggerType;
+  job_id: string;
+  status: string;
+  trigger: string;
 }
 
 export interface NodeTable extends BaseType {
@@ -110,11 +103,11 @@ export interface NodeTable extends BaseType {
   max_instances?: number;
   start_date?: string;
   end_date?: string;
-  created_by?: CommonType;
-  updated_by?: CommonType;
-  deleted_by?: CommonType;
   status?: number;
   description?: string;
+  next_run_time?: string;
+  last_run_time?: string;
+  last_run_status?: number;
 }
 
 export interface NodeForm extends BaseFormType {
@@ -127,9 +120,10 @@ export interface NodeForm extends BaseFormType {
   kwargs?: string;
   coalesce?: boolean;
   max_instances?: number;
+  trigger?: TriggerType | "";
+  trigger_args?: string;
   start_date?: string;
   end_date?: string;
-  status?: number;
   description?: string;
 }
 

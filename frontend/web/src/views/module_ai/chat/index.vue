@@ -58,9 +58,8 @@ defineOptions({
   inheritAttrs: false,
 });
 
-import { ref, onMounted, onUnmounted } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
-import AiChatAPI, { ChatSession } from "@/api/module_ai/chat";
+import AiChatAPI, { type ChatSession } from "@/api/module_ai/chat";
 import { Auth } from "@utils/auth";
 import type { ChatMessage, UploadedFile } from "./types";
 import FaSidebar from "./components/FaSidebar.vue";
@@ -295,9 +294,9 @@ const handleSelectSession = async (session: ChatSession) => {
     const sessionData = response.data.data || {};
     const runs = sessionData.runs || [];
 
-    runs.forEach((run: any) => {
+    runs.forEach((run: { messages?: { role: string; content: string }[] }) => {
       const runMessages = run.messages || [];
-      runMessages.forEach((msg: any) => {
+      runMessages.forEach((msg: { role: string; content: string }) => {
         if (msg.role === "user" || msg.role === "assistant") {
           addMessage(msg.role, msg.content);
         }

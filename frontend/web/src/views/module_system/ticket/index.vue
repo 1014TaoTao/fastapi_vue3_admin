@@ -372,7 +372,6 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from "vue";
 import { useCrudForm } from "@/hooks/core/useCrudForm";
 import TicketAPI, {
   getTicketComments,
@@ -382,6 +381,7 @@ import TicketAPI, {
   type TicketTable,
   type TicketCommentTable,
 } from "@/api/module_system/ticket";
+import type { ColumnOption } from "@/types/component";
 import type { SearchFormItem } from "@/components/forms/fa-search-bar/index.vue";
 import type { FormItem } from "@/components/forms/fa-form/index.vue";
 import {
@@ -530,7 +530,7 @@ function onPageCurrentChange(page: number) {
   fetchData();
 }
 
-const columnChecks = ref([]);
+const columnChecks = ref<ColumnOption[]>([]);
 
 async function handleSearchBarSearch(params: Record<string, unknown>) {
   searchForm.value = {

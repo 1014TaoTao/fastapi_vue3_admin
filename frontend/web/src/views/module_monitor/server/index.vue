@@ -186,7 +186,6 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted } from "vue";
 import ServerAPI, { type ServerInfo } from "@/api/module_monitor/server";
 
 defineOptions({ name: "ServerMonitor" });

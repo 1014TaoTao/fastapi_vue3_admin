@@ -40,7 +40,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
 import { Connection, Loading, Warning, Delete, Setting } from "@element-plus/icons-vue";
 import { resolveIconForFaSvgIcon } from "@utils";
 

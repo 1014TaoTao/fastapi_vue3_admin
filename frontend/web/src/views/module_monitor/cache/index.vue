@@ -123,7 +123,7 @@
                       v-hasPerm="['module_monitor:cache:query']"
                       type="primary"
                       link
-                      @click="getCacheKeyList(row)"
+                      @click="getCacheKeyList(row as CacheInfo)"
                     >
                       {{ row.cache_name }}
                     </ElButton>
@@ -135,7 +135,7 @@
                     <ElPopconfirm
                       :title="`确认删除缓存 ${row.cache_name} 吗？`"
                       placement="top"
-                      @confirm="handleClearCacheName(row)"
+                      @confirm="handleClearCacheName(row as CacheInfo)"
                     >
                       <template #reference>
                         <ElButton
@@ -201,7 +201,7 @@
                     <ElPopconfirm
                       :title="`确认删除键 ${row.cacheKey} 吗？`"
                       placement="top"
-                      @confirm="handleClearCacheKey(row.cacheKey)"
+                      @confirm="handleClearCacheKey(row.cacheKey as string)"
                     >
                       <template #reference>
                         <ElButton
@@ -328,7 +328,7 @@ const getCacheNameList = async () => {
   }
 };
 
-const handleClearCacheName = async (row: any) => {
+const handleClearCacheName = async (row: CacheInfo) => {
   try {
     await CacheAPI.deleteCacheName(row.cache_name);
     getCacheNameList();
@@ -338,7 +338,7 @@ const handleClearCacheName = async (row: any) => {
   }
 };
 
-const getCacheKeyList = async (row?: any) => {
+const getCacheKeyList = async (row?: CacheInfo) => {
   try {
     const cacheName = row?.cache_name || nowCacheName.value;
     if (!cacheName) return;

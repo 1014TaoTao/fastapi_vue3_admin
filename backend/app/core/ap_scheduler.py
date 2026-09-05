@@ -1,6 +1,5 @@
 import asyncio
 import json
-from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
@@ -26,12 +25,14 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.date import DateTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 from redis.asyncio import Redis
+from sqlalchemy.orm import Session
 
 from app.config.setting import settings
 from app.core.database import engine
 from app.core.logger import logger
 
-# 任务状态常量
+# 任务状态常量（与 task_job.status 注释保持一致：0待执行 1执行中 2成功 3失败）
+JOB_STATUS_SUCCESS = 2
 JOB_STATUS_FAILED = 3
 
 # 多 worker 下单实例调度锁：所有进程共享同一个 RedisJobStore，若每个进程都自行
@@ -41,26 +42,6 @@ SCHEDULER_LOCK_KEY = "fastapiadmin:scheduler:lock"
 SCHEDULER_LOCK_TTL = 30  # 锁有效期（秒）；须大于续期间隔，否则锁在续期前就过期
 SCHEDULER_RENEW_INTERVAL = 10  # 持有者续期间隔
 SCHEDULER_POLL_INTERVAL = 5  # 候选进程争抢间隔；越小接管越快，Redis 压力越大
-
-# 系统级周期任务注册与任务失败落库由 api 层登记注入（core 不反向依赖 app.api.* 的 ORM/Service）。
-# - 登记回调在本进程取得调度器持有权、本地 start 后调用（幂等，replace_existing 兜底）；
-# - 失败落库接收 core 已组装好的记录 dict，仅负责持久化。
-SystemJobRegistrar = Callable[[], None]
-JobFailureRecorder = Callable[[dict[str, Any]], None]
-
-_system_job_registrar: SystemJobRegistrar | None = None
-_job_failure_recorder: JobFailureRecorder | None = None
-
-
-def set_scheduler_backends(
-    *,
-    system_job_registrar: SystemJobRegistrar | None = None,
-    job_failure_recorder: JobFailureRecorder | None = None,
-) -> None:
-    """登记调度器所需的 api 层能力（应用启动时由 api 层调用）。"""
-    global _system_job_registrar, _job_failure_recorder
-    _system_job_registrar = system_job_registrar
-    _job_failure_recorder = job_failure_recorder
 
 scheduler = AsyncIOScheduler()
 scheduler.configure(
@@ -89,25 +70,29 @@ scheduler.configure(
 
 
 class SchedulerUtil:
-    """定时任务 SDK — 仅封装 APScheduler 核心操作，不含业务逻辑（无 ORM/实体引用）。"""
+    """定时任务 SDK — 封装 APScheduler 核心操作与任务执行记录落库。"""
 
     redis_instance: Redis | None = None
     # 多 worker 选主状态：_redis 为空视为单机直跑；_leader_token 非空表示本进程持有调度锁
     _redis: Redis | None = None
     _leader_token: str | None = None
     _maintain_task: asyncio.Task | None = None
+    _reconcile_task: asyncio.Task | None = None
 
     # ------------------------------------------------------------------ #
     # 生命周期（多 worker 下仅持有分布式锁的进程真正运行调度器）
     # ------------------------------------------------------------------ #
     @classmethod
     async def init_scheduler(cls, redis: Redis | None = None) -> None:
-        """应用启动时初始化定时任务调度器（含系统级周期任务注册）。
+        """应用启动时初始化定时任务调度器。
 
         多 worker 部署（WORKERS>1）时各进程共享 RedisJobStore，若各自 start，
         同一任务会被多个进程重复执行。这里用分布式锁选主：本进程抢到锁就启动
         调度器；抢不到则转后台候选，持有者异常退出后自动接管。
         Redis 不可用（None）时退化为本进程直接运行，等价于单机行为。
+
+        参数:
+        - redis (Redis | None): Redis 连接，用于调度锁与任务持久化。
 
         返回:
         - None
@@ -135,6 +120,7 @@ class SchedulerUtil:
             return True
         if cls._redis is None:
             cls._start_scheduler_local()
+            cls._spawn_reconcile()
             return True
         from app.core.redis_crud import RedisCURD
 
@@ -143,6 +129,8 @@ class SchedulerUtil:
             cls._leader_token = token
             cls._start_scheduler_local()
         cls._spawn_maintain()
+        if acquired:
+            cls._spawn_reconcile()
         return acquired
 
     @classmethod
@@ -160,9 +148,7 @@ class SchedulerUtil:
             while True:
                 if cls._leader_token:
                     await asyncio.sleep(SCHEDULER_RENEW_INTERVAL)
-                    renewed = await crud.renew_lock(
-                        key=SCHEDULER_LOCK_KEY, expire=SCHEDULER_LOCK_TTL, value=cls._leader_token
-                    )
+                    renewed = await crud.renew_lock(key=SCHEDULER_LOCK_KEY, expire=SCHEDULER_LOCK_TTL, value=cls._leader_token)
                     if renewed:
                         continue
                     # 续期失败：先确认锁是否真丢（也可能只是 Redis 瞬时抖动）
@@ -173,13 +159,12 @@ class SchedulerUtil:
                     cls._stop_scheduler_local()
                 else:
                     await asyncio.sleep(SCHEDULER_POLL_INTERVAL)
-                    acquired, token = await crud.lock(
-                        key=SCHEDULER_LOCK_KEY, expire=SCHEDULER_LOCK_TTL
-                    )
+                    acquired, token = await crud.lock(key=SCHEDULER_LOCK_KEY, expire=SCHEDULER_LOCK_TTL)
                     if not acquired:
                         continue
                     cls._leader_token = token
                     cls._start_scheduler_local()
+                    cls._spawn_reconcile()
                     logger.info("✅ 本进程接管调度器持有权，定时任务调度器已启动")
         except asyncio.CancelledError:
             raise
@@ -187,19 +172,84 @@ class SchedulerUtil:
             logger.error("调度器维护协程异常退出: {}", e)
 
     @classmethod
+    def _spawn_reconcile(cls) -> None:
+        """启动（或复用）节点任务自愈注册协程：以 task_node 表为准恢复正式调度计划。"""
+        if cls._reconcile_task is not None and not cls._reconcile_task.done():
+            return
+        cls._reconcile_task = asyncio.create_task(cls.reconcile_node_jobs(), name="scheduler-node-reconcile")
+
+    @classmethod
+    async def reconcile_node_jobs(cls) -> None:
+        """节点任务自愈注册：以 task_node 表为唯一真源恢复正式调度计划。
+
+        - DB 记录（启用 + 配置了触发方式）在调度器中缺失 → 补注册（job id = 节点 id）；
+        - 调度器中残留的正式任务（job id 为纯数字）在 DB 已停用/删除/取消计划 → 移除；
+        - 已过去的一次性 date 计划不补注册（单次任务执行完成后即完成使命）；
+        - 手动执行产生的临时 job 不受影响；被 job 页暂停的 job 保留其暂停状态。
+
+        注意：若本进程不是调度器持有者，此处补注册的 job 会写入共享 jobstore，
+        需等持有者下一次 wakeup 才会真正接管（单机部署无此延迟）。
+        """
+        from zoneinfo import ZoneInfo
+
+        from sqlalchemy import false, select
+
+        from app.core.database import async_db_session
+        from app.modules.task.cronjob.node.model import NodeModel
+        from app.modules.task.cronjob.node.service import register_node_job
+
+        try:
+            async with async_db_session() as session:
+                rows = (await session.execute(select(NodeModel).where(NodeModel.is_deleted == false()))).scalars().all()
+                nodes = list(rows)
+        except Exception as e:
+            logger.error(f"节点任务自愈: 读取节点列表失败: {e!s}", exc_info=True)
+            return
+
+        try:
+            existing = {job.id for job in cls.get_jobs()}
+            tz = ZoneInfo("Asia/Shanghai")
+            want_ids: set[str] = set()
+            for node in nodes:
+                if not node or node.status != 0 or not node.trigger or not (node.func or "").strip():
+                    continue
+                # date 单次计划：执行时间已过的不再注册（执行完成后会被监听器移除）
+                if node.trigger == "date":
+                    try:
+                        run_at = datetime.strptime((node.trigger_args or "").strip(), "%Y-%m-%d %H:%M:%S").replace(tzinfo=tz)
+                        if run_at <= datetime.now(tz):
+                            continue
+                    except (ValueError, TypeError):
+                        continue
+                want_ids.add(str(node.id))
+
+            for job_id in existing:
+                if job_id.isdigit() and job_id not in want_ids:
+                    try:
+                        cls.remove_job(job_id)
+                        logger.info(f"节点任务自愈: 已移除节点 {job_id} 的残留任务")
+                    except Exception:
+                        pass
+
+            for node in nodes:
+                if str(node.id) not in want_ids or str(node.id) in existing:
+                    continue
+                try:
+                    register_node_job(node)
+                    logger.info(f"节点任务自愈: 已恢复节点 {node.id} 的定时任务")
+                except Exception as e:
+                    logger.error(f"节点任务自愈: 恢复节点 {node.id} 失败: {e!s}", exc_info=True)
+        except Exception as e:
+            logger.error(f"节点任务自愈执行失败: {e!s}", exc_info=True)
+
+    @classmethod
     def _start_scheduler_local(cls) -> None:
-        """本地启动调度器并注册系统级周期任务（幂等）。"""
+        """本地启动调度器（幂等）。"""
         if scheduler.running:
             return
         scheduler.start()
         scheduler.add_listener(cls._dispatch_job_event, EVENT_ALL)
         scheduler.resume()
-
-        if _system_job_registrar is not None:
-            _system_job_registrar()
-            logger.info("✅ 系统级定时任务已注册")
-        else:
-            logger.warning("⚠️ 系统级周期任务注册器未登记，跳过系统任务注册")
 
     @classmethod
     def _stop_scheduler_local(cls) -> None:
@@ -213,11 +263,6 @@ class SchedulerUtil:
         if cls._maintain_task is not None and not cls._maintain_task.done():
             return
         cls._maintain_task = asyncio.create_task(cls._maintain_loop(), name="scheduler-maintain")
-
-    @classmethod
-    def register_system_job(cls, job_id: str, func: Callable, trigger: Any, name: str) -> None:
-        """外部注册系统级定时任务。"""
-        scheduler.add_job(func, trigger=trigger, id=job_id, name=name, replace_existing=True)
 
     @classmethod
     async def start(cls, paused: bool = False) -> bool:
@@ -240,6 +285,9 @@ class SchedulerUtil:
         if cls._maintain_task is not None and not cls._maintain_task.done():
             cls._maintain_task.cancel()
             cls._maintain_task = None
+        if cls._reconcile_task is not None and not cls._reconcile_task.done():
+            cls._reconcile_task.cancel()
+            cls._reconcile_task = None
         cls._leader_token = None
         cls._stop_scheduler_local()
 
@@ -263,38 +311,47 @@ class SchedulerUtil:
             return "date"
         return "manual"
 
+    @staticmethod
+    def _record_job_log(record: dict[str, Any]) -> None:
+        """任务执行结果落库（成功/失败均可写；APScheduler 事件线程同步执行，独立短连接）。"""
+        from app.modules.task.cronjob.job.model import JobModel  # 延迟导入：core 导入期不依赖业务层（守卫不变式 3）
+
+        with Session(engine) as session:
+            job_log = JobModel(**record)
+            session.add(job_log)
+            session.commit()
+            logger.info(f"执行日志已记录: job_id={record['job_id']}, id={job_log.id}")
+
+    @staticmethod
+    def _is_temp_job_id(job_id: str) -> bool:
+        """是否为手动执行的一次性临时 job（node 手动执行 / job 卡片立即执行）。"""
+        return ":manual:" in job_id or "_run_now_" in job_id
+
+    @staticmethod
+    def _normalize_job_id(job_id: str) -> str:
+        """临时 job 归一为所属节点 id，保证执行日志可按节点聚合。"""
+        if ":manual:" in job_id:
+            return job_id.split(":manual:")[0]
+        if "_run_now_" in job_id:
+            return job_id.split("_run_now_")[0]
+        return job_id
+
     @classmethod
     def _dispatch_job_event(cls, event: JobEvent) -> None:
-        """APScheduler 事件统一处理（注册为 EVENT_ALL 回调），仅错误事件写入 DB。"""
+        """APScheduler 事件统一处理（注册为 EVENT_ALL 回调），执行成功/失败均落库。"""
         job_id = str(event.job_id) if hasattr(event, "job_id") else None
         if not job_id:
             return
 
-        if event.code == EVENT_JOB_ERROR:
+        if event.code == EVENT_JOB_EXECUTED:
+            logger.info(f"任务 {job_id} 执行成功")
+            cls._finish_job_record(job_id=job_id, status=JOB_STATUS_SUCCESS, detail=getattr(event, "retval", None))
+        elif event.code == EVENT_JOB_ERROR:
             exception = getattr(event, "exception", None)
             logger.error(f"任务 {job_id} 执行失败: {exception!s}")
-            if _job_failure_recorder is None:
-                logger.warning("任务失败落库记录器未登记，跳过失败记录: job_id={}", job_id)
-                return
-            try:
-                job = SchedulerUtil.get_job(job_id=job_id)
-                _job_failure_recorder(
-                    {
-                        "job_id": job_id,
-                        "job_name": job.name if job else None,
-                        "trigger_type": SchedulerUtil._get_trigger_type(job_id) if job else "manual",
-                        "status": JOB_STATUS_FAILED,
-                        "error": str(exception),
-                        "next_run_time": str(job.next_run_time) if job and job.next_run_time else None,
-                        "job_state": SchedulerUtil._get_job_state(job) if job else None,
-                    }
-                )
-            except Exception as e:
-                logger.error(f"记录失败日志出错: job_id={job_id}, error={e}", exc_info=True)
+            cls._finish_job_record(job_id=job_id, status=JOB_STATUS_FAILED, detail=exception)
         elif event.code == EVENT_JOB_MISSED:
             logger.warning(f"任务 {job_id} 错过执行时间")
-        elif event.code == EVENT_JOB_EXECUTED:
-            logger.info(f"任务 {job_id} 执行成功")
         elif event.code == EVENT_JOB_SUBMITTED:
             logger.info(f"任务 {job_id} 已提交执行")
         elif event.code == EVENT_JOB_REMOVED:
@@ -303,6 +360,45 @@ class SchedulerUtil:
             logger.info(f"任务 {job_id} 已添加")
         elif event.code == EVENT_ALL_JOBS_REMOVED:
             logger.info("所有任务已从调度器中移除")
+
+    @classmethod
+    def _finish_job_record(cls, *, job_id: str, status: int, detail: Any) -> None:
+        """任务一次执行结束的统一收尾：写执行日志；清理一次性/过期任务。"""
+        job = None
+        try:
+            job = SchedulerUtil.get_job(job_id=job_id)
+        except Exception:
+            pass
+        is_temp = cls._is_temp_job_id(job_id)
+        try:
+            record = {
+                "job_id": cls._normalize_job_id(job_id),
+                "job_name": job.name if job else None,
+                "trigger_type": "manual" if is_temp else (SchedulerUtil._get_trigger_type(job_id) if job else "manual"),
+                "status": status,
+                "error": str(detail)[:4000] if status == JOB_STATUS_FAILED else None,
+                "result": None if status == JOB_STATUS_FAILED else (str(detail)[:4000] if detail is not None else None),
+                "next_run_time": str(job.next_run_time) if job and job.next_run_time else None,
+                "job_state": SchedulerUtil._get_job_state(job) if job else None,
+            }
+            cls._record_job_log(record)
+        except Exception as e:
+            logger.error(f"记录执行日志出错: job_id={job_id}, error={e}", exc_info=True)
+
+        # 手动一次性任务：执行结束即从调度器移除，避免 jobstore 堆积
+        if is_temp:
+            try:
+                SchedulerUtil.remove_job(job_id=job_id)
+            except Exception:
+                pass
+            return
+        # 一次性 date 计划执行完成（无下次运行时间）后移除
+        if job and job.next_run_time is None and isinstance(getattr(job, "trigger", None), DateTrigger):
+            try:
+                SchedulerUtil.remove_job(job_id=job_id)
+                logger.info(f"一次性 date 任务 {job_id} 已完成，已从调度器移除")
+            except Exception:
+                pass
 
     @classmethod
     def pause(cls) -> None:
@@ -339,6 +435,7 @@ class SchedulerUtil:
     @classmethod
     def print_jobs(cls, jobstore: str | None = None) -> str:
         import io
+
         output = io.StringIO()
         scheduler.print_jobs(jobstore=jobstore, out=output)
         return output.getvalue()

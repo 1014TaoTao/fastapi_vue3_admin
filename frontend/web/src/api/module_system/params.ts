@@ -5,7 +5,7 @@ const API_PATH = "/system/param";
 const ParamsAPI = {
   uploadFile(body: any) {
     return request<ApiResponse<UploadFilePath>>({
-      url: `/common/file/upload?upload_type=param`,
+      url: `/file/upload?upload_type=param`,
       method: "post",
       data: body,
       headers: { "Content-Type": "multipart/form-data" },

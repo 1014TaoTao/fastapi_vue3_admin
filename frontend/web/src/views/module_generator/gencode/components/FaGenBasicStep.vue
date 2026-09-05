@@ -261,7 +261,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, onUnmounted, ref, watch } from "vue";
 import type { FormInstance, FormRules } from "element-plus";
 import { QuestionFilled } from "@element-plus/icons-vue";
 import type { GenTableSchema } from "@/api/module_generator/gencode";
@@ -276,7 +275,13 @@ const props = defineProps<{
   menuOptions: OptionType[];
 }>();
 
-function findOptionByValue(options: OptionType[], value: number | string): any | null {
+/** 菜单树选项在通用 OptionType 基础上携带 route_path（见 formatMenuTreeWithMeta） */
+type MenuOptionNode = OptionType & { route_path?: string };
+
+function findOptionByValue(
+  options: MenuOptionNode[],
+  value: number | string
+): MenuOptionNode | null {
   for (const opt of options) {
     if (String(opt.value) === String(value)) return opt;
     if (opt.children?.length) {

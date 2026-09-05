@@ -23,16 +23,18 @@
 backend/
 ├── app/                     # 项目核心代码
 │   ├── alembic/             # 数据库迁移管理
-│   ├── api/                 # API 接口模块
-│   │   └── v1/              # API v1 版本
-│   │       ├── module_system/   # 系统管理模块
-│   │       ├── module_monitor/  # 系统监控模块
-│   │       ├── module_ai/       # AI 功能模块
-│   │       └── module_*/       # 其他业务模块
+│   ├── api/                 # 路由装配层（v1 聚合各模块路由）
+│   ├── modules/             # 业务模块层（按业务域竖切）
+│   │   ├── system/          #   系统管理
+│   │   ├── monitor/         #   系统监控
+│   │   ├── ai/              #   AI 功能
+│   │   ├── task/            #   定时任务
+│   │   ├── workflow/        #   工作流
+│   │   ├── generator/       #   代码生成
+│   │   └── common/          #   文件 / 健康检查
 │   ├── common/              # 公共组件（常量、枚举、响应封装）
 │   ├── config/              # 项目配置文件
 │   ├── core/                # 核心模块（数据库、中间件、安全）
-│   ├── module_task/         # 定时任务模块
 │   ├── plugin/              # 插件模块（二开目录）
 │   ├── scripts/             # 初始化脚本和数据
 │   └── utils/               # 工具类（验证码、文件上传等）
@@ -51,7 +53,7 @@ backend/
 每个业务模块采用统一的分层结构：
 
 ```txt
-module_*/
+modules/<模块>/<子域>/
 ├── controller.py    # 控制器 - HTTP 请求处理
 ├── service.py       # 服务层 - 业务逻辑处理
 ├── crud.py          # 数据层 - 数据库操作

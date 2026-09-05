@@ -118,7 +118,6 @@ export interface HeaderBarFeatureConfig {
   globalSearch: FeatureConfigItem;
   fullscreen: FeatureConfigItem;
   notification: FeatureConfigItem;
-  chat: FeatureConfigItem;
   language: FeatureConfigItem;
   settings: FeatureConfigItem;
   themeToggle: FeatureConfigItem;

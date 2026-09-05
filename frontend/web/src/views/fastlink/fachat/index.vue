@@ -166,7 +166,6 @@
 <script setup lang="ts">
 import { Picture, Paperclip, ArrowDown } from "@element-plus/icons-vue";
 
-import { mittBus } from "@utils";
 import meAvatar from "@imgs/avatar/avatar5.webp";
 import aiAvatar from "@imgs/avatar/avatar10.webp";
 import avatar2 from "@imgs/avatar/avatar2.webp";
@@ -198,7 +197,6 @@ interface Person {
 }
 
 const searchQuery = ref("");
-const isDrawerVisible = ref(false);
 const isOnline = ref(true);
 const selectedPerson = ref<Person | null>(null);
 const messageText = ref("");
@@ -446,21 +444,9 @@ const scrollToBottom = () => {
   }, 100);
 };
 
-/**
- * 打开聊天窗口
- */
-const openChat = () => {
-  isDrawerVisible.value = true;
-};
-
 onMounted(() => {
   scrollToBottom();
-  mittBus.on("openChat", openChat);
   const first = personList.value[0];
   if (first) selectedPerson.value = first;
-});
-
-onUnmounted(() => {
-  mittBus.off("openChat", openChat);
 });
 </script>

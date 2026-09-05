@@ -1,27 +1,12 @@
-from collections.abc import Awaitable, Callable
 from typing import Any
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 
 from app.core.base_schema import AuthSchema
 from app.core.logger import logger
-
-# 数据权限所需的角色范围 / 子部门查询由 api 层登记注入（core 不反向依赖 app.api.* 的 ORM 模型）。
-# 注入点必须可 await：RoleScopesLoader 返回当前用户的 data_scope 集合；
-# DeptChildrenLoader 返回某部门「含自身」的后代部门 ID 集合。
-RoleScopesLoader = Callable[[AsyncSession, int], Awaitable[set[int]]]
-DeptChildrenLoader = Callable[[AsyncSession, int], Awaitable[set[int]]]
-
-_user_role_scopes_loader: RoleScopesLoader | None = None
-_dept_children_loader: DeptChildrenLoader | None = None
-
-
-def set_data_scope_loaders(user_role_scopes: RoleScopesLoader, dept_children: DeptChildrenLoader) -> None:
-    """登记数据权限查询实现（应用启动时由 api 层调用）。"""
-    global _user_role_scopes_loader, _dept_children_loader
-    _user_role_scopes_loader = user_role_scopes
-    _dept_children_loader = dept_children
+from app.utils.common_util import get_child_id_map, get_child_recursion
 
 
 class Permission:
@@ -96,7 +81,7 @@ class Permission:
 
     @staticmethod
     def _relationship_column(rel: Any, column: str) -> Any | None:
-        """取关系目标映射上的列对象（core 不 import 业务模型，走 mapper 反射）。"""
+        """取关系目标映射上的列对象（目标模型经 mapper 反射获得，与具体业务模型解耦）。"""
         try:
             target_model = rel.property.mapper.class_
         except (AttributeError, TypeError):
@@ -109,26 +94,31 @@ class Permission:
             return None
 
     async def _load_user_data_scopes(self) -> set[int]:
-        """读取当前用户角色的数据权限范围集合（未登记时按最小范围"仅本人"降级）。"""
-        if _user_role_scopes_loader is None:
-            logger.error("用户数据权限加载器未登记（set_data_scope_loaders）")
-            return set()
-        return await _user_role_scopes_loader(self.db, self.auth.user.id)
+        """读取当前用户角色的数据权限范围集合（data_scope 值）。"""
+        from app.modules.system.role.model import RoleModel  # 延迟导入：core 导入期不依赖业务层（守卫不变式 3）
+        from app.modules.system.user.model import UserModel
+
+        stmt = select(RoleModel.data_scope).join(RoleModel.users).where(UserModel.id == self.auth.user.id)
+        rows = (await self.db.execute(stmt)).scalars().all()
+        return {int(scope) for scope in rows}
 
     async def _get_accessible_dept_ids(self, data_scopes: set) -> set[int]:
         accessible_dept_ids = set()
         user_dept_id = getattr(self.auth.user, "dept_id", None)
 
         if self.DATA_SCOPE_DEPT_AND_CHILD in data_scopes and user_dept_id is not None:
-            if _dept_children_loader is None:
-                logger.error("子部门数据权限加载器未登记（set_data_scope_loaders）")
+            try:
+                accessible_dept_ids.update(await self._load_dept_children(user_dept_id))
+            except Exception as e:
+                # 降级为「仅本部门」（最小授权），留日志避免子部门越权范围被静默扩大/缩小不可见
+                logger.warning(f"子部门数据权限计算失败，降级为本部门范围: {e}")
                 accessible_dept_ids.add(user_dept_id)
-            else:
-                try:
-                    accessible_dept_ids.update(await _dept_children_loader(self.db, user_dept_id))
-                except Exception as e:
-                    # 降级为「仅本部门」（最小授权），留日志避免子部门越权范围被静默扩大/缩小不可见
-                    logger.warning(f"子部门数据权限计算失败，降级为本部门范围: {e}")
-                    accessible_dept_ids.add(user_dept_id)
 
         return accessible_dept_ids
+
+    async def _load_dept_children(self, dept_id: int) -> set[int]:
+        """按部门树计算某部门的子部门 ID 集合（含自身）。"""
+        from app.modules.system.dept.model import DeptModel  # 延迟导入：core 导入期不依赖业务层（守卫不变式 3）
+
+        dept_objs = (await self.db.execute(select(DeptModel))).scalars().all()
+        return set(get_child_recursion(id=dept_id, id_map=get_child_id_map(dept_objs)))

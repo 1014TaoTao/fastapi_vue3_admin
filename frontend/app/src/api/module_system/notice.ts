@@ -21,7 +21,7 @@ export const NoticeAPI = {
     return http.Put(`${SYSTEM_BASE}/notice/update/${id}`, data)
   },
   remove(ids: number[]): Promise<void> {
-    return http.Delete(`${SYSTEM_BASE}/notice/delete`, { ids: JSON.stringify(ids) })
+    return http.Delete(`${SYSTEM_BASE}/notice/delete`, ids)
   },
   batchStatus(data: BatchSetStatus): Promise<void> {
     return http.Patch(`${SYSTEM_BASE}/notice/status/batch`, data)

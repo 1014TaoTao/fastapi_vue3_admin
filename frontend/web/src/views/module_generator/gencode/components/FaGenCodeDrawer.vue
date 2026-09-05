@@ -80,7 +80,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
 import type { FormRules } from "element-plus";
 import { Close, Right, FolderOpened, Back, Download } from "@element-plus/icons-vue";
 import type { EditorConfiguration } from "codemirror";

@@ -115,7 +115,7 @@ FastapiAdmin/
 | 方式 | 组织方式 | 典型目录（示例） |
 |------|----------|-----------------|
 | **按技术层次分包** | 同一类技术文件归在一起 | 顶层 `models/`、`schemas/`、`services/`、`controllers/` … |
-| **按业务特性分包** | 同一业务域的文件归在一起 | `app/api/v1/module_*/` 下并列 `controller.py`、`service.py`、`crud.py`、`model.py`、`schema.py` |
+| **按业务特性分包** | 同一业务域的文件归在一起 | `app/modules/*/` 下并列 `controller.py`、`service.py`、`crud.py`、`model.py`、`schema.py`（路由清单单独放 `app/api/v1/`） |
 
 **本项目（后端）采用：按业务特性分包（竖切）。**
 

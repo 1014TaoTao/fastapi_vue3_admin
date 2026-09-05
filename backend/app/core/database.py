@@ -1,26 +1,25 @@
-from fastapi import FastAPI
-from redis import exceptions
-from redis.asyncio import Redis
 from sqlalchemy import Engine, create_engine, event
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.orm import sessionmaker
 
 from app.config.setting import settings
 from app.core.base_model import MappedBase
 from app.core.logger import logger
 
 
-def create_engine_and_session(db_url: str = settings.DB_URI) -> tuple[Engine, sessionmaker]:
-    """创建同步数据库引擎和会话工厂。
+def create_sync_engine(db_url: str = settings.DB_URI) -> Engine:
+    """创建同步数据库引擎。
+
+    同步引擎仅供同步组件使用：APScheduler SQLAlchemyJobStore、代码生成器 Inspector
+    （后者经 asyncio.to_thread 在线程池中调用，见 gencode/crud.py 的 _sync_* 方法）。
+    请求侧一律走异步会话，勿在事件循环内直接使用本引擎。
 
     参数:
     - db_url (str): 数据库连接URL,默认从配置中获取。
 
     返回:
-    - tuple[Engine, sessionmaker]: 同步数据库引擎和会话工厂。
+    - Engine: 同步数据库引擎。
     """
     try:
-        # 同步数据库引擎
         engine: Engine = create_engine(
             url=db_url,
             echo=settings.DATABASE_ECHO,
@@ -30,10 +29,7 @@ def create_engine_and_session(db_url: str = settings.DB_URI) -> tuple[Engine, se
     except Exception as e:
         logger.error(f"❌ 数据库连接失败 {e}")
         raise
-    else:
-        # 同步数据库会话工厂
-        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-        return engine, SessionLocal
+    return engine
 
 
 def create_async_engine_and_session(db_url: str = settings.ASYNC_DB_URI) -> tuple[AsyncEngine, async_sessionmaker[AsyncSession]]:
@@ -53,7 +49,6 @@ def create_async_engine_and_session(db_url: str = settings.ASYNC_DB_URI) -> tupl
                 echo=settings.DATABASE_ECHO,
                 echo_pool=settings.ECHO_POOL,
                 pool_pre_ping=settings.POOL_PRE_PING,
-                future=settings.FUTURE,
                 pool_recycle=settings.POOL_RECYCLE,
                 connect_args={"timeout": 30},  # 等待锁释放，避免并发写立即报 database is locked
             )
@@ -71,7 +66,6 @@ def create_async_engine_and_session(db_url: str = settings.ASYNC_DB_URI) -> tupl
                 echo=settings.DATABASE_ECHO,
                 echo_pool=settings.ECHO_POOL,
                 pool_pre_ping=settings.POOL_PRE_PING,
-                future=settings.FUTURE,
                 pool_recycle=settings.POOL_RECYCLE,
                 pool_size=settings.POOL_SIZE,
                 max_overflow=settings.MAX_OVERFLOW,
@@ -93,19 +87,18 @@ def create_async_engine_and_session(db_url: str = settings.ASYNC_DB_URI) -> tupl
         return async_engine, AsyncSessionLocal
 
 
-engine, db_session = create_engine_and_session()
+engine = create_sync_engine()
 async_engine, async_db_session = create_async_engine_and_session()
 
 async def check_db() -> None:
     """检查数据库连接是否正常。"""
-
     try:
-        with engine.connect():
+        async with async_engine.connect():
             pass
         logger.info("✅ 数据库连接正常")
     except Exception as e:
         logger.error(f"❌ 数据库连接失败: {e}")
-        raise e
+        raise
 
 
 async def create_tables() -> None:
@@ -115,11 +108,11 @@ async def create_tables() -> None:
     - None
     """
     try:
-        async with async_engine.begin() as coon:
-            await coon.run_sync(MappedBase.metadata.create_all)
+        async with async_engine.begin() as conn:
+            await conn.run_sync(MappedBase.metadata.create_all)
     except Exception as e:
         logger.error(f"❌ 数据库表结构初始化失败: {e}")
-        raise e
+        raise
 
 
 async def drop_tables() -> None:
@@ -133,40 +126,4 @@ async def drop_tables() -> None:
             await conn.run_sync(MappedBase.metadata.drop_all)
     except Exception as e:
         logger.error(f"❌ 数据库表结构删除失败: {e}")
-        raise e
-
-
-async def redis_connect(app: FastAPI, status: bool) -> Redis | None:
-    """创建或关闭Redis连接。
-
-    连接失败时直接抛出异常（fail-fast）：Redis 承载会话/参数缓存/调度 jobstore，
-    静默降级会导致应用带病运行、请求期随机 500，宁可启动即失败。
-
-    参数:
-    - app (FastAPI): FastAPI应用实例。
-    - status (bool): 连接状态,True为创建连接,False为关闭连接。
-
-    返回:
-    - Redis | None: Redis连接实例（status=False 时返回 None）。
-    """
-    if status:
-        try:
-            rd = await Redis.from_url(
-                url=settings.REDIS_URI,
-                encoding="utf-8",
-                decode_responses=True,
-                health_check_interval=settings.REDIS_HEALTH_CHECK_INTERVAL,
-                max_connections=settings.POOL_SIZE,
-                socket_timeout=settings.POOL_TIMEOUT,
-            )
-            app.state.redis = rd
-            if await rd.ping():  # pyright: ignore[reportGeneralTypeIssues]
-                return rd
-            msg = "Redis ping 返回 False，连接不可用"
-            raise exceptions.ConnectionError(msg)
-        except exceptions.RedisError as e:
-            logger.error(f"❌ Redis 连接失败: {e}")
-            raise
-    else:
-        await app.state.redis.close()
-        logger.info("✅️ Redis连接已关闭")
+        raise

@@ -91,7 +91,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
 import AppConfig from "@/config";
 import loginIcon from "@fa_imgs/background.svg";
 import { useConfigStore } from "@stores";

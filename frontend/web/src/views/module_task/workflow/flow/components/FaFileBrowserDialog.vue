@@ -82,8 +82,6 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from "vue";
-
 import { Document, Folder, Refresh } from "@element-plus/icons-vue";
 import StorageAPI, { type StorageObject } from "@/api/module_task/workflow/storage";
 

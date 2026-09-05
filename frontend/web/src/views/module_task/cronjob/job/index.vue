@@ -377,14 +377,17 @@ defineOptions({
   inheritAttrs: false,
 });
 
-import JobAPI, { SchedulerStatus, SchedulerJob, JobLogTable } from "@/api/module_task/cronjob/job";
+import JobAPI, {
+  type SchedulerStatus,
+  type SchedulerJob,
+  type JobLogTable,
+} from "@/api/module_task/cronjob/job";
 import type { SearchFormItem } from "@/components/forms/fa-search-bar/index.vue";
 import type FaSearchBar from "@/components/forms/fa-search-bar/index.vue";
 import FaTableHeader from "@/components/tables/fa-table-header/index.vue";
 import FaTable from "@/components/tables/fa-table/index.vue";
 import FaDialog from "@/components/modal/fa-dialog/index.vue";
 import FaDrawer from "@/components/modal/fa-drawer/index.vue";
-import { ElMessageBox } from "element-plus";
 import {
   VideoPlay,
   VideoPause,
@@ -396,9 +399,7 @@ import {
   Edit,
   Close,
 } from "@element-plus/icons-vue";
-import type { TableOperationAction } from "@/utils/table";
-import { renderTableOperationCell } from "@utils";
-import { computed, h, nextTick, onMounted, ref } from "vue";
+import { renderTableOperationCell, type TableOperationAction } from "@utils";
 import { Terminal, TerminalApi } from "vue-web-terminal";
 import type { ColumnOption } from "@/types/component";
 
@@ -811,7 +812,7 @@ const consoleVisible = ref(false);
 
 const executionLogDrawerVisible = ref(false);
 const jobStateVisible = ref(false);
-const jobStateData = ref<any>(null);
+const jobStateData = ref<string | Record<string, unknown> | undefined>(undefined);
 
 // ─── 修改任务弹窗 ───
 const modifyDialog = reactive({
@@ -1001,11 +1002,7 @@ async function handleResumeScheduler() {
 
 async function handleShutdownScheduler() {
   try {
-    await ElMessageBox.confirm("确定要关闭调度器吗？", "警告", {
-      confirmButtonText: "确定",
-      cancelButtonText: "取消",
-      type: "warning",
-    });
+    await confirmDelete("确定要关闭调度器吗？");
     await JobAPI.shutdownScheduler();
     await refreshJobList();
   } catch (error: unknown) {
@@ -1017,17 +1014,8 @@ async function handleShutdownScheduler() {
 
 async function handleClearAllJobs() {
   try {
-    await ElMessageBox.confirm(
-      "确定要清空所有任务吗？\n" +
-        "此操作会将所有待执行任务的日志标记为已取消，不会删除历史执行记录。\n" +
-        "如需删除所有执行记录，请使用执行记录的批量删除功能。",
-      "警告",
-      {
-        confirmButtonText: "确定",
-        cancelButtonText: "取消",
-        type: "warning",
-        dangerouslyUseHTMLString: false,
-      }
+    await confirmDelete(
+      "确定要清空所有任务吗？此操作会将所有待执行任务的日志标记为已取消，不会删除历史执行记录。"
     );
     await JobAPI.clearAllJobs();
     await refreshJobList();
@@ -1107,6 +1095,8 @@ async function handleOpenExecutionLogDrawer(job: SchedulerJob) {
   logSearchForm.value = {
     status: undefined,
     trigger_type: undefined,
+    created_time: undefined,
+    updated_time: undefined,
   };
   executionLogDrawerVisible.value = true;
   await nextTick();

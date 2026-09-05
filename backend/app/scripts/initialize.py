@@ -5,19 +5,19 @@ from typing import Any
 from sqlalchemy import func, inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.module_system.dept.model import DeptModel
-from app.api.v1.module_system.dict.model import DictDataModel, DictTypeModel
-from app.api.v1.module_system.menu.model import MenuModel
-from app.api.v1.module_system.params.model import ParamsModel
-from app.api.v1.module_system.role.model import RoleModel
-from app.api.v1.module_system.user.model import UserModel, UserRolesModel
-from app.api.v1.module_system.versions.model import VersionModel
 from app.common.enums import EnvironmentEnum
 from app.config.path_conf import ALEMBIC_VERSION_DIR, BASE_DIR, SCRIPT_DIR
 from app.config.setting import settings
 from app.core.base_model import MappedBase
 from app.core.database import async_db_session, async_engine, check_db, create_tables
 from app.core.logger import logger
+from app.modules.system.dept.model import DeptModel
+from app.modules.system.dict.model import DictDataModel, DictTypeModel
+from app.modules.system.menu.model import MenuModel
+from app.modules.system.params.model import ParamsModel
+from app.modules.system.role.model import RoleModel
+from app.modules.system.user.model import UserModel, UserRolesModel
+from app.modules.system.versions.model import VersionModel
 from app.utils.import_util import ImportUtil
 
 # 导入全部模型：与 alembic env.py 保持一致，确保全局 MapperRegistry 的 FK 引用可完整解析

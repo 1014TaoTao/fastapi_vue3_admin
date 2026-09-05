@@ -1,8 +1,0 @@
-# 见 docs/PLUGIN_ARCHITECTURE.md
-
-name = "common"
-title = "公共"
-version = "1.0.0"
-description = "公共功能；路由由 module_common/**/controller 动态注册。"
-optional = true
-tags = ["common"]

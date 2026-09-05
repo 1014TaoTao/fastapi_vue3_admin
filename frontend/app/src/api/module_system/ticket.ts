@@ -20,7 +20,7 @@ export const TicketAPI = {
     return http.Put(`${SYSTEM_BASE}/ticket/update/${id}`, data)
   },
   remove(ids: number[]): Promise<void> {
-    return http.Delete(`${SYSTEM_BASE}/ticket/delete`, { ids: JSON.stringify(ids) })
+    return http.Delete(`${SYSTEM_BASE}/ticket/delete`, ids)
   },
   batch(data: { ids: number[], status: number, assigned_id?: number }): Promise<void> {
     return http.Put(`${SYSTEM_BASE}/ticket/batch`, data)

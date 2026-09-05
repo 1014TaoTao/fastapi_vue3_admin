@@ -63,7 +63,6 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, onMounted, onUnmounted } from "vue";
 import { Handle, Position, useNodeConnections } from "@vue-flow/core";
 import { ElIcon, ElTooltip } from "element-plus";
 import { Folder, FolderOpened } from "@element-plus/icons-vue";

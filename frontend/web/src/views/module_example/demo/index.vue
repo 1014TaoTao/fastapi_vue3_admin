@@ -35,11 +35,12 @@
             :perm-patch="['module_example:demo:patch']"
             :delete-loading="batchDeleting"
             :create-loading="createLoading"
+            :more-loading="moreLoading"
             @add="handleAdd"
             @import="openImport"
             @export="openExport"
             @delete="handleBatchDelete"
-            @more="runBatchStatus"
+            @more="handleMoreClick"
           />
         </template>
       </FaTableHeader>
@@ -153,8 +154,13 @@
 
 <script setup lang="ts">
 import { Plus, Delete } from "@element-plus/icons-vue";
-import type { TableOperationAction } from "@/utils/table";
-import { renderTableOperationCell, stripPaginationParams, toCrudCols } from "@utils";
+import {
+  renderTableOperationCell,
+  resolveStatusColumns,
+  stripPaginationParams,
+  toCrudCols,
+  type TableOperationAction,
+} from "@utils";
 import { useCrudForm } from "@/hooks/core/useCrudForm";
 import { ResultEnum } from "@/enums/api/result.enum";
 import type { IContentConfig, IObject } from "@/components/modal/types";
@@ -165,7 +171,6 @@ import DemoAPI, {
   type DemoPageQuery,
   type DemoTable,
 } from "@/api/module_example/demo";
-import type { ColumnOption } from "@/types/component";
 import FaDescriptions from "@/components/display/fa-descriptions/index.vue";
 import FaForm from "@/components/forms/fa-form/index.vue";
 import FaTableHeader from "@/components/tables/fa-table-header/index.vue";
@@ -245,6 +250,7 @@ const { selectedRows, selectedIds, batchDeleting, onTableSelectionChange } =
   useTableSelection<DemoTable>();
 
 const createLoading = ref(false);
+const moreLoading = ref(false);
 
 const {
   columns,
@@ -264,14 +270,14 @@ const {
   refreshRemove,
 } = useTable({
   core: {
-    apiFn: DemoAPI.getDemoList,
+    apiFn: DemoAPI.listDemo,
     apiParams: {
       page_no: 1,
       page_size: 10,
     },
-    columnsFactory: (): ColumnOption<DemoTable>[] => [
-      { type: "globalIndex", width: 56, label: "序号" },
+    columnsFactory: resolveStatusColumns<DemoTable>(() => [
       { type: "selection", width: 48, fixed: "left" },
+      { type: "globalIndex", width: 56, label: "序号" },
       { prop: "name", label: "名称", minWidth: 120, showOverflowTooltip: true },
       {
         prop: "status",
@@ -279,7 +285,7 @@ const {
         width: 88,
         status: {
           0: { type: "success", text: "启用" },
-          1: { type: "info", text: "停用" },
+          1: { type: "danger", text: "停用" },
         },
       },
       { prop: "int_val", label: "整数", minWidth: 88, showOverflowTooltip: true },
@@ -314,13 +320,13 @@ const {
         showOverflowTooltip: true,
       },
       {
-        prop: "created_by",
+        prop: "created_id",
         label: "创建人",
         minWidth: 100,
         formatter: (row: DemoTable) => row.created_by?.name ?? "—",
       },
       {
-        prop: "updated_by",
+        prop: "updated_id",
         label: "更新人",
         minWidth: 100,
         formatter: (row: DemoTable) => row.updated_by?.name ?? "—",
@@ -333,7 +339,7 @@ const {
         align: "center",
         formatter: (row: DemoTable) => formatDemoOperationCell(row),
       },
-    ],
+    ]),
   },
 });
 
@@ -489,7 +495,7 @@ const crud = useCrudForm<DemoForm>({
   dialogVisible,
   dataFormRef,
   formRenderKey: demoFormRenderKey,
-  detailApi: DemoAPI.getDemoDetail,
+  detailApi: DemoAPI.detailDemo,
   createApi: DemoAPI.createDemo,
   updateApi: DemoAPI.updateDemo,
   titles: { create: "新增", update: "修改", detail: "详情" },
@@ -640,7 +646,12 @@ async function handleBatchDelete() {
   const ids = selectedIds.value;
   if (ids.length === 0) return;
   try {
-    await confirmBatchDelete(ids.length);
+    await confirmBatchDelete(
+      ids.length,
+      (data.value as DemoTable[])
+        .filter((r) => ids.includes(r.id!))
+        .map((r) => String(r.name ?? r.id))
+    );
     batchDeleting.value = true;
     await DemoAPI.deleteDemo(ids);
     faTableRef.value?.elTableRef?.clearSelection();
@@ -652,24 +663,24 @@ async function handleBatchDelete() {
   }
 }
 
-async function runBatchStatus(value: "enable" | "disable") {
+async function handleMoreClick(value: "enable" | "disable") {
   const ids = selectedIds.value;
   if (ids.length === 0) {
     ElMessage.warning("请先在列表中勾选数据");
     return;
   }
   try {
-    await confirmAction(
-      `确认对选中的 ${ids.length} 条数据${value === "enable" ? "启用" : "停用"}？`,
-      "批量设置"
-    );
+    await confirmToggleStatus(value);
+    moreLoading.value = true;
     const status = value === "enable" ? 0 : 1;
     await DemoAPI.batchDemo({ ids, status });
     // 成功 / 失败提示由 axios 拦截器统一处理
     faTableRef.value?.elTableRef?.clearSelection();
     await refreshData();
   } catch {
-    // 用户取消
+    // 用户取消或操作失败
+  } finally {
+    moreLoading.value = false;
   }
 }
 

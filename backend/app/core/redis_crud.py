@@ -1,8 +1,47 @@
 from typing import Any
 
-from redis.asyncio.client import Redis
+from fastapi import FastAPI
+from redis import exceptions
+from redis.asyncio import Redis
 
+from app.config.setting import settings
 from app.core.logger import logger
+
+
+async def redis_connect(app: FastAPI, status: bool) -> Redis | None:
+    """创建或关闭Redis连接。
+
+    连接失败时直接抛出异常（fail-fast）：Redis 承载会话/参数缓存/调度 jobstore，
+    静默降级会导致应用带病运行、请求期随机 500，宁可启动即失败。
+
+    参数:
+    - app (FastAPI): FastAPI应用实例。
+    - status (bool): 连接状态,True为创建连接,False为关闭连接。
+
+    返回:
+    - Redis | None: Redis连接实例（status=False 时返回 None）。
+    """
+    if status:
+        try:
+            rd = await Redis.from_url(
+                url=settings.REDIS_URI,
+                encoding="utf-8",
+                decode_responses=True,
+                health_check_interval=settings.REDIS_HEALTH_CHECK_INTERVAL,
+                max_connections=settings.POOL_SIZE,
+                socket_timeout=settings.POOL_TIMEOUT,
+            )
+            app.state.redis = rd
+            if await rd.ping():  # pyright: ignore[reportGeneralTypeIssues]
+                return rd
+            msg = "Redis ping 返回 False，连接不可用"
+            raise exceptions.ConnectionError(msg)
+        except exceptions.RedisError as e:
+            logger.error(f"❌ Redis 连接失败: {e}")
+            raise
+    else:
+        await app.state.redis.close()
+        logger.info("✅️ Redis连接已关闭")
 
 
 class RedisCURD:

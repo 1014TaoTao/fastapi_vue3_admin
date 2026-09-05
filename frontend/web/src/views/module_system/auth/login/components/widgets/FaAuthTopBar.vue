@@ -113,11 +113,9 @@
 
 <script setup lang="ts">
 import { LanguageEnum } from "@/enums/appEnum";
-import { computed } from "vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 import { useSettingsStore, useUserStore, useConfigStore } from "@stores";
-import { useHeaderBar } from "@/hooks/core/useHeaderBar";
 import { themeAnimation } from "@utils";
 import { languageOptions } from "@/locales";
 

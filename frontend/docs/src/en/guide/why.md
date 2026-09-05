@@ -48,7 +48,7 @@ For admin/dashboard scenarios, Vue3 + Element Plus provides superior developer e
 
 ```
 # Vertical slice (this project)
-api/v1/module_system/user/      # All user code in one directory
+modules/system/user/            # All user code in one directory
 ├── controller.py
 ├── service.py
 ├── crud.py

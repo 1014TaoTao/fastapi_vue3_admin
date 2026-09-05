@@ -18,7 +18,7 @@ interface DownloadUtil {
 
 const download: DownloadUtil = {
   async name(name: string, isDelete: boolean = true) {
-    const url = baseURL + "/common/file/download";
+    const url = baseURL + "/file/download";
     try {
       const res = await axios.post<Blob>(
         url,

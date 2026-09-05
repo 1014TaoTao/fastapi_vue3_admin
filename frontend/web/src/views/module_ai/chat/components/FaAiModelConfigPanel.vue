@@ -253,8 +253,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from "vue";
-import { ElMessage, ElMessageBox } from "element-plus";
+import { ElMessage } from "element-plus";
 import type { FormInstance, FormRules } from "element-plus";
 import {
   Plus,
@@ -478,9 +477,7 @@ const handleUseDefault = async () => {
 
 const handleDelete = async (item: AiModelConfigItem) => {
   try {
-    await ElMessageBox.confirm(`确认删除模型「${item.name}」？此操作不可恢复`, "删除确认", {
-      type: "warning",
-    });
+    await confirmDelete(`确认删除模型「${item.name}」？此操作不可恢复`);
   } catch {
     return;
   }

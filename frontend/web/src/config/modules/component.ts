@@ -40,12 +40,6 @@ export const globalComponentsConfig: GlobalComponentConfig[] = [
     enabled: true,
   },
   {
-    name: "聊天窗口",
-    key: "chat-window",
-    component: defineAsyncComponent(() => import("@/layouts/fa-chat-window/index.vue")),
-    enabled: true,
-  },
-  {
     name: "礼花效果",
     key: "fireworks-effect",
     component: defineAsyncComponent(() => import("@/layouts/fa-fireworks-effect/index.vue")),

@@ -1,6 +1,6 @@
 import { request } from "@utils";
 
-const API_PATH = "/task/workflow/node";
+const API_PATH = "/workflow/source";
 
 const NodeAPI = {
   pageNode(query?: TablePageQuery) {

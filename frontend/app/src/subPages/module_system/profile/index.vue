@@ -23,7 +23,7 @@ const saving = ref(false)
 const userProfile = ref<UserInfo>()
 
 /** 头像上传：后端通用文件上传（upload_type=avatar），字段名 file */
-const uploadAvatarAction = `${import.meta.env.VITE_API_BASE_URL || ''}${import.meta.env.VITE_APP_BASE_API || ''}/common/file/upload?upload_type=avatar`
+const uploadAvatarAction = `${import.meta.env.VITE_API_BASE_URL || ''}${import.meta.env.VITE_APP_BASE_API || ''}/file/upload?upload_type=avatar`
 const uploadHeader = { Authorization: `Bearer ${userStore.getAccessToken() || ''}` }
 const avatarFileList = ref<{ url: string }[]>([])
 

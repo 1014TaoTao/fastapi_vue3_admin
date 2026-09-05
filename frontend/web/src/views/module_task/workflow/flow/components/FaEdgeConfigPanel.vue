@@ -52,8 +52,6 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from "vue";
-
 import { Close, Share } from "@element-plus/icons-vue";
 import FaForm from "@/components/forms/fa-form/index.vue";
 

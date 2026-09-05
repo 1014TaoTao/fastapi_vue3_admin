@@ -4,7 +4,7 @@ from typing import Any
 
 from fastapi import status
 from fastapi.encoders import jsonable_encoder
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from starlette.background import BackgroundTask
 
@@ -131,50 +131,6 @@ class StreamResponse(StreamingResponse):
             headers=headers,  # 文件名
             background=background,  # 文件大小
         )
-
-
-class PlainTextContentResponse(PlainTextResponse):
-    """纯文本响应类"""
-
-    def __init__(
-        self,
-        content: str,
-        status_code: int = status.HTTP_200_OK,
-        headers: Mapping[str, str] | None = None,
-    ) -> None:
-        """初始化纯文本响应类
-
-        参数:
-        - content (str): 响应文本内容。
-        - status_code (int): HTTP 状态码。
-        - headers (Mapping[str, str] | None): 响应头。
-
-        返回:
-        - None
-        """
-        super().__init__(content=content, status_code=status_code, headers=headers)
-
-
-class HTMLContentResponse(HTMLResponse):
-    """HTML 响应类"""
-
-    def __init__(
-        self,
-        content: str,
-        status_code: int = status.HTTP_200_OK,
-        headers: Mapping[str, str] | None = None,
-    ) -> None:
-        """初始化 HTML 响应类
-
-        参数:
-        - content (str): HTML 内容。
-        - status_code (int): HTTP 状态码。
-        - headers (Mapping[str, str] | None): 响应头。
-
-        返回:
-        - None
-        """
-        super().__init__(content=content, status_code=status_code, headers=headers)
 
 
 class RedirectContentResponse(RedirectResponse):

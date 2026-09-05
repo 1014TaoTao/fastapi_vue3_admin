@@ -221,7 +221,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed, onMounted, nextTick, markRaw, type Component } from "vue";
+import type { Component } from "vue";
 import { ElMessage } from "element-plus";
 import { MarkerType, Panel, Position, SelectionMode, VueFlow, useVueFlow } from "@vue-flow/core";
 import { Background } from "@vue-flow/background";
@@ -626,7 +626,11 @@ function handleDeleteNode() {
   })();
 }
 
-function handleSaveEdge(data: any) {
+function handleSaveEdge(data: {
+  data?: Record<string, unknown>;
+  animated?: boolean;
+  style?: Record<string, any>;
+}) {
   if (!selectedEdge.value) return;
   const edgeId = selectedEdge.value!.id;
   const currentEdges = getEdgesRef.value;

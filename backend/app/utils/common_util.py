@@ -103,6 +103,15 @@ def search_to_dict(search: Any, default: Any = None) -> dict | None:
         return default
     d = search.model_dump(exclude_none=True)
 
+    # 自动合并 _start/_end 时间范围对 → ("between", [start, end])
+    # 适用业务时间列（date/time/datetime），如 begin_date_start / begin_date_end
+    for key in list(d.keys()):
+        if key.endswith("_start"):
+            base = key[: -len("_start")]
+            end_key = f"{base}_end"
+            if end_key in d:
+                d[base] = ("between", [d.pop(key), d.pop(end_key)])
+
     # 处理数组格式的时间范围参数 → ("between", [start, end])
     for key in list(d.keys()):
         if isinstance(d[key], list) and len(d[key]) == 2 and key.endswith("_time"):

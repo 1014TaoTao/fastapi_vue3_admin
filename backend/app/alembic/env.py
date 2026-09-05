@@ -1,7 +1,9 @@
 import asyncio
 import warnings
+from collections.abc import Iterable
 
 from alembic import context
+from alembic.operations import MigrationScript
 from alembic.runtime.migration import MigrationContext
 from sqlalchemy import pool, text
 from sqlalchemy.engine import Connection
@@ -72,7 +74,11 @@ def run_migrations_online() -> None:
         if connection.dialect.name == "mysql":
             connection.execute(text("SET FOREIGN_KEY_CHECKS=0"))
 
-        def process_revision_directives(context: MigrationContext, revision: str, directives: list) -> None:
+        def process_revision_directives(
+            context: MigrationContext,
+            revision: str | Iterable[str | None] | Iterable[str],
+            directives: list[MigrationScript],
+        ) -> None:
             script = directives[0]
 
             # 检查所有操作集是否为空

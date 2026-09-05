@@ -1,6 +1,6 @@
 import { request } from "@utils";
 
-const API_PATH = "/task/workflow/storage";
+const API_PATH = "/workflow/storage";
 
 const StorageAPI = {
   /** 查询文件/目录列表。传 page_no/page_size 时分页返回（PageResult），否则返回全量数组。 */

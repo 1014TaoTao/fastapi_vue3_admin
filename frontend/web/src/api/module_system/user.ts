@@ -1,5 +1,5 @@
 import { request } from "@utils";
-import { MenuTable, MenuForm } from "@/api/module_system/menu";
+import { type MenuTable, type MenuForm } from "@/api/module_system/menu";
 
 const API_PATH = "/system/user";
 
@@ -14,7 +14,7 @@ export const UserAPI = {
 
   uploadCurrentUserAvatar(body: FormData) {
     return request<ApiResponse<UploadFilePath>>({
-      url: `/common/file/upload?upload_type=avatar`,
+      url: `/file/upload?upload_type=avatar`,
       method: "post",
       data: body,
       headers: { "Content-Type": "multipart/form-data" },

@@ -120,12 +120,6 @@
           :show-submit="false"
           class="crud-dialog-art-form"
         >
-          <template #status>
-            <ElRadioGroup v-model="formData.status">
-              <ElRadio :value="0">启用</ElRadio>
-              <ElRadio :value="1">停用</ElRadio>
-            </ElRadioGroup>
-          </template>
         </FaForm>
       </template>
     </FaDialog>
@@ -515,6 +509,12 @@ const roleDialogFormItems = computed<FormItem[]>(() => [
     key: "status",
     type: "radiogroup",
     span: 24,
+    props: {
+      options: [
+        { label: "启用", value: 0 },
+        { label: "停用", value: 1 },
+      ],
+    },
   },
   {
     label: "描述",

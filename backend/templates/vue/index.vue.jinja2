@@ -40,11 +40,12 @@
             :perm-patch="['{{ permission_prefix }}:patch']"
             :delete-loading="batchDeleting"
             :create-loading="createLoading"
+            :more-loading="moreLoading"
             @add="handleAdd"
             @import="openImport"
             @export="openExport"
             @delete="handleBatchDelete"
-            @more="runBatchStatus"
+            @more="handleMoreClick"
           />
         </template>
       </FaTableHeader>
@@ -79,7 +80,17 @@
           :data="detailFormData"
           :items="detailItems"
           max-height="70vh"
-        />
+        >
+          {% if has_json_column %}
+          {% for column in columns %}
+          {% if column.python_type == 'dict' %}
+          <template #{{ column.column_name }}="{ row }">
+            <FaJsonPretty v-if="row?.{{ column.column_name }} != null" :value="row?.{{ column.column_name }}" height="140px" />
+          </template>
+          {% endif %}
+          {% endfor %}
+          {% endif %}
+        </FaDescriptions>
       </template>
       <template v-else>
         <FaForm
@@ -145,15 +156,21 @@
 </template>
 
 <script setup lang="ts">
-import type { TableOperationAction } from "@/utils/table";
-import { renderTableOperationCell, stripPaginationParams, toCrudCols } from "@utils";
+import {
+  renderTableOperationCell,
+  resolveStatusColumns,
+  stripPaginationParams,
+  toCrudCols,
+  type TableOperationAction,
+} from "@utils";
 import { useCrudForm } from "@/hooks/core/useCrudForm";
-import { confirmDelete, confirmBatchDelete, confirmAction } from "@/hooks/core/useConfirm";
 import { ResultEnum } from "@/enums/api/result.enum";
 import type { IContentConfig, IObject } from "@/components/modal/types";
 import type { AuditSearchFormParams } from "@/components/forms/fa-search-bar/auditSearchFormItems";
+{% if has_dict_column %}
+import type { SearchFormItem } from "@/components/forms/fa-search-bar/index.vue";
+{% endif %}
 import type { FormItem } from "@/components/forms/fa-form/index.vue";
-import type { ColumnOption } from "@/types/component";
 import FaDescriptions from "@/components/display/fa-descriptions/index.vue";
 import FaForm from "@/components/forms/fa-form/index.vue";
 import FaTableHeader from "@/components/tables/fa-table-header/index.vue";
@@ -192,6 +209,10 @@ const createInitialFormData = (): {{ class_name }}Form => ({
   {{ column.column_name }}: {% if column.python_type == "str" %}"0"{% else %}0{% endif %},
   {% elif column.python_type == "bool" or column.html_type == "switch" %}
   {{ column.column_name }}: false,
+  {% elif column.html_type in ["editor", "imageUpload", "fileUpload"] %}
+  {{ column.column_name }}: "",
+  {% elif not column.is_nullable and column.python_type == "str" %}
+  {{ column.column_name }}: "",
   {% else %}
   {{ column.column_name }}: undefined,
   {% endif %}
@@ -203,7 +224,11 @@ const createInitialFormData = (): {{ class_name }}Form => ({
 type {{ class_name }}SearchFormParams = {
   {% for column in columns %}
   {% if column.is_query and column.column_name not in ['created_time', 'updated_time', 'created_id', 'updated_id', 'is_deleted', 'deleted_time', 'deleted_id'] and column.column_name != pk_column_name %}
+  {% if column.python_type in ['date', 'time', 'datetime'] %}
+  {{ column.column_name }}?: [string, string];
+  {% else %}
   {{ column.column_name }}?: string;
+  {% endif %}
   {% endif %}
   {% endfor %}
 } & AuditSearchFormParams;
@@ -216,8 +241,8 @@ const searchForm = ref<{{ class_name }}SearchFormParams>({
   {% endfor %}
   created_id: undefined,
   updated_id: undefined,
-  created_time: [],
-  updated_time: [],
+  created_time: undefined,
+  updated_time: undefined,
 });
 
 /** 搜索区域默认展开展示 */
@@ -228,7 +253,7 @@ const searchBarRules: Record<string, unknown> = {};
 
 {% if has_dict_column %}
 /** 业务搜索项（审计四字段由 FaSearchBar 的 includeAudit 属性追加） */
-const businessSearchItemsRaw = computed(() => [
+const businessSearchItemsRaw = computed<SearchFormItem[]>(() => [
 {% else %}
 /** 业务搜索项（审计四字段由 FaSearchBar 的 includeAudit 属性追加） */
 const businessSearchItems = computed(() => [
@@ -273,18 +298,56 @@ const businessSearchItems = computed(() => [
     span: 6,
   },
   {% elif column.html_type == "datetime" %}
+  {% if column.python_type == "date" %}
   {
     label: "{{ comment }}",
     key: "{{ column.column_name }}",
-    type: "date-picker",
+    type: "daterange",
     props: {
-      type: "date",
+      type: "daterange",
       valueFormat: "YYYY-MM-DD",
+      startPlaceholder: "开始日期",
+      endPlaceholder: "结束日期",
+      rangeSeparator: "至",
       clearable: true,
-      placeholder: "请选择{{ comment }}",
+      style: { width: "100%" },
     },
     span: 6,
   },
+  {% elif column.python_type == "time" %}
+  {
+    label: "{{ comment }}",
+    key: "{{ column.column_name }}",
+    type: "timepicker",
+    props: {
+      isRange: true,
+      format: "HH:mm:ss",
+      valueFormat: "HH:mm:ss",
+      rangeSeparator: "至",
+      startPlaceholder: "开始时间",
+      endPlaceholder: "结束时间",
+      clearable: true,
+      style: { width: "100%" },
+    },
+    span: 6,
+  },
+  {% else %}
+  {
+    label: "{{ comment }}",
+    key: "{{ column.column_name }}",
+    type: "datetimerange",
+    props: {
+      type: "datetimerange",
+      valueFormat: "YYYY-MM-DD HH:mm:ss",
+      startPlaceholder: "开始日期时间",
+      endPlaceholder: "结束日期时间",
+      rangeSeparator: "至",
+      clearable: true,
+      style: { width: "100%" },
+    },
+    span: 6,
+  },
+  {% endif %}
   {% endif %}
   {% endif %}
   {% endfor %}
@@ -315,6 +378,7 @@ const { selectedRows, selectedIds, batchDeleting, onTableSelectionChange } =
   useTableSelection<{{ class_name }}Table>();
 
 const createLoading = ref(false);
+const moreLoading = ref(false);
 
 const PK = "{{ pk_column_name }}" as const;
 
@@ -336,16 +400,16 @@ const {
   refreshRemove,
 } = useTable({
   core: {
-    apiFn: {{ class_name }}API.get{{ class_name }}List,
+    apiFn: {{ class_name }}API.list{{ class_name }},
     apiParams: {
       page_no: 1,
       page_size: 10,
     },
-    columnsFactory: (): ColumnOption<{{ class_name }}Table>[] => [
-      { type: "globalIndex", width: 56, label: "序号" },
+    columnsFactory: resolveStatusColumns<{{ class_name }}Table>(() => [
       { type: "selection", width: 48, fixed: "left" },
+      { type: "globalIndex", width: 56, label: "序号" },
       {% for column in columns %}
-      {% if column.is_list and column.column_name not in ['is_deleted', 'deleted_time', 'deleted_id'] and column.column_name != pk_column_name %}
+      {% if column.is_list and column.column_name not in ['is_deleted', 'deleted_time', 'deleted_id'] and column.column_name != pk_column_name and column.python_type != 'dict' %}
       {% set column_comment = column.column_comment if column.column_comment else '' %}
       {% set parentheseIndex = column_comment.find("（") %}
       {% set comment = column_comment[:parentheseIndex] if parentheseIndex != -1 else column_comment %}
@@ -356,7 +420,7 @@ const {
         width: 88,
         status: {
           0: { type: "success", text: "启用" },
-          1: { type: "info", text: "停用" },
+          1: { type: "danger", text: "停用" },
         },
       },
       {% elif column.column_name == "created_id" %}
@@ -418,7 +482,7 @@ const {
         align: "center",
         formatter: (row: {{ class_name }}Table) => formatOperationCell(row),
       },
-    ],
+    ]),
   },
 });
 
@@ -468,6 +532,8 @@ const detailItems: import("@/components/display/fa-descriptions/index.vue").Desc
   { label: "创建时间", prop: "created_time" },
   {% elif column.column_name == 'updated_time' %}
   { label: "更新时间", prop: "updated_time" },
+  {% elif column.python_type == 'dict' %}
+  { label: "{{ comment }}", prop: "{{ column.column_name }}", slot: "{{ column.column_name }}" },
   {% else %}
   { label: "{{ comment }}", prop: "{{ column.column_name }}" },
   {% endif %}
@@ -480,8 +546,13 @@ const formData = ref<{{ class_name }}Form>(createInitialFormData());
 const rules = reactive({
   {% for column in columns %}
   {% if column.is_insert or column.is_edit %}
-  {% if column.column_name not in ['uuid', 'created_time', 'updated_time', 'created_id', 'updated_id', 'is_deleted', 'deleted_time', 'deleted_id', 'tenant_id'] and column.column_name != pk_column_name %}
-  {{ column.column_name }}: [{ required: {% if not column.is_nullable %}true{% else %}false{% endif %}, message: "请填写{{ column.column_comment or column.column_name }}", trigger: "blur" }],
+  {% if column.column_name not in ['uuid', 'created_time', 'updated_time', 'created_id', 'updated_id', 'is_deleted', 'deleted_time', 'deleted_id', 'tenant_id'] and column.column_name != pk_column_name and column.python_type != 'dict' %}
+  {% set comment = column.column_comment[:column.column_comment.find("（")] if (column.column_comment and "（" in column.column_comment) else (column.column_comment or column.column_name) %}
+  {% if column.column_name == "status" %}
+  {{ column.column_name }}: [{ required: {% if not column.is_nullable %}true{% else %}false{% endif %}, message: "请选择状态", trigger: "blur" }],
+  {% else %}
+  {{ column.column_name }}: [{ required: {% if not column.is_nullable %}true{% else %}false{% endif %}, message: "请填写{{ comment }}", trigger: "blur" }],
+  {% endif %}
   {% endif %}
   {% endif %}
   {% endfor %}
@@ -494,7 +565,7 @@ const dialogFormItems: FormItem[] = [
   {% set column_comment = column.column_comment if column.column_comment else '' %}
   {% set parentheseIndex = column_comment.find("（") %}
   {% set comment = column_comment[:parentheseIndex] if parentheseIndex != -1 else column_comment %}
-  {% if column.column_name not in ['uuid', 'created_time', 'updated_time', 'created_id', 'updated_id', 'is_deleted', 'deleted_time', 'deleted_id', 'tenant_id'] and column.column_name != pk_column_name %}
+  {% if column.column_name not in ['uuid', 'created_time', 'updated_time', 'created_id', 'updated_id', 'is_deleted', 'deleted_time', 'deleted_id', 'tenant_id'] and column.column_name != pk_column_name and column.python_type != 'dict' %}
   {% if column.column_name == "status" %}
   {
     key: "status",
@@ -520,6 +591,12 @@ const dialogFormItems: FormItem[] = [
       placeholder: "请输入描述",
     },
   },
+  {% elif column.python_type == "bool" or column.html_type == "switch" %}
+  { key: "{{ column.column_name }}", label: "{{ comment }}", type: "switch" },
+  {% elif column.python_type == "time" %}
+  { key: "{{ column.column_name }}", label: "{{ comment }}", type: "timepicker", props: { placeholder: "请选择{{ comment }}", valueFormat: "HH:mm:ss", style: "width: 100%" } },
+  {% elif column.python_type == "date" %}
+  { key: "{{ column.column_name }}", label: "{{ comment }}", type: "date", props: { placeholder: "请选择{{ comment }}", valueFormat: "YYYY-MM-DD", style: "width: 100%" } },
   {% elif column.python_type == "int" or column.python_type == "float" or column.python_type == "Decimal" %}
   { key: "{{ column.column_name }}", label: "{{ comment }}", type: "number", props: { placeholder: "请输入{{ comment }}"{% if column.python_type == "float" or column.python_type == "Decimal" %}, step: 0.01, precision: 2{% endif %} } },
   {% elif column.html_type == "input" %}
@@ -538,6 +615,12 @@ const dialogFormItems: FormItem[] = [
   { key: "{{ column.column_name }}", label: "{{ comment }}", type: "switch" },
   {% elif column.html_type == "checkbox" %}
   { key: "{{ column.column_name }}", label: "{{ comment }}", type: "checkbox" },
+  {% elif column.html_type == "editor" %}
+  { key: "{{ column.column_name }}", label: "{{ comment }}", type: "editor", span: 24, props: { height: "300px", placeholder: "请输入{{ comment }}" } },
+  {% elif column.html_type == "imageUpload" %}
+  { key: "{{ column.column_name }}", label: "{{ comment }}", type: "imageupload" },
+  {% elif column.html_type == "fileUpload" %}
+  { key: "{{ column.column_name }}", label: "{{ comment }}", type: "fileupload", props: { tip: "支持常见文档、压缩包等，大小不超过 20MB" } },
   {% else %}
   { key: "{{ column.column_name }}", label: "{{ comment }}", type: "input", props: { placeholder: "请输入{{ comment }}" } },
   {% endif %}
@@ -555,7 +638,7 @@ const crud = useCrudForm<{{ class_name }}Form>({
   dialogVisible,
   dataFormRef,
   formRenderKey,
-  detailApi: (id: number) => {{ class_name }}API.get{{ class_name }}Detail(id),
+  detailApi: (id: number) => {{ class_name }}API.detail{{ class_name }}(id),
   createApi: (data: {{ class_name }}Form) => {{ class_name }}API.create{{ class_name }}(data),
   updateApi: (id: number, data: {{ class_name }}Form) => {{ class_name }}API.update{{ class_name }}(id, data),
   titles: { create: "新增", update: "修改", detail: "详情" },
@@ -577,7 +660,18 @@ const handleSearch = async (params: {{ class_name }}SearchFormParams) => {
   replaceSearchParams({
     {% for column in columns %}
     {% if column.is_query and column.column_name not in ['created_time', 'updated_time', 'created_id', 'updated_id', 'is_deleted', 'deleted_time', 'deleted_id'] and column.column_name != pk_column_name %}
+    {% if column.python_type in ['date', 'time', 'datetime'] %}
+    {{ column.column_name }}_start:
+      Array.isArray(params.{{ column.column_name }}) && params.{{ column.column_name }}.length === 2
+        ? params.{{ column.column_name }}[0]
+        : undefined,
+    {{ column.column_name }}_end:
+      Array.isArray(params.{{ column.column_name }}) && params.{{ column.column_name }}.length === 2
+        ? params.{{ column.column_name }}[1]
+        : undefined,
+    {% else %}
     {{ column.column_name }}: params.{{ column.column_name }},
+    {% endif %}
     {% endif %}
     {% endfor %}
     created_id: params.created_id ?? undefined,
@@ -603,8 +697,8 @@ const onResetSearch = async () => {
     {% endfor %}
     created_id: undefined,
     updated_id: undefined,
-    created_time: [],
-    updated_time: [],
+    created_time: undefined,
+    updated_time: undefined,
   };
   await resetSearchParams();
 };
@@ -694,7 +788,10 @@ async function handleBatchDelete() {
   const ids = selectedIds.value;
   if (ids.length === 0) return;
   try {
-    await confirmBatchDelete(ids.length);
+    await confirmBatchDelete(
+      ids.length,
+      selectedRows.value.map((row) => String(row["{{ pk_column_name }}"] ?? "")),
+    );
     batchDeleting.value = true;
     await {{ class_name }}API.delete{{ class_name }}(ids);
     faTableRef.value?.elTableRef?.clearSelection();
@@ -706,24 +803,24 @@ async function handleBatchDelete() {
   }
 }
 
-async function runBatchStatus(value: "enable" | "disable") {
+async function handleMoreClick(value: "enable" | "disable") {
   const ids = selectedIds.value;
   if (ids.length === 0) {
     ElMessage.warning("请先在列表中勾选数据");
     return;
   }
   try {
-    await confirmAction(
-      `确认对选中的 ${ids.length} 条数据${value === "enable" ? "启用" : "停用"}？`,
-      "批量设置"
-    );
+    await confirmToggleStatus(value);
+    moreLoading.value = true;
     const status = value === "enable" ? 0 : 1;
     await {{ class_name }}API.batch{{ class_name }}({ ids, status });
     // 成功 / 失败提示由 axios 拦截器统一处理
     faTableRef.value?.elTableRef?.clearSelection();
     await refreshData();
   } catch {
-    // 用户取消
+    // 用户取消或操作失败
+  } finally {
+    moreLoading.value = false;
   }
 }
 

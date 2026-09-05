@@ -14,7 +14,7 @@ class DemoModel(ModelMixin, UserMixin):
     __table_args__: dict[str, str] = {"comment": "示例表"}
 
     name: Mapped[str] = mapped_column(String(64), nullable=False, index=True, comment="名称")
-    status: Mapped[int] = mapped_column(Integer, default=0, nullable=False, comment="状态(0:启动 1:停用)", index=True)
+    status: Mapped[int] = mapped_column(Integer, default=0, nullable=False, comment="状态(0:正常 1:停用)", index=True)
     description: Mapped[str | None] = mapped_column(Text, default=None, nullable=True, comment="备注")
     int_val: Mapped[int | None] = mapped_column(Integer, nullable=True, comment="整数")
     bigint_val: Mapped[int | None] = mapped_column(BIGINT, nullable=True, comment="大整数")

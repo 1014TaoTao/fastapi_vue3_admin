@@ -1477,15 +1477,16 @@ active(0) → grace(1) → suspended(2) → expired(4) → archived(5)
 | POST | `/monitor/resource/export` | module_monitor:resource:export | 导出资源列表 |
 | GET | `/monitor/server/info` | module_monitor:server:query | 服务器监控信息 |
 
-### 20.17 公共模块
+### 20.17 文件与健康探针
 
 | 方法 | 路径 | 权限标识 | 说明 |
 |------|------|---------|------|
-| POST | `/common/file/upload` | module_common:file:upload | 上传文件 |
-| POST | `/common/file/download` | module_common:file:download | 下载文件 |
-| GET | `/health` | — | 基础健康检查 |
-| GET | `/health/live` | — | 存活探针 |
-| GET | `/health/ready` | — | 就绪探针 |
+| POST | `/file/upload` | module_common:file:upload | 上传文件 |
+| POST | `/file/download` | module_common:file:download | 下载文件 |
+| GET | `/monitor/health` | — | 基础健康检查 |
+| GET | `/monitor/health/live` | — | 存活探针 |
+| GET | `/monitor/health/ready` | — | 就绪探针 |
+| GET | `/monitor/health/stream` | — | 健康实时流（SSE，30s 快照） |
 | GET | `/metrics` | — | Prometheus 指标端点 |
 
 ### 20.18 邮件服务
@@ -2853,8 +2854,8 @@ Redis 缓存监控，提供缓存统计信息、缓存名称列表、键值查�
 
 | 方法 | 路径 | 权限标识 | 说明 |
 |------|------|---------|------|
-| POST | `/common/file/upload` | module_common:file:upload | 上传文件 |
-| POST | `/common/file/download` | module_common:file:download | 下载文件 |
+| POST | `/file/upload` | module_common:file:upload | 上传文件 |
+| POST | `/file/download` | module_common:file:download | 下载文件 |
 
 ---
 
@@ -2863,9 +2864,10 @@ Redis 缓存监控，提供缓存统计信息、缓存名称列表、键值查�
 #### 37.3.1 业务描述
 
 三级健康检查体系，用于不同场景的健康探测：
-- `/health`: 基础健康检查（负载均衡器探测）
-- `/health/live`: 存活探针（K8s livenessProbe）
-- `/health/ready`: 就绪探针（K8s readinessProbe，检测数据库和 Redis）
+- `/monitor/health`: 基础健康检查（负载均衡器探测）
+- `/monitor/health/live`: 存活探针（K8s livenessProbe）
+- `/monitor/health/ready`: 就绪探针（K8s readinessProbe，检测数据库和 Redis）
+- `/monitor/health/stream`: 健康实时流（SSE；服务端单例快照循环每 30s 一拍，探活成本与连接数无关）
 
 #### 37.3.2 数据模型
 
@@ -2903,6 +2905,7 @@ Redis 缓存监控，提供缓存统计信息、缓存名称列表、键值查�
 | GET | `/health` | — | 基础健康检查 |
 | GET | `/health/live` | — | 存活探针 |
 | GET | `/health/ready` | — | 就绪探针 |
+| GET | `/health/stream` | — | 健康实时流（SSE，事件名 health，30s 快照一拍） |
 
 ---
 

@@ -187,20 +187,6 @@
                 </ElOption>
               </ElSelect>
             </template>
-            <template #is_default>
-              <ElRadioGroup v-model="formData.is_default">
-                <ElRadio :value="true">是</ElRadio>
-                <ElRadio :value="false">否</ElRadio>
-              </ElRadioGroup>
-            </template>
-            <template #status>
-              <ElSwitch
-                v-model="formData.status"
-                inline-prompt
-                :active-value="0"
-                :inactive-value="1"
-              />
-            </template>
           </FaForm>
         </template>
       </FaDialog>
@@ -209,7 +195,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h, onMounted, reactive, ref } from "vue";
 import DictAPI, {
   type DictDataForm,
   type DictDataPageQuery,
@@ -483,19 +468,22 @@ const dictDataDialogFormItems = computed<FormItem[]>(() => [
     label: "样式属性",
     key: "css_class",
     type: "input",
-    placeholder: "",
   },
   {
     label: "列表类样式",
     key: "list_class",
     type: "input",
-    placeholder: "",
   },
   {
     label: "是否默认",
     key: "is_default",
     type: "radiogroup",
-    placeholder: "",
+    props: {
+      options: [
+        { label: "是", value: true },
+        { label: "否", value: false },
+      ],
+    },
   },
   {
     label: "排序",
@@ -511,7 +499,11 @@ const dictDataDialogFormItems = computed<FormItem[]>(() => [
     label: "状态",
     key: "status",
     type: "switch",
-    placeholder: "",
+    props: {
+      activeValue: 0,
+      inactiveValue: 1,
+      inlinePrompt: true,
+    },
   },
   {
     label: "描述",

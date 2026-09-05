@@ -188,7 +188,7 @@ class ImportUtil:
             # 检查是否有自定义的apscheduler模型
             for module_name in [
                 "app.core.ap_scheduler",
-                "app.module_task.scheduler_test",
+                "app.modules.task.scheduler_test",
             ]:
                 try:
                     module = importlib.import_module(module_name)

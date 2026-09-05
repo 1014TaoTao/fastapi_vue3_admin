@@ -1,0 +1,8 @@
+# 见 docs/PLUGIN_ARCHITECTURE.md
+
+name = "monitor"
+title = "监控"
+version = "1.0.0"
+description = "监控功能（缓存/在线用户/服务器监控/健康探针）；路由经 api/v1/monitor.py 装配。"
+optional = true
+tags = ["monitor"]

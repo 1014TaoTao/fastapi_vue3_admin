@@ -27,12 +27,12 @@
             <span class="text-base font-semibold">传输任务列表</span>
             <span
               class="inline-flex items-center gap-1.25 text-xs"
-              :class="wsConnected ? 'text-(--el-color-success)' : 'text-(--el-color-info)'"
+              :class="sseConnected ? 'text-(--el-color-success)' : 'text-(--el-color-info)'"
             >
               <i
                 class="h-2 w-2 rounded-full"
-                :class="wsConnected ? 'bg-(--el-color-success)' : 'bg-(--el-color-info)'"
-              />{{ wsConnected ? "实时连接" : "连接中…" }}
+                :class="sseConnected ? 'bg-(--el-color-success)' : 'bg-(--el-color-info)'"
+              />{{ sseConnected ? "实时连接" : "连接中…" }}
             </span>
             <el-button type="primary" @click="openCreate">新建传输任务</el-button>
           </div>
@@ -361,7 +361,7 @@
 
 <script setup lang="ts">
 import TransferAPI, {
-  TransferSocket,
+  TransferStream,
   type TransferPushMessage,
   type TransferSourceType,
   type TransferStatus,
@@ -502,6 +502,7 @@ async function loadTasks() {
     });
     tasks.value = data.data.items || [];
     total.value = data.data.total || 0;
+    syncStream(); // 列表刷新后重新评估：有进行中任务才保持连接
   } finally {
     loading.value = false;
   }
@@ -879,9 +880,20 @@ async function openDetail(row: TransferTaskItem) {
   detailRow.value = data.data;
 }
 
-// ── WebSocket 实时进度 ────────────────────────────────────────────────
-const wsConnected = ref(false);
-let transferSocket: TransferSocket | null = null;
+// ── SSE 实时进度（按需连接：仅存在进行中任务时保持连接，全部终态即断开） ──
+const sseConnected = ref(false);
+let transferStream: TransferStream | null = null;
+
+const hasActiveTask = computed(() =>
+  tasks.value.some((t) => t.status === "pending" || t.status === "running")
+);
+
+/** 连接生命周期跟随任务列表：有 pending/running 任务才连；全部终态即断开（终态前服务端已推过一次收尾帧） */
+function syncStream() {
+  if (!transferStream) return;
+  if (hasActiveTask.value) transferStream.connect();
+  else transferStream.disconnect();
+}
 
 function onMessage(msg: TransferPushMessage) {
   if (msg.type !== "task_update") return;
@@ -896,20 +908,20 @@ function onMessage(msg: TransferPushMessage) {
   if (detailVisible.value && detailRow.value?.id === item.id) {
     detailRow.value = item;
   }
+  syncStream(); // 收到终态帧且无其他进行中任务时自动断开
 }
 function onStatus(connected: boolean) {
-  wsConnected.value = connected;
+  sseConnected.value = connected;
 }
 
 onMounted(() => {
   loadSources();
   loadFlows();
-  loadTasks();
-  transferSocket = new TransferSocket({ onMessage, onStatus });
-  transferSocket.connect();
+  loadTasks(); // 末尾 syncStream 决定是否连接
+  transferStream = new TransferStream({ onMessage, onStatus });
 });
 onUnmounted(() => {
-  transferSocket?.disconnect();
-  transferSocket = null;
+  transferStream?.disconnect();
+  transferStream = null;
 });
 </script>

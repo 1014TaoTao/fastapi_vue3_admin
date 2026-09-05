@@ -1,6 +1,6 @@
 import { request } from "@utils";
 
-const API_PATH = "/task/workflow/flow";
+const API_PATH = "/workflow/flow";
 
 const FlowAPI = {
   pageFlow(query?: FlowPageQuery) {

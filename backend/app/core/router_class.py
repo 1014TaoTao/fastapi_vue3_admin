@@ -1,31 +1,18 @@
 import json
 import time
-from collections.abc import Awaitable, Callable, Coroutine
-from typing import Any
+from collections.abc import Callable, Coroutine
+from typing import Any, TypedDict
 
 from fastapi import Request, Response
 from fastapi.routing import APIRoute
 from starlette.background import BackgroundTask
 
 from app.config.setting import settings
+from app.core.database import async_db_session
 from app.core.logger import logger
 from app.utils.ip_local_util import get_client_ip
 
-# 操作日志落库实现由 api 层登记注入（core 不反向依赖 app.api.*）
-OperationLogWriter = Callable[[dict[str, Any]], Awaitable[None]]
-_operation_log_writer: OperationLogWriter | None = None
-
-
-def set_operation_log_writer(writer: OperationLogWriter) -> None:
-    """登记操作日志落库实现（应用启动时由 api 层调用）。"""
-    global _operation_log_writer
-    _operation_log_writer = writer
-
-_WRITE_METHODS = {"POST", "PUT", "DELETE", "PATCH"}
-
-# 操作日志脱敏：命中键名（不区分大小写）的值替换为掩码，防止凭据明文入库。
-# 有日志查看权限的人不应因此获得全员密码/token。
-_SENSITIVE_KEYS = {
+_SENSITIVE_KEYS: set[str] = {
     "password",
     "passwd",
     "old_password",
@@ -53,40 +40,34 @@ def _redact_sensitive(obj: Any) -> Any:
         return [_redact_sensitive(item) for item in obj]
     return obj
 
-# （通常在登录前调用，没有 JWT token）
-_PUBLIC_WRITE_PATHS: set[str] = {
-    "/auth/login",
-    "/auth/token/refresh",
-    "/auth/captcha/slider/complete",
-    "/auth/user/register",
-}
+
+class OperationLogRecord(TypedDict):
+    """操作日志落库记录（字段与 OperationLogModel 对应，定义与消费同处）。"""
+
+    username: str
+    request_path: str
+    request_method: str
+    request_payload: str
+    response_code: int
+    response_json: str
+    process_time: str
+    description: str
+    request_ip: str
 
 
-async def _write_operation_log_async(log_data: dict) -> None:
-    """委托已登记的写入器落库操作日志（未登记时降级为告警，不阻塞响应）。"""
-    if _operation_log_writer is None:
-        logger.warning("操作日志写入器未登记，跳过落库: path={}", log_data.get("request_path"))
-        return
+async def _write_operation_log_async(log_data: OperationLogRecord) -> None:
+    """落库操作日志（BackgroundTask 中执行；失败仅告警，不影响响应）。"""
+    from app.modules.system.log.model import OperationLogModel  # 延迟导入：core 导入期不依赖业务层（守卫不变式 3）
+
     try:
-        await _operation_log_writer(log_data)
+        async with async_db_session() as session, session.begin():
+            session.add(OperationLogModel(**log_data))
     except Exception:
         logger.exception("操作日志写入失败: path={}", log_data.get("request_path"))
 
 
 class OperationLogRoute(APIRoute):
-    """操作日志路由 — 自动记录请求/响应并后台异步写入。
-
-    根据 HTTP 方法判断：
-    - 写方法 (POST/PUT/DELETE/PATCH)：注入租户写权限检查
-    - 读方法 (GET/HEAD/OPTIONS)：不注入
-    """
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        methods = getattr(self, "methods", set())
-        if methods & _WRITE_METHODS and self.path not in _PUBLIC_WRITE_PATHS:
-            if self.dependencies is None:
-                self.dependencies = []
+    """操作日志路由 — 按配置的 HTTP 方法自动记录请求/响应并后台异步写入。"""
 
     def get_route_handler(self) -> Callable[[Request], Coroutine[Any, Any, Response]]:
         original_route_handler = super().get_route_handler()
@@ -106,11 +87,7 @@ class OperationLogRoute(APIRoute):
                     try:
                         form_data = await request.form()
                         # 过滤 UploadFile 对象并脱敏凭据字段
-                        oper_param["form"] = {
-                            k: (_REDACTED if k.lower() in _SENSITIVE_KEYS else v)
-                            for k, v in form_data.items()
-                            if not hasattr(v, "read")
-                        }
+                        oper_param["form"] = {k: (_REDACTED if k.lower() in _SENSITIVE_KEYS else v) for k, v in form_data.items() if not hasattr(v, "read")}
                     except Exception:
                         oper_param["form"] = {}
                 else:
@@ -132,21 +109,21 @@ class OperationLogRoute(APIRoute):
                 if is_json:
                     # 响应体同样脱敏：登录/刷新响应含 access_token，明文入库等于 token 泄露
                     try:
-                        response_data = json.dumps(_redact_sensitive(json.loads(response.body.decode())), ensure_ascii=False).encode()
+                        response_data = json.dumps(_redact_sensitive(json.loads(bytes(response.body).decode())), ensure_ascii=False).encode()
                     except (json.JSONDecodeError, UnicodeDecodeError):
                         response_data = b"{}"
                 else:
                     response_data = b"{}"
 
-                log_data: dict[str, Any] = {
-                    "username": getattr(getattr(request.state, "ctx", None), "user_username", "unknown"),
+                log_data: OperationLogRecord = {
+                    "username": str(getattr(getattr(request.state, "ctx", None), "user_username", None) or "unknown"),
                     "request_path": request.url.path,
                     "request_method": request.method,
                     "request_payload": log_payload,
                     "response_code": response.status_code,
                     "response_json": bytes(response_data).decode(),
                     "process_time": f"{(time.perf_counter() - start):.2f}s",
-                    "description": route.summary if route else "",
+                    "description": (route.summary or "") if route else "",
                     "request_ip": get_client_ip(request),
                 }
                 response.background = BackgroundTask(_write_operation_log_async, log_data)

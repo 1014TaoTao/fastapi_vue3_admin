@@ -174,8 +174,8 @@ async def _test_lifespan(app) -> AsyncGenerator[Any, None]:
     # 将 admin 密码重置为已知密码 "admin123"
     from sqlalchemy import update
 
-    from app.api.v1.module_system.user.model import UserModel
     from app.core.database import async_db_session
+    from app.modules.system.user.model import UserModel
     from app.utils.password_util import PwdUtil
 
     async with async_db_session() as db:

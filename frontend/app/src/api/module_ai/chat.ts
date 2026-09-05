@@ -24,7 +24,7 @@ export const ChatAPI = {
   },
   /** 删除会话 */
   removeSession(ids: number[]): Promise<void> {
-    return http.Delete(`${AI_BASE}/delete`, { ids: JSON.stringify(ids) })
+    return http.Delete(`${AI_BASE}/delete`, ids)
   },
   /** 发送消息 (非流式) */
   sendMessage(sessionId: number, content: string): Promise<ChatMessage> {

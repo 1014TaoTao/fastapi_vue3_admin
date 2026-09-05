@@ -1,7 +1,7 @@
 import { request } from "@utils";
-import { Auth } from "@utils/auth";
+import { createSSEClient, httpEndpoint, type SSEClient } from "@utils/sse";
 
-const API_PATH = "/task/workflow/transfer";
+const API_PATH = "/workflow/transfer";
 
 const TransferAPI = {
   /** 创建传输任务（远端源，JSON） */
@@ -130,17 +130,12 @@ export interface TransferTaskQuery extends PageQuery {
   status?: TransferStatus;
 }
 
-/** 服务端 WS 推送消息 */
+/** 服务端 SSE 推送消息 */
 export type TransferPushMessage = { type: "task_update"; data: TransferTaskItem };
 
-/** 传输任务 WebSocket 客户端（自动重连 + 心跳，参照 ChatSocket） */
-export class TransferSocket {
-  private ws: WebSocket | null = null;
-  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  private pingTimer: ReturnType<typeof setInterval> | null = null;
-  private heartbeatTimer: ReturnType<typeof setTimeout> | null = null;
-  private attempt = 0;
-  private stopped = false;
+/** 传输任务 SSE 客户端（自动重连；令牌走 Authorization 头；连接生命周期由视图层按"是否存在进行中任务"控制） */
+export class TransferStream {
+  private client: SSEClient | null = null;
   private handlers: {
     onMessage: (msg: TransferPushMessage) => void;
     onStatus: (connected: boolean) => void;
@@ -153,101 +148,37 @@ export class TransferSocket {
     this.handlers = handlers;
   }
 
+  /** 建立连接（幂等：已存在连接实例时直接返回，重连由客户端内部负责） */
   connect() {
-    if (this.ws?.readyState === WebSocket.OPEN || this.ws?.readyState === WebSocket.CONNECTING)
-      return;
-    this.stopped = false;
-    try {
-      const url = new URL(
-        "/api/v1/task/workflow/transfer/ws",
-        import.meta.env.VITE_APP_WS_ENDPOINT
-      );
-      const token = Auth.getAccessToken();
-      // 令牌经 Sec-WebSocket-Protocol 传递，避免出现在 URL 与服务端 access log 中
-      this.ws = token
-        ? new WebSocket(url.toString(), ["access_token", `access_token.${token}`])
-        : new WebSocket(url.toString());
-      this.ws.onopen = () => this.handleOpen();
-      this.ws.onmessage = (event) => this.handleMessage(event);
-      this.ws.onclose = (event) => this.handleClose(event);
-      this.ws.onerror = () => this.ws?.close();
-    } catch {
-      this.scheduleReconnect();
-    }
+    if (this.client) return;
+    const url = new URL(
+      "/api/v1/task/workflow/transfer/stream",
+      httpEndpoint(import.meta.env.VITE_APP_WS_ENDPOINT)
+    );
+    this.client = createSSEClient({
+      url: url.toString(),
+      onEvent: (event, data) => {
+        if (event !== "task_update") return;
+        try {
+          this.handlers.onMessage(JSON.parse(data));
+        } catch {
+          /* ignore */
+        }
+      },
+      onStatus: (connected) => this.handlers.onStatus(connected),
+      // 令牌失效：释放实例，视图层下次 sync 时以新令牌重建
+      onFatal: () => {
+        this.client = null;
+      },
+    });
   }
 
   disconnect() {
-    this.stopped = true;
-    this.clearTimers();
-    if (this.ws) {
-      this.ws.onclose = null;
-      this.ws.close(1000, "close");
-      this.ws = null;
-    }
-  }
-
-  private handleOpen() {
-    this.attempt = 0;
-    this.handlers.onStatus(true);
-    this.heartbeatTimer = setTimeout(() => {
-      try {
-        this.ws?.send("ping");
-      } catch {
-        /* ignore */
-      }
-    }, 30000);
-    this.pingTimer = setInterval(() => {
-      try {
-        this.ws?.send("ping");
-      } catch {
-        /* ignore */
-      }
-    }, 60000);
-  }
-
-  private handleMessage(event: MessageEvent) {
-    if (event.data === "pong") return;
-    try {
-      this.handlers.onMessage(JSON.parse(event.data));
-    } catch {
-      /* ignore */
-    }
-  }
-
-  private handleClose(event?: CloseEvent) {
-    this.ws = null;
-    this.clearTimers();
-    this.handlers.onStatus(false);
-    // 4001 = 令牌无效（登出/失效），不再自动重连
-    if (event?.code === 4001) {
-      this.stopped = true;
-      return;
-    }
-    if (!this.stopped) this.scheduleReconnect();
-  }
-
-  private scheduleReconnect() {
-    if (this.stopped || this.reconnectTimer) return;
-    const delay = Math.min(2000 * Math.pow(1.5, this.attempt), 30000);
-    this.reconnectTimer = setTimeout(() => {
-      this.reconnectTimer = null;
-      this.attempt += 1;
-      this.connect();
-    }, delay);
-  }
-
-  private clearTimers() {
-    if (this.pingTimer) clearInterval(this.pingTimer);
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = null;
-    }
-    if (this.heartbeatTimer) clearTimeout(this.heartbeatTimer);
-    this.pingTimer = null;
-    this.heartbeatTimer = null;
+    this.client?.disconnect();
+    this.client = null;
   }
 
   get connected() {
-    return this.ws?.readyState === WebSocket.OPEN;
+    return this.client?.connected ?? false;
   }
 }
