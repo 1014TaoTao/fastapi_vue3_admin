@@ -5,11 +5,12 @@
       <!-- 多节点浏览：el-tabs 左侧标签（状态点+文字靠左、关闭按钮右端对齐，参考 data-transfer/web 已验证实现） -->
       <el-tabs
         v-if="tabs.length"
-        v-model="activeId as number"
+        :model-value="activeId ?? undefined"
         tab-position="left"
         class="min-h-0 flex-1"
         :addable="true"
         :editable="true"
+        @update:model-value="(v) => (activeId = v as number)"
         @tab-change="onElTabChange"
         @tab-remove="(name) => closeTab(Number(name))"
         @tab-add="openAddDialog"
