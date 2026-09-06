@@ -207,11 +207,12 @@ def _build_job_trigger(
         fields = cron_expr.split()
         if len(fields) not in (6, 7):
             raise ValueError("无效的 Cron 表达式，格式: 秒 分 时 日 月 周 [年]")
+        # Quartz 风格的 ? 仅表示"该位无具体值"，croniter 不支持，先统一规范化为 * 再校验
+        parsed = [field if field != "?" else "*" for field in fields]
         try:
-            croniter(cron_expr)
+            croniter(" ".join(parsed))
         except (KeyError, ValueError):
             raise ValueError(f"Cron表达式不正确: {cron_expr}")
-        parsed = [field if field != "?" else "*" for field in fields]
         if len(fields) == 6:
             parsed.append("*")
         second, minute, hour, day, month, day_of_week, year = parsed

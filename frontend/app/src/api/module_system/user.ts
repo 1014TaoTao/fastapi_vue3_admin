@@ -169,10 +169,9 @@ const UserAPI = {
 
 export default UserAPI
 
-/* 忘记密码表单（与后端 UserForgetPasswordSchema 一致，confirmPassword 为前端校验字段不提交） */
+/* 忘记密码申请（与后端 UserForgetPasswordSchema 一致：仅用户名，后端不会直接改密） */
 export interface ForgetPasswordForm {
   username: string
-  new_password: string
 }
 
 /* 注册表单 */

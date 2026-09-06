@@ -17,8 +17,6 @@ const submitting = ref(false)
 const forgetFormRef = ref()
 const forgetForm = reactive({
   username: '',
-  new_password: '',
-  confirmPassword: '',
 })
 
 /** 与后端 UserForgetPasswordSchema 一致：字母开头，3-32 位，仅允许字母、数字、_ . - */
@@ -29,25 +27,15 @@ const forgetSchema: FormSchema = {
   validate: (model) => {
     const errors: Array<{ path: Array<string | number>, message: string }> = []
     const username = String(model.username ?? '').trim()
-    const password = String(model.new_password ?? '')
-    const confirmPassword = String(model.confirmPassword ?? '')
     if (!username)
       errors.push({ path: ['username'], message: t('common.form.usernameRequired') })
     else if (!USERNAME_REG.test(username))
       errors.push({ path: ['username'], message: t('common.form.usernameFormat') })
-    if (!password)
-      errors.push({ path: ['new_password'], message: t('common.form.newPasswordRequired') })
-    else if (password.length < 6)
-      errors.push({ path: ['new_password'], message: t('common.form.passwordLength') })
-    if (!confirmPassword)
-      errors.push({ path: ['confirmPassword'], message: t('common.form.confirmNewRequired') })
-    else if (confirmPassword !== password)
-      errors.push({ path: ['confirmPassword'], message: t('common.form.mismatch') })
     return errors
   },
 }
 
-/** 重置密码成功后记住用户名，回登录页由用户用新密码登录 */
+/** 提交忘记密码申请：后端不会直接改密，成功后提示联系管理员 */
 async function handleSubmit() {
   if (submitting.value)
     return
@@ -58,13 +46,13 @@ async function handleSubmit() {
   const username = forgetForm.username.trim()
   submitting.value = true
   try {
-    await UserAPI.forgetPassword({ username, new_password: forgetForm.new_password })
+    await UserAPI.forgetPassword({ username })
     Storage.set(REMEMBER_ME_KEY, { username, remember: true })
     toast.success(t('forget.success'))
     uni.reLaunch({ url: '/pages/login/index' })
   }
   catch {
-    // http 层已统一错误提示（如用户不存在）
+    // http 层已统一错误提示
   }
   finally {
     submitting.value = false
@@ -92,26 +80,6 @@ function goLogin() {
               clearable
               :compact="false"
               prefix-icon="user"
-            />
-          </wd-form-item>
-          <wd-form-item prop="new_password" custom-style="margin-bottom: 14rpx; padding-left: 0; padding-right: 0;">
-            <wd-input
-              v-model="forgetForm.new_password"
-              :placeholder="t('common.form.newPasswordPlaceholder')"
-              show-password
-              clearable
-              :compact="false"
-              prefix-icon="lock"
-            />
-          </wd-form-item>
-          <wd-form-item prop="confirmPassword" custom-style="margin-bottom: 14rpx; padding-left: 0; padding-right: 0;">
-            <wd-input
-              v-model="forgetForm.confirmPassword"
-              :placeholder="t('common.form.confirmNewPlaceholder')"
-              show-password
-              clearable
-              :compact="false"
-              prefix-icon="lock"
             />
           </wd-form-item>
         </wd-form>

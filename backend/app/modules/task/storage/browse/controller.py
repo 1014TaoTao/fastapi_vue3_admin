@@ -27,7 +27,7 @@ def _delete_temp_file(path: str) -> None:
 
 @StorageBrowseRouter.post("/upload", summary="上传文件到存储源", response_model=ResponseSchema[StorageUploadResultSchema])
 async def upload_storage_file_controller(
-    auth: Annotated[AuthSchema, Security(AuthPermission(["module_storage:browse:upload"]))],
+    auth: Annotated[AuthSchema, Security(AuthPermission(["module_task:storage:browse:upload"]))],
     db: Annotated[AsyncSession, Depends(db_getter)],
     file: Annotated[UploadFile, File(description="上传文件")],
     source_id: Annotated[int | None, Form(description="存储源ID（不传使用默认存储源）")] = None,
@@ -42,7 +42,7 @@ async def upload_storage_file_controller(
 
 @StorageBrowseRouter.post("/download", summary="下载存储源文件", response_model=None)
 async def download_storage_file_controller(
-    auth: Annotated[AuthSchema, Security(AuthPermission(["module_storage:browse:download"]))],
+    auth: Annotated[AuthSchema, Security(AuthPermission(["module_task:storage:browse:download"]))],
     db: Annotated[AsyncSession, Depends(db_getter)],
     background_tasks: BackgroundTasks,
     remote_path: Annotated[str, Body(description="远端文件路径")],
@@ -58,7 +58,7 @@ async def download_storage_file_controller(
 
 @StorageBrowseRouter.post("/download_dir", summary="下载存储源目录（递归打包ZIP）", response_model=None)
 async def download_dir_storage_file_controller(
-    auth: Annotated[AuthSchema, Security(AuthPermission(["module_storage:browse:download"]))],
+    auth: Annotated[AuthSchema, Security(AuthPermission(["module_task:storage:browse:download"]))],
     db: Annotated[AsyncSession, Depends(db_getter)],
     background_tasks: BackgroundTasks,
     remote_path: Annotated[str, Body(description="远端目录路径")],
@@ -74,7 +74,7 @@ async def download_dir_storage_file_controller(
 
 @StorageBrowseRouter.delete("/delete", summary="删除存储源文件", response_model=ResponseSchema[None])
 async def delete_storage_file_controller(
-    auth: Annotated[AuthSchema, Security(AuthPermission(["module_storage:browse:delete"]))],
+    auth: Annotated[AuthSchema, Security(AuthPermission(["module_task:storage:browse:delete"]))],
     db: Annotated[AsyncSession, Depends(db_getter)],
     remote_path: Annotated[str, Body(description="远端文件路径")],
     source_id: Annotated[int | None, Body(description="存储源ID（不传使用默认存储源）")] = None,
@@ -86,7 +86,7 @@ async def delete_storage_file_controller(
 
 @StorageBrowseRouter.get("/list", summary="查询存储源文件列表", response_model=None)
 async def list_storage_file_controller(
-    auth: Annotated[AuthSchema, Security(AuthPermission(["module_storage:browse:query"]))],
+    auth: Annotated[AuthSchema, Security(AuthPermission(["module_task:storage:browse:query"]))],
     db: Annotated[AsyncSession, Depends(db_getter)],
     source_id: Annotated[int | None, Query(description="存储源ID（不传使用默认存储源）")] = None,
     prefix: Annotated[str | None, Query(description="目录前缀（可选）")] = None,
@@ -102,7 +102,7 @@ async def list_storage_file_controller(
 
 @StorageBrowseRouter.get("/buckets", summary="查询存储源桶列表", response_model=ResponseSchema[list[str]])
 async def list_storage_buckets_controller(
-    auth: Annotated[AuthSchema, Security(AuthPermission(["module_storage:browse:query"]))],
+    auth: Annotated[AuthSchema, Security(AuthPermission(["module_task:storage:browse:query"]))],
     db: Annotated[AsyncSession, Depends(db_getter)],
     source_id: Annotated[int | None, Query(description="存储源ID（不传使用默认存储源）")] = None,
 ) -> JSONResponse:
@@ -112,7 +112,7 @@ async def list_storage_buckets_controller(
 
 @StorageBrowseRouter.post("/copy", summary="复制/移动文件", response_model=ResponseSchema[StoragePathResultSchema])
 async def copy_or_move_storage_file_controller(
-    auth: Annotated[AuthSchema, Security(AuthPermission(["module_storage:browse:update"]))],
+    auth: Annotated[AuthSchema, Security(AuthPermission(["module_task:storage:browse:update"]))],
     db: Annotated[AsyncSession, Depends(db_getter)],
     source_id: Annotated[int | None, Body(description="源存储源ID（不传使用默认存储源）")] = None,
     source_path: Annotated[str, Body(description="源文件路径")] = "",
@@ -134,7 +134,7 @@ async def copy_or_move_storage_file_controller(
 
 @StorageBrowseRouter.put("/rename", summary="重命名/移动文件", response_model=ResponseSchema[StoragePathResultSchema])
 async def rename_storage_file_controller(
-    auth: Annotated[AuthSchema, Security(AuthPermission(["module_storage:browse:update"]))],
+    auth: Annotated[AuthSchema, Security(AuthPermission(["module_task:storage:browse:update"]))],
     db: Annotated[AsyncSession, Depends(db_getter)],
     source_id: Annotated[int | None, Body(description="存储源ID（不传使用默认存储源）")] = None,
     source_path: Annotated[str, Body(description="原路径")] = "",
@@ -149,7 +149,7 @@ async def rename_storage_file_controller(
 
 @StorageBrowseRouter.post("/mkdir", summary="新建目录", response_model=ResponseSchema[StoragePathCreateSchema])
 async def mkdir_storage_file_controller(
-    auth: Annotated[AuthSchema, Security(AuthPermission(["module_storage:browse:update"]))],
+    auth: Annotated[AuthSchema, Security(AuthPermission(["module_task:storage:browse:update"]))],
     db: Annotated[AsyncSession, Depends(db_getter)],
     source_id: Annotated[int | None, Body(description="存储源ID（不传使用默认存储源）")] = None,
     remote_dir: Annotated[str, Body(description="目录路径")] = "",
@@ -161,7 +161,7 @@ async def mkdir_storage_file_controller(
 
 @StorageBrowseRouter.post("/share", summary="生成分享链接", response_model=ResponseSchema[str | None])
 async def share_storage_file_controller(
-    auth: Annotated[AuthSchema, Security(AuthPermission(["module_storage:browse:query"]))],
+    auth: Annotated[AuthSchema, Security(AuthPermission(["module_task:storage:browse:query"]))],
     db: Annotated[AsyncSession, Depends(db_getter)],
     remote_path: Annotated[str, Body(description="远端文件路径")] = "",
     source_id: Annotated[int | None, Body(description="存储源ID（不传使用默认存储源）")] = None,

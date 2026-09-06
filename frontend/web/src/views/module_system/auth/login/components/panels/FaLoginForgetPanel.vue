@@ -22,42 +22,6 @@
           </template>
         </ElInput>
       </ElFormItem>
-      <ElTooltip :visible="isCapsLock" :content="$t('login.capsLock')" placement="right">
-        <ElFormItem prop="new_password">
-          <ElInput
-            v-model.trim="forgetForm.new_password"
-            class="custom-height"
-            type="password"
-            autocomplete="off"
-            show-password
-            clearable
-            :placeholder="$t('login.placeholder.password')"
-            @keyup="checkCapsLock"
-          >
-            <template #prefix>
-              <ElIcon><Lock /></ElIcon>
-            </template>
-          </ElInput>
-        </ElFormItem>
-      </ElTooltip>
-      <ElTooltip :visible="isCapsLock" :content="$t('login.capsLock')" placement="right">
-        <ElFormItem prop="confirmPassword">
-          <ElInput
-            v-model.trim="forgetForm.confirmPassword"
-            class="custom-height"
-            type="password"
-            autocomplete="off"
-            show-password
-            clearable
-            :placeholder="$t('login.message.password.confirm')"
-            @keyup="checkCapsLock"
-          >
-            <template #prefix>
-              <ElIcon><Lock /></ElIcon>
-            </template>
-          </ElInput>
-        </ElFormItem>
-      </ElTooltip>
       <div class="mt-6">
         <ElButton
           class="h-11 w-full min-w-0 rounded-lg! text-base font-medium"
@@ -80,7 +44,7 @@
 </template>
 
 <script setup lang="ts">
-import { Lock, User } from "@element-plus/icons-vue";
+import { User } from "@element-plus/icons-vue";
 import type { ForgetPasswordForm } from "@/api/module_system/user";
 import type { FormRules } from "element-plus";
 
@@ -101,19 +65,9 @@ interface Emits {
   toLogin: [];
 }
 
-const emit = defineEmits<Emits>();
+defineEmits<Emits>();
 
 const formRef = ref();
-const isCapsLock = ref(false);
-
-function checkCapsLock(event: KeyboardEvent) {
-  if (event instanceof KeyboardEvent) {
-    isCapsLock.value = event.getModifierState("CapsLock");
-    if (event.key === "Enter") {
-      emit("submit");
-    }
-  }
-}
 
 defineExpose({
   validate: () => formRef.value?.validate?.(),

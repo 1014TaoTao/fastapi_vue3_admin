@@ -117,11 +117,14 @@ services:
     ports:
       - "${BACKEND_PORT:-8001}:8001"
     volumes:
-      # ── 注意 ──────────────────────────────────
-      # 以下挂载将宿主机代码覆盖容器内代码，实现热更新。
-      # 生产环境建议注释掉该行，使用镜像内自带的代码。
+      # ── 开发热更新（可选）─────────────────────
+      # 取消注释将宿主机代码覆盖容器内代码。生产环境保持注释，
+      # 使用镜像内自带的代码（Dockerfile 已 COPY backend）。
       # ─────────────────────────────────────────
-      - ../backend:/home
+      # - ../backend:/home
+      # 本地存储源根目录持久化（种子节点 host=static/upload）：
+      # 必须挂载，否则每次部署重建容器会丢失用户上传的文件
+      - ./backend/static/upload:/home/static/upload
     depends_on:
       mysql:
         condition: service_healthy
@@ -133,7 +136,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:8001/monitor/health\")' || exit 1",
+          "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:8001/api/v1/monitor/health/check\", timeout=5)' || exit 1",
         ]
       interval: 15s
       timeout: 10s
@@ -167,7 +170,6 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/web:/usr/share/nginx/html/web:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
-      # 按需启用（取消注释）：
       - ./nginx/app:/usr/share/nginx/html/app:ro
       - ./nginx/docs:/usr/share/nginx/html/docs:ro
     depends_on:

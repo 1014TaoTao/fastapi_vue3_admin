@@ -141,8 +141,6 @@ export default UserAPI;
 
 export interface ForgetPasswordForm {
   username: string;
-  new_password: string;
-  confirmPassword: string;
 }
 
 export interface RegisterForm {

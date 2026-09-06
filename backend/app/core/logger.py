@@ -86,6 +86,7 @@ def setup_logger() -> None:
         "alembic.autogenerate",
         "alembic.runtime.plugins",
         "asyncio",
+        "websockets",
         "sqlalchemy",
         "aiomysql",
         "tzlocal",

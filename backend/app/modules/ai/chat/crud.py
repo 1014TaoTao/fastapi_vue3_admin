@@ -32,16 +32,32 @@ def _get_agno_db() -> Any:
         with _db_lock:
             if _db_instance is None:
                 db_type = settings.DATABASE_TYPE
-                db_uri = settings.DB_URI
+                # agno 异步 DB 内部走 SQLAlchemy asyncio 扩展（create_async_engine），
+                # 必须用异步驱动 URI；传同步的 DB_URI（pymysql/psycopg）会报 InvalidRequestError
+                db_uri = settings.ASYNC_DB_URI
                 if db_type == "mysql":
                     _db_instance = AsyncMySQLDb(db_url=db_uri, db_schema=settings.DATABASE_NAME, create_schema=False)
                 elif db_type == "postgres":
                     _db_instance = AsyncPostgresDb(db_url=db_uri, db_schema="public", create_schema=False)
                 elif db_type == "sqlite":
-                    _db_instance = AsyncSqliteDb(db_file=db_uri.replace("sqlite:///", ""))
+                    _db_instance = AsyncSqliteDb(db_file=db_uri.replace("sqlite+aiosqlite:///", ""))
                 else:
                     raise CustomException(msg=f"不支持的数据库类型: {db_type}")
     return _db_instance
+
+
+async def init_agno_tables() -> None:
+    """应用启动时确保 agno 表结构存在（幂等，表已存在则跳过）。
+
+    agno 的 create_schema 仅控制是否自动建库，建表需调用方显式触发；
+    不初始化则首次读写会话时报 "Table has an invalid schema"。
+    """
+    db = _get_agno_db()
+    try:
+        await db._create_all_tables()
+    except Exception as e:
+        # 多 worker 并发首启时可能同时建表，"已存在"类冲突可安全忽略
+        logger.warning(f"agno 表初始化告警（多为并发建表冲突，可忽略）: {e}")
 
 
 def _row_session_name(row: dict[str, Any]) -> str:

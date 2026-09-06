@@ -27,8 +27,8 @@
         <template #left>
           <FaTableHeaderLeft
             :remove-ids="selectedIds"
-            :perm-create="['module_storage:workflow:node:create']"
-            :perm-delete="['module_storage:workflow:node:delete']"
+            :perm-create="['module_task:storage:node:create']"
+            :perm-delete="['module_task:storage:node:delete']"
             :delete-loading="batchDeleting"
             :create-loading="createLoading"
             @add="handleAdd"
@@ -347,14 +347,14 @@ function buildSourceRowActions(
       artType: "view",
       icon: "ri:link",
       iconColor: "var(--el-color-primary)",
-      perm: "module_storage:workflow:node:query",
+      perm: "module_task:storage:node:query",
       run: () => ctx.onTest(row.id!),
     },
     {
       key: "detail",
       label: "详情",
       artType: "view",
-      perm: "module_storage:workflow:node:query",
+      perm: "module_task:storage:node:query",
       run: () => ctx.onDetail(row.id!),
     },
     {
@@ -362,7 +362,7 @@ function buildSourceRowActions(
       label: "编辑",
       artType: "edit",
       icon: "ri:edit-2-line",
-      perm: "module_storage:workflow:node:update",
+      perm: "module_task:storage:node:update",
       run: () => ctx.onEdit(row.id!),
     },
     {
@@ -370,7 +370,7 @@ function buildSourceRowActions(
       label: "删除",
       artType: "delete",
       icon: "ri:delete-bin-4-line",
-      perm: "module_storage:workflow:node:delete",
+      perm: "module_task:storage:node:delete",
       run: () => ctx.onDelete(row.id!, row.name ?? ""),
     },
   ];
@@ -458,7 +458,7 @@ async function handleTest(id: number) {
 // 打开浏览：跳转到文件管理并携带存储源信息
 function handleOpen(row: SourceTable) {
   router.push({
-    path: "/task/storage/workflow/browse",
+    path: "/task/storage/browse",
     query: { source_id: row.id, name: row.name, protocol: row.protocol },
   });
 }

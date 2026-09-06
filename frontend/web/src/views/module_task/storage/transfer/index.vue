@@ -34,121 +34,113 @@
                 :class="sseConnected ? 'bg-(--el-color-success)' : 'bg-(--el-color-info)'"
               />{{ sseConnected ? "实时连接" : "连接中…" }}
             </span>
-            <el-button type="primary" @click="openCreate">新建传输任务</el-button>
+            <ElButton
+              v-hasPerm="['module_task:storage:transfer:create']"
+              type="primary"
+              @click="openCreate"
+              >新建传输任务</ElButton
+            >
           </div>
         </template>
       </FaTableHeader>
 
-      <div class="min-h-0 flex-1">
-        <FaTable
-          :data="tasks"
-          :columns="columns"
-          :pagination="{ current: page, size: pageSize, total }"
-          stripe
-          border
-          height="100%"
-          @pagination:size-change="onPageSizeChange"
-          @pagination:current-change="onPageChange"
-        >
-          <template #task_type="{ row }">
-            <el-tag :type="row.task_type === 'chain' ? 'warning' : 'primary'" size="small">
-              {{ row.task_type === "chain" ? "链式" : "多目标" }}
-            </el-tag>
-          </template>
-          <template #source="{ row }">
-            <div class="min-w-0">
-              <div>
-                <el-tag v-if="row.source_type === 'local'" size="small" type="success">本地</el-tag>
-                <el-tag v-else size="small" type="info">{{
-                  protoText(sourceById(row.source_id))
-                }}</el-tag>
-                <span class="ml-1 text-[#606266]">{{
-                  row.source_type === "local"
-                    ? row.source_name || "本地文件"
-                    : sourceName(row.source_id)
-                }}</span>
-              </div>
-              <div v-if="row.source_path" class="mt-0.5 truncate text-xs text-[#909399]">
-                {{ row.source_path }}
-              </div>
+      <FaTable
+        :data="tasks"
+        :columns="columns"
+        :pagination="{ current: page, size: pageSize, total }"
+        @pagination:size-change="onPageSizeChange"
+        @pagination:current-change="onPageChange"
+      >
+        <template #task_type="{ row }">
+          <ElTag :type="row.task_type === 'chain' ? 'warning' : 'primary'" size="small">
+            {{ row.task_type === "chain" ? "链式" : "多目标" }}
+          </ElTag>
+        </template>
+        <template #source="{ row }">
+          <div class="min-w-0">
+            <div>
+              <ElTag v-if="row.source_type === 'local'" size="small" type="success">本地</ElTag>
+              <ElTag v-else size="small" type="info">{{
+                protoText(sourceById(row.source_id))
+              }}</ElTag>
+              <span class="ml-1 text-(--el-text-color-regular)">{{
+                row.source_type === "local"
+                  ? row.source_name || "本地文件"
+                  : sourceName(row.source_id)
+              }}</span>
             </div>
-          </template>
-          <template #target="{ row }">
-            <span class="text-[#606266]" :title="targetFullText(row as TransferTaskItem)">{{
-              targetShortText(row as TransferTaskItem)
-            }}</span>
-          </template>
-          <template #status="{ row }">
-            <el-tag :type="statusTypeMap[row.status as TransferStatus] || 'info'">{{
-              statusText[row.status as TransferStatus] || row.status
-            }}</el-tag>
-          </template>
-          <template #progress="{ row }">
-            <div class="flex flex-col gap-0.5">
-              <el-progress
-                :percentage="row.progress || 0"
-                :status="row.status === 'failed' ? 'exception' : undefined"
-              />
+            <div
+              v-if="row.source_path"
+              class="mt-0.5 truncate text-xs text-(--el-text-color-secondary)"
+            >
+              {{ row.source_path }}
+            </div>
+          </div>
+        </template>
+        <template #target="{ row }">
+          <span
+            class="text-(--el-text-color-regular)"
+            :title="targetFullText(row as TransferTaskItem)"
+            >{{ targetShortText(row as TransferTaskItem) }}</span
+          >
+        </template>
+        <template #status="{ row }">
+          <ElTag :type="statusTypeMap[row.status as TransferStatus] || 'info'">{{
+            statusText[row.status as TransferStatus] || row.status
+          }}</ElTag>
+        </template>
+        <template #progress="{ row }">
+          <div class="flex flex-col gap-0.5">
+            <ElProgress
+              :percentage="row.progress || 0"
+              :status="row.status === 'failed' ? 'exception' : undefined"
+            />
+            <div
+              v-if="row.status === 'running' || row.speed > 0"
+              class="flex items-center gap-1.5 text-xs"
+            >
+              <span
+                class="shrink-0 rounded-[3px] bg-(--el-color-success) px-1.25 py-0.5 text-[11px] leading-none text-white"
+                >{{ formatSpeed(row.speed) }}</span
+              >
+              <span class="whitespace-nowrap text-(--el-text-color-secondary)"
+                >{{ formatSize(row.transferred_size) }} / {{ formatSize(row.total_size) }}</span
+              >
+            </div>
+          </div>
+        </template>
+        <template #info="{ row }">
+          <div v-if="row.error_msg" class="flex min-w-0 items-center gap-1.5">
+            <ElPopover placement="top-start" width="360" trigger="hover">
               <div
-                v-if="row.status === 'running' || row.speed > 0"
-                class="flex items-center gap-1.5 text-xs"
+                class="max-h-75 overflow-auto break-all whitespace-pre-line text-(--el-color-danger) leading-[1.6]"
               >
-                <span
-                  class="shrink-0 rounded-[3px] bg-(--el-color-success) px-1.25 py-0.5 text-[11px] leading-none text-white"
-                  >{{ formatSpeed(row.speed) }}</span
-                >
-                <span class="whitespace-nowrap text-(--el-text-color-secondary)"
-                  >{{ formatSize(row.transferred_size) }} / {{ formatSize(row.total_size) }}</span
-                >
+                {{ row.error_msg }}
               </div>
-            </div>
-          </template>
-          <template #info="{ row }">
-            <div v-if="row.error_msg" class="flex min-w-0 items-center gap-1.5">
-              <el-popover placement="top-start" width="360" trigger="hover">
-                <div
-                  class="max-h-75 overflow-auto break-all whitespace-pre-line text-[#800000] leading-[1.6]"
+              <template #reference>
+                <span
+                  class="inline-block max-w-full truncate align-bottom text-(--el-color-danger)"
+                  >{{ row.error_msg }}</span
                 >
-                  {{ row.error_msg }}
-                </div>
-                <template #reference>
-                  <span class="inline-block max-w-full truncate align-bottom text-[#800000]">{{
-                    row.error_msg
-                  }}</span>
-                </template>
-              </el-popover>
-              <el-button
-                v-if="row.status === 'failed'"
-                size="small"
-                type="primary"
-                link
-                @click="copyMessage(row.error_msg)"
-                >复制</el-button
-              >
-            </div>
-            <span v-else class="ml-1 text-[#606266]">{{
-              stepSummaryText(row as TransferTaskItem)
-            }}</span>
-          </template>
-          <template #actions="{ row }">
-            <el-button size="small" link type="primary" @click="openDetail(row as TransferTaskItem)"
-              >详情</el-button
-            >
-            <el-button
-              v-if="row.status === 'pending' || row.status === 'running'"
+              </template>
+            </ElPopover>
+            <ElButton
+              v-if="row.status === 'failed'"
               size="small"
+              type="primary"
               link
-              type="warning"
-              @click="cancelTask(row as TransferTaskItem)"
+              @click="copyMessage(row.error_msg)"
+              >复制</ElButton
             >
-              取消
-            </el-button>
-            <el-button size="small" link type="danger" @click="removeTask(row as TransferTaskItem)"
-              >删除</el-button
-            >
-          </template>
-        </FaTable>
-      </div>
+          </div>
+          <span v-else class="ml-1 text-(--el-text-color-regular)">{{
+            stepSummaryText(row as TransferTaskItem)
+          }}</span>
+        </template>
+        <template #actions="{ row }">
+          <span v-html="formatTransferOperationCell(row as TransferTaskItem)" />
+        </template>
+      </FaTable>
     </ElCard>
 
     <!-- 新建传输任务 -->
@@ -174,7 +166,7 @@
       >
         <!-- 传输流程：具名插槽接管（需 @change 触发流程填充） -->
         <template #flow_id>
-          <el-select
+          <ElSelect
             v-model="selectedFlowId"
             placeholder="从已配置流程自动填充（可选，仍可手动调整）"
             clearable
@@ -182,18 +174,18 @@
             style="width: 100%"
             @change="applyFlow"
           >
-            <el-option
+            <ElOption
               v-for="f in enabledFlows"
               :key="f.id"
               :value="f.id!"
               :label="flowOptionLabel(f)"
             />
-          </el-select>
+          </ElSelect>
         </template>
 
         <!-- 本地文件：componentMap 无 upload 类型，具名插槽接管 -->
         <template #local_file>
-          <el-upload
+          <ElUpload
             drag
             :auto-upload="false"
             :limit="1"
@@ -203,35 +195,35 @@
             style="width: 100%"
           >
             <div class="el-upload__text">将文件拖到此处，或 <em>点击选择文件</em></div>
-          </el-upload>
+          </ElUpload>
         </template>
 
         <!-- 目标列表：动态增删行，具名插槽接管 -->
         <template #targets>
           <div style="width: 100%">
             <div v-for="(t, idx) in form.targets" :key="idx" class="mb-2 flex items-center gap-2">
-              <el-tag
+              <ElTag
                 v-if="form.task_type === 'chain'"
                 size="small"
                 :type="idx === 0 ? 'primary' : 'warning'"
                 class="shrink-0"
               >
                 #{{ idx + 1 }}
-              </el-tag>
-              <el-select
+              </ElTag>
+              <ElSelect
                 v-model="t.target_id"
                 placeholder="目标存储源"
                 filterable
                 style="width: 250px"
               >
-                <el-option
+                <ElOption
                   v-for="s in enabledSources"
                   :key="s.id"
                   :label="`${s.name}（${s.protocol}${s.host ? ' · ' + s.host : ''}）`"
                   :value="s.id!"
                 />
-              </el-select>
-              <el-input
+              </ElSelect>
+              <ElInput
                 v-model="t.target_path"
                 :placeholder="
                   selectedFlowId && !t.target_path
@@ -240,15 +232,13 @@
                 "
                 style="flex: 1"
               />
-              <el-button link type="danger" @click="removeTarget(idx)">删除</el-button>
+              <ElButton link type="danger" @click="removeTarget(idx)">删除</ElButton>
             </div>
             <div class="flex items-center gap-3">
-              <el-button type="primary" plain size="small" @click="addTarget"
-                >＋ 添加目标</el-button
-              >
+              <ElButton type="primary" plain size="small" @click="addTarget">＋ 添加目标</ElButton>
               <span
                 v-if="form.task_type === 'chain' && form.targets.length > 1"
-                class="text-[#909399]"
+                class="text-(--el-text-color-secondary)"
               >
                 将按顺序执行：{{ flowPreview }}
               </span>
@@ -277,12 +267,12 @@
           max-height="70vh"
         >
           <template #name="{ row }">
-            <el-tooltip :content="String(row?.name ?? '')" placement="top" :show-after="100">
+            <ElTooltip :content="String(row?.name ?? '')" placement="top" :show-after="100">
               <div class="max-w-45 truncate">{{ row?.name }}</div>
-            </el-tooltip>
+            </ElTooltip>
           </template>
           <template #source="{ row }">
-            <el-tooltip
+            <ElTooltip
               :content="row ? sourceShortText(row as unknown as TransferTaskItem) : ''"
               placement="top"
               :show-after="100"
@@ -290,7 +280,7 @@
               <div class="max-w-55 truncate">
                 {{ row ? sourceShortText(row as unknown as TransferTaskItem) : "" }}
               </div>
-            </el-tooltip>
+            </ElTooltip>
           </template>
           <template #total_size="{ row }">{{ formatSize(row?.total_size as number) }}</template>
           <template #speed="{ row }">{{ formatSpeed(row?.speed as number) }}</template>
@@ -314,12 +304,10 @@
               class="rounded-md border border-(--el-border-color-lighter) bg-(--el-fill-color-lighter) px-3 py-2.5"
             >
               <div class="flex items-center gap-2">
-                <el-tag :type="idx === 0 ? 'primary' : 'warning'" size="small"
-                  >#{{ idx + 1 }}</el-tag
-                >
-                <el-tag :type="statusTypeMap[step.status] || 'info'" size="small">{{
+                <ElTag :type="idx === 0 ? 'primary' : 'warning'" size="small">#{{ idx + 1 }}</ElTag>
+                <ElTag :type="statusTypeMap[step.status] || 'info'" size="small">{{
                   statusText[step.status] || step.status
-                }}</el-tag>
+                }}</ElTag>
                 <span class="ml-auto text-xs text-(--el-text-color-secondary)"
                   >{{ step.progress }}% · {{ formatSpeed(step.speed) }}</span
                 >
@@ -353,7 +341,7 @@
             </div>
           </template>
         </div>
-        <el-empty v-else description="暂无步骤" :image-size="60" />
+        <ElEmpty v-else description="暂无步骤" :image-size="60" />
       </template>
     </FaDialog>
   </div>
@@ -370,6 +358,7 @@ import TransferAPI, {
 } from "@/api/module_storage/transfer";
 import NodeAPI, { type SourceTable } from "@/api/module_storage/node";
 import FlowAPI, { type FlowTable } from "@/api/module_storage/workflow";
+import { renderTableOperationCell, type TableOperationAction } from "@utils";
 import FaDescriptions, {
   type DescriptionsItem,
 } from "@/components/display/fa-descriptions/index.vue";
@@ -486,7 +475,13 @@ const columnChecks = ref<ColumnOption[]>([
   { prop: "status", label: "状态", width: 92, useSlot: true },
   { prop: "progress", label: "进度", minWidth: 240, useSlot: true },
   { prop: "info", label: "信息", minWidth: 180, useSlot: true },
-  { prop: "actions", label: "操作", width: 150, fixed: "right", useSlot: true },
+  {
+    prop: "actions",
+    label: "操作",
+    width: 150,
+    fixed: "right",
+    formatter: formatTransferOperationCell,
+  },
 ]);
 /** 渲染列：仅保留列设置中可见的列 */
 const columns = computed(() => columnChecks.value.filter((c) => c.visible !== false));
@@ -811,10 +806,46 @@ async function submit() {
 }
 
 // ── 取消 / 删除 ───────────────────────────────────────────────────────
+/** 操作列（与 demo 案例统一：renderTableOperationCell + 权限码） */
+function buildTransferRowActions(row: TransferTaskItem): TableOperationAction[] {
+  const all: TableOperationAction[] = [
+    {
+      key: "detail",
+      label: "详情",
+      artType: "view",
+      perm: "module_task:storage:transfer:query",
+      run: () => void openDetail(row),
+    },
+  ];
+  if (row.status === "pending" || row.status === "running") {
+    all.push({
+      key: "cancel",
+      label: "取消",
+      artType: "more",
+      icon: "ri:stop-circle-line",
+      iconColor: "var(--el-color-warning)",
+      perm: "module_task:storage:transfer:update",
+      run: () => void cancelTask(row),
+    });
+  }
+  all.push({
+    key: "delete",
+    label: "删除",
+    artType: "delete",
+    perm: "module_task:storage:transfer:delete",
+    run: () => void removeTask(row),
+  });
+  return all;
+}
+function formatTransferOperationCell(row: TransferTaskItem) {
+  return renderTableOperationCell(buildTransferRowActions(row), {
+    wrapperClass: "inline-flex flex-wrap items-center justify-end gap-1",
+  });
+}
 async function cancelTask(row: TransferTaskItem) {
   if (!row.id) return;
   try {
-    await ElMessageBox.confirm(`确认取消任务「${row.name}」？`, "提示", { type: "warning" });
+    await confirmDelete(`确认取消任务「${row.name}」？取消后任务将停止传输。`);
   } catch {
     return;
   }
@@ -824,7 +855,7 @@ async function cancelTask(row: TransferTaskItem) {
 async function removeTask(row: TransferTaskItem) {
   if (!row.id) return;
   try {
-    await ElMessageBox.confirm(`确认删除任务「${row.name}」？`, "提示", { type: "warning" });
+    await confirmDelete(`确认删除任务「${row.name}」吗？此操作不可恢复！`);
   } catch {
     return;
   }

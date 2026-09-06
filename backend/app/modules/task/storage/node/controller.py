@@ -24,7 +24,7 @@ StorageNodeRouter = APIRouter(route_class=OperationLogRoute, prefix="/storage/no
 
 @StorageNodeRouter.get("/protocols", summary="查询支持的存储协议", response_model=ResponseSchema[list[StorageProtocolDefSchema]])
 async def get_storage_protocols_controller(
-    auth: Annotated[AuthSchema, Security(AuthPermission(["module_storage:workflow:node:query"]))],
+    auth: Annotated[AuthSchema, Security(AuthPermission(["module_task:storage:node:query"]))],
 ) -> JSONResponse:
     result: list[StorageProtocolDefSchema] = [
         StorageProtocolDefSchema(protocol=p.value, name=p.name, default_port=DEFAULT_PORTS[p])
@@ -35,7 +35,7 @@ async def get_storage_protocols_controller(
 
 @StorageNodeRouter.get("/advanced-fields", summary="查询存储 SDK 高级配置字段定义", response_model=ResponseSchema[dict[str, list[AdvancedFieldDefSchema]]])
 async def get_advanced_fields_controller(
-    auth: Annotated[AuthSchema, Security(AuthPermission(["module_storage:workflow:node:query"]))],
+    auth: Annotated[AuthSchema, Security(AuthPermission(["module_task:storage:node:query"]))],
 ) -> JSONResponse:
     """返回按协议分组的 SDK 高级配置字段元数据，供前端「高级设置」面板按协议动态渲染。"""
     return SuccessResponse(data=ADVANCED_FIELD_DEFS, msg="查询高级配置字段成功")
@@ -43,7 +43,7 @@ async def get_advanced_fields_controller(
 
 @StorageNodeRouter.get("/page", summary="分页查询存储源", response_model=ResponseSchema[PageResultSchema[StorageNodeOutSchema]])
 async def get_storage_source_page_controller(
-    auth: Annotated[AuthSchema, Security(AuthPermission(["module_storage:workflow:node:query"]))],
+    auth: Annotated[AuthSchema, Security(AuthPermission(["module_task:storage:node:query"]))],
     db: Annotated[AsyncSession, Depends(db_getter)],
     page: Annotated[PaginationQueryParam, Depends()],
     search: Annotated[StorageNodeQueryParam, Query()],
@@ -59,7 +59,7 @@ async def get_storage_source_page_controller(
 
 @StorageNodeRouter.get("/list", summary="查询存储源列表", response_model=ResponseSchema[list[StorageNodeOutSchema]])
 async def get_storage_source_list_controller(
-    auth: Annotated[AuthSchema, Security(AuthPermission(["module_storage:workflow:node:query"]))],
+    auth: Annotated[AuthSchema, Security(AuthPermission(["module_task:storage:node:query"]))],
     db: Annotated[AsyncSession, Depends(db_getter)],
     search: Annotated[StorageNodeQueryParam, Query()],
 ) -> JSONResponse:
@@ -69,7 +69,7 @@ async def get_storage_source_list_controller(
 
 @StorageNodeRouter.get("/detail/{id}", summary="查询存储源详情", response_model=ResponseSchema[StorageNodeOutSchema])
 async def get_storage_source_detail_controller(
-    auth: Annotated[AuthSchema, Security(AuthPermission(["module_storage:workflow:node:query"]))],
+    auth: Annotated[AuthSchema, Security(AuthPermission(["module_task:storage:node:query"]))],
     db: Annotated[AsyncSession, Depends(db_getter)],
     id: Annotated[int, Path(description="存储源ID", ge=1)],
 ) -> JSONResponse:
@@ -79,7 +79,7 @@ async def get_storage_source_detail_controller(
 
 @StorageNodeRouter.post("/create", status_code=status.HTTP_201_CREATED, summary="创建存储源", response_model=ResponseSchema[StorageNodeOutSchema])
 async def create_storage_source_controller(
-    auth: Annotated[AuthSchema, Security(AuthPermission(["module_storage:workflow:node:create"]))],
+    auth: Annotated[AuthSchema, Security(AuthPermission(["module_task:storage:node:create"]))],
     db: Annotated[AsyncSession, Depends(db_getter)],
     data: Annotated[StorageNodeCreateSchema, Body(description="存储源创建参数")],
 ) -> JSONResponse:
@@ -89,7 +89,7 @@ async def create_storage_source_controller(
 
 @StorageNodeRouter.put("/update/{id}", summary="修改存储源", response_model=ResponseSchema[StorageNodeOutSchema])
 async def update_storage_source_controller(
-    auth: Annotated[AuthSchema, Security(AuthPermission(["module_storage:workflow:node:update"]))],
+    auth: Annotated[AuthSchema, Security(AuthPermission(["module_task:storage:node:update"]))],
     db: Annotated[AsyncSession, Depends(db_getter)],
     id: Annotated[int, Path(description="存储源ID", ge=1)],
     data: Annotated[StorageNodeUpdateSchema, Body(description="存储源修改参数")],
@@ -100,7 +100,7 @@ async def update_storage_source_controller(
 
 @StorageNodeRouter.delete("/delete", summary="删除存储源", response_model=ResponseSchema[None])
 async def delete_storage_source_controller(
-    auth: Annotated[AuthSchema, Security(AuthPermission(["module_storage:workflow:node:delete"]))],
+    auth: Annotated[AuthSchema, Security(AuthPermission(["module_task:storage:node:delete"]))],
     db: Annotated[AsyncSession, Depends(db_getter)],
     ids: Annotated[list[int], Body(description="存储源ID列表")],
 ) -> JSONResponse:
@@ -110,7 +110,7 @@ async def delete_storage_source_controller(
 
 @StorageNodeRouter.post("/test/{id}", summary="测试存储源连接", response_model=ResponseSchema[bool])
 async def test_storage_source_controller(
-    auth: Annotated[AuthSchema, Security(AuthPermission(["module_storage:workflow:node:query"]))],
+    auth: Annotated[AuthSchema, Security(AuthPermission(["module_task:storage:node:query"]))],
     db: Annotated[AsyncSession, Depends(db_getter)],
     id: Annotated[int, Path(description="存储源ID", ge=1)],
 ) -> JSONResponse:
@@ -120,7 +120,7 @@ async def test_storage_source_controller(
 
 @StorageNodeRouter.post("/test", summary="测试存储源连接(配置)", response_model=ResponseSchema[bool])
 async def test_storage_source_config_controller(
-    auth: Annotated[AuthSchema, Security(AuthPermission(["module_storage:workflow:node:query"]))],
+    auth: Annotated[AuthSchema, Security(AuthPermission(["module_task:storage:node:query"]))],
     db: Annotated[AsyncSession, Depends(db_getter)],
     data: Annotated[StorageNodeTestSchema, Body(description="存储源连接配置")],
 ) -> JSONResponse:

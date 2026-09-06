@@ -30,7 +30,7 @@ StorageTransferRouter = APIRouter(route_class=OperationLogRoute, prefix="/storag
 
 @StorageTransferRouter.post("/task", summary="创建传输任务(远端源)", response_model=ResponseSchema[TransferTaskCreateResultSchema])
 async def create_transfer_task_controller(
-    auth: Annotated[AuthSchema, Security(AuthPermission(["module_storage:workflow:transfer:create"]))],
+    auth: Annotated[AuthSchema, Security(AuthPermission(["module_task:storage:transfer:create"]))],
     db: Annotated[AsyncSession, Depends(db_getter)],
     data: Annotated[TransferTaskCreateSchema, Body(description="任务参数(远端源)")],
 ) -> JSONResponse:
@@ -40,7 +40,7 @@ async def create_transfer_task_controller(
 
 @StorageTransferRouter.post("/task/upload", summary="创建传输任务(本地上传源)", response_model=ResponseSchema[TransferTaskCreateResultSchema])
 async def create_local_transfer_task_controller(
-    auth: Annotated[AuthSchema, Security(AuthPermission(["module_storage:workflow:transfer:create"]))],
+    auth: Annotated[AuthSchema, Security(AuthPermission(["module_task:storage:transfer:create"]))],
     db: Annotated[AsyncSession, Depends(db_getter)],
     file: Annotated[UploadFile, File(description="本地源文件")],
     name: Annotated[str, Form(description="任务名称")],
@@ -58,7 +58,7 @@ async def create_local_transfer_task_controller(
 
 @StorageTransferRouter.get("/task/page", summary="分页查询传输任务", response_model=ResponseSchema[PageResultSchema[TransferTaskOutSchema]])
 async def get_transfer_task_page_controller(
-    auth: Annotated[AuthSchema, Security(AuthPermission(["module_storage:workflow:transfer:query"]))],
+    auth: Annotated[AuthSchema, Security(AuthPermission(["module_task:storage:transfer:query"]))],
     db: Annotated[AsyncSession, Depends(db_getter)],
     page: Annotated[PaginationQueryParam, Depends()],
     search: Annotated[TransferTaskQueryParam, Query()],
@@ -74,7 +74,7 @@ async def get_transfer_task_page_controller(
 
 @StorageTransferRouter.get("/task/{id}", summary="查询传输任务详情", response_model=ResponseSchema[TransferTaskOutSchema])
 async def get_transfer_task_detail_controller(
-    auth: Annotated[AuthSchema, Security(AuthPermission(["module_storage:workflow:transfer:query"]))],
+    auth: Annotated[AuthSchema, Security(AuthPermission(["module_task:storage:transfer:query"]))],
     db: Annotated[AsyncSession, Depends(db_getter)],
     id: Annotated[int, Path(description="任务ID", ge=1)],
 ) -> JSONResponse:
@@ -84,7 +84,7 @@ async def get_transfer_task_detail_controller(
 
 @StorageTransferRouter.post("/task/{id}/cancel", summary="取消传输任务", response_model=ResponseSchema[None])
 async def cancel_transfer_task_controller(
-    auth: Annotated[AuthSchema, Security(AuthPermission(["module_storage:workflow:transfer:update"]))],
+    auth: Annotated[AuthSchema, Security(AuthPermission(["module_task:storage:transfer:update"]))],
     db: Annotated[AsyncSession, Depends(db_getter)],
     id: Annotated[int, Path(description="任务ID", ge=1)],
 ) -> JSONResponse:
@@ -94,7 +94,7 @@ async def cancel_transfer_task_controller(
 
 @StorageTransferRouter.delete("/task", summary="删除传输任务", response_model=ResponseSchema[None])
 async def delete_transfer_task_controller(
-    auth: Annotated[AuthSchema, Security(AuthPermission(["module_storage:workflow:transfer:delete"]))],
+    auth: Annotated[AuthSchema, Security(AuthPermission(["module_task:storage:transfer:delete"]))],
     db: Annotated[AsyncSession, Depends(db_getter)],
     ids: Annotated[list[int], Body(description="任务ID列表")],
 ) -> JSONResponse:

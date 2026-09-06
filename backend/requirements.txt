@@ -11,6 +11,7 @@ bleach==6.4.0                          # 过滤 HTML 标签
 tinycss2==1.5.1                        # bleach CSS 清洗依赖
 click==8.1.7                           # 命令行参数解析
 fastapi==0.138.2                       # fastapi 框架
+fastapi-limiter==0.2.0                 # 限频器
 greenlet==3.5.2                        # 协程核心依赖（SQLAlchemy 异步）
 httpx==0.28.1                          # HTTP 客户端
 jinja2==3.1.6                          # 模板引擎

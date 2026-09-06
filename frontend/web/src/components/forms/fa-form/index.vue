@@ -22,11 +22,12 @@
           >
             <ElFormItem
               :prop="item.key"
+              :label="typeof item.label === 'string' ? item.label : undefined"
               :label-width="item.label ? item.labelWidth || labelWidth : undefined"
             >
-              <template #label v-if="item.label">
-                <component v-if="typeof item.label !== 'string'" :is="item.label" />
-                <span v-else>{{ item.label }}</span>
+              <!-- 字符串 label 走 ElFormItem 默认渲染使 label-suffix 生效；组件 label 保留插槽 -->
+              <template v-if="item.label && typeof item.label !== 'string'" #label>
+                <component :is="item.label" />
               </template>
               <slot :name="item.key" :item="item" :modelValue="modelValue">
                 <component
@@ -119,11 +120,12 @@
         >
           <ElFormItem
             :prop="item.key"
+            :label="typeof item.label === 'string' ? item.label : undefined"
             :label-width="item.label ? item.labelWidth || labelWidth : undefined"
           >
-            <template #label v-if="item.label">
-              <component v-if="typeof item.label !== 'string'" :is="item.label" />
-              <span v-else>{{ item.label }}</span>
+            <!-- 字符串 label 走 ElFormItem 默认渲染使 label-suffix 生效；组件 label 保留插槽 -->
+            <template v-if="item.label && typeof item.label !== 'string'" #label>
+              <component :is="item.label" />
             </template>
             <slot :name="item.key" :item="item" :modelValue="modelValue">
               <component

@@ -35,6 +35,27 @@ from app.core.logger import logger
 JOB_STATUS_SUCCESS = 2
 JOB_STATUS_FAILED = 3
 
+# 常见执行失败模式的中文结论（匹配原始异常文本；任意第三方异常无法机翻，保留原文供诊断）
+_JOB_ERROR_HINTS: list[tuple[str, str]] = [
+    ("maximum number of running instances", "任务已达最大并发实例数，本次执行被跳过（可调大节点的 max_instances）"),
+    ("was missed by", "任务错过计划执行时间（misfire，通常因进程繁忙或重启空窗）"),
+    ("Insufficient Balance", "AI 模型账户余额不足"),
+    ("Payment Required", "AI 模型服务计费失败（HTTP 402）"),
+    ("Unauthorized", "上游认证失败（HTTP 401），请检查访问令牌"),
+    ("rate limit", "触发上游限流（HTTP 429），请稍后重试"),
+    ("Connection", "网络连接异常，请检查目标地址与网络"),
+    ("Timeout", "请求超时"),
+]
+
+
+def _humanize_job_error(detail: Any) -> str:
+    """把执行异常转成"中文结论｜原始信息"回显；未命中已知模式时原样返回。"""
+    text = str(detail)[:4000]
+    for pattern, hint in _JOB_ERROR_HINTS:
+        if pattern in text:
+            return f"{hint}｜原始信息: {text}"[:4000]
+    return text
+
 # 多 worker 下单实例调度锁：所有进程共享同一个 RedisJobStore，若每个进程都自行
 # start，同一任务会被重复调度执行。仅持有锁的进程运行调度器并周期续期，其余进程
 # 周期争抢——持有者崩溃（锁过期）后自动接管。
@@ -396,7 +417,7 @@ class SchedulerUtil:
                 "job_name": job.name if job else None,
                 "trigger_type": "manual" if is_temp else (SchedulerUtil._get_trigger_type(job_id) if job else "manual"),
                 "status": status,
-                "error": str(detail)[:4000] if status == JOB_STATUS_FAILED else None,
+                "error": _humanize_job_error(detail) if status == JOB_STATUS_FAILED else None,
                 "result": None if status == JOB_STATUS_FAILED else (str(detail)[:4000] if detail is not None else None),
                 "next_run_time": str(job.next_run_time) if job and job.next_run_time else None,
                 "job_state": SchedulerUtil._get_job_state(job) if job else None,

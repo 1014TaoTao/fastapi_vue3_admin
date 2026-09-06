@@ -27,8 +27,8 @@
         <template #left>
           <FaTableHeaderLeft
             :remove-ids="selectedIds"
-            :perm-create="['module_storage:workflow:flow:create']"
-            :perm-delete="['module_storage:workflow:flow:delete']"
+            :perm-create="['module_task:storage:flow:create']"
+            :perm-delete="['module_task:storage:flow:delete']"
             :delete-loading="batchDeleting"
             :create-loading="createLoading"
             @add="handleAdd"
@@ -358,7 +358,7 @@ function buildFlowRowActions(
       key: "detail",
       label: "查看",
       artType: "view",
-      perm: "module_storage:workflow:flow:query",
+      perm: "module_task:storage:flow:query",
       run: () => ctx.onDetail(row.id!),
     },
     {
@@ -366,7 +366,7 @@ function buildFlowRowActions(
       label: "设计",
       artType: "edit",
       icon: "ri:pen-nib-line",
-      perm: "module_storage:workflow:flow:update",
+      perm: "module_task:storage:flow:update",
       run: () => ctx.onEdit(row.id!),
     },
     {
@@ -375,7 +375,7 @@ function buildFlowRowActions(
       artType: "view",
       icon: "ri:play-line",
       iconColor: "var(--el-color-success)",
-      perm: "module_storage:workflow:transfer:create",
+      perm: "module_task:storage:transfer:create",
       run: () => ctx.onExecute(row),
     },
     {
@@ -383,7 +383,7 @@ function buildFlowRowActions(
       label: "删除",
       artType: "delete",
       icon: "ri:delete-bin-4-line",
-      perm: "module_storage:workflow:flow:delete",
+      perm: "module_task:storage:flow:delete",
       run: () => ctx.onDelete(row.id!, row.name ?? ""),
     },
   ];

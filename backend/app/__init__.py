@@ -22,12 +22,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[Any, Any]:
     from app.core.ap_scheduler import SchedulerUtil
     from app.core.database import async_engine
     from app.core.redis_crud import redis_connect
+    from app.modules.ai.chat.crud import init_agno_tables
     from app.modules.system.dict.service import DictDataService
     from app.modules.system.params.service import ParamsService
     from app.scripts.initialize import InitializeData
 
     await InitializeData().init_db()
     logger.info(f"✅ {settings.DATABASE_TYPE} 连接初始化完成")
+    await init_agno_tables()
+    logger.info("✅ AI 会话表 初始化完成")
     await redis_connect(app, status=True)
     logger.info("✅ Redis 连接初始化完成")
     await ParamsService.init_cache(redis=app.state.redis)

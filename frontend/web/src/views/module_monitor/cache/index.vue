@@ -408,7 +408,7 @@ const getInfo = async () => {
     loading.value = true;
     const response = await CacheAPI.getCacheInfo();
     cache.value = response.data.data || { info: {}, command_stats: [], db_size: 0 };
-    initCharts();
+    void initCharts();
   } catch (error: unknown) {
     if (import.meta.env.DEV) console.error("获取缓存监控数据失败:", error);
     ElMessage.error("获取缓存监控数据失败");
@@ -417,8 +417,27 @@ const getInfo = async () => {
   }
 };
 
-const initCharts = () => {
+/** 等待容器完成布局（路由过渡/首次渲染时 clientWidth/Height 可能为 0），避免 ECharts "Can't get DOM width or height" 警告 */
+const waitForSize = (el: HTMLElement): Promise<void> =>
+  new Promise((resolve) => {
+    const check = () => {
+      // 组件卸载后 template ref 置 null，此时 ref 不再指向 el，直接结束避免悬挂循环
+      if (
+        (commandstats.value !== el && usedmemory.value !== el) ||
+        (el.clientWidth > 0 && el.clientHeight > 0)
+      ) {
+        resolve();
+        return;
+      }
+      requestAnimationFrame(check);
+    };
+    check();
+  });
+
+const initCharts = async () => {
   if (!commandstats.value || !usedmemory.value) return;
+  await Promise.all([waitForSize(commandstats.value), waitForSize(usedmemory.value)]);
+  if (!commandstats.value || !usedmemory.value) return; // 等待期间组件被卸载
 
   commandstatsInstance = echarts.init(commandstats.value, "macarons");
   usedmemoryInstance = echarts.init(usedmemory.value, "macarons");
@@ -480,7 +499,7 @@ onMounted(() => {
 
 watch(activeTab, (tab) => {
   if (tab === "0") {
-    nextTick(() => initCharts());
+    nextTick(() => void initCharts());
   }
 });
 

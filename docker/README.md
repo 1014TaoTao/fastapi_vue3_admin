@@ -7,27 +7,22 @@
 ```
 docker/
 ├── backend/                # 后端服务配置
-│   └── Dockerfile          # 后端 Dockerfile（多阶段构建）
+│   └── Dockerfile          # 后端 Dockerfile（依赖安装 + 代码复制，配合根 .dockerignore）
 ├── nginx/                  # Nginx 配置
 │   ├── nginx.conf          # Nginx 配置文件
-│   ├── ssl/                # SSL 证书目录（放置 server.key / server.pem）
-│   │   ├── server.key      # SSL 私钥
-│   │   └── server.pem      # SSL 证书
+│   ├── ssl/                # SSL 证书目录（放置 server.key / server.pem，.gitignore 已排除）
 │   ├── web/                # 前端静态文件（构建后自动放置 dist/）
 │   └── app/ + docs/        # 移动端 H5 / 文档站点（按需启用）
 ├── mysql/                  # MySQL 持久化 & 初始化
-│   ├── init/               # 首次启动时执行的 SQL 脚本
-│   │   └── init.sql
+│   ├── init/               # 首次启动时执行的 SQL 脚本（可选）
 │   └── data/               # 数据库数据文件（自动生成）
 ├── redis/                  # Redis 持久化 & 配置
 │   ├── conf/
 │   │   └── redis.conf      # Redis 持久化配置文件
 │   └── data/               # Redis 数据文件（自动生成）
 ├── docker-compose.yaml     # Docker Compose 编排文件
-├── docker-compose-example.yaml  # 编排文件示例
 ├── .env                    # 环境变量配置文件（.gitignore 已排除）
 ├── .env.example            # 环境变量示例文件
-├── env.sh                  # 环境变量加载脚本
 └── README.md               # 本文档
 ```
 

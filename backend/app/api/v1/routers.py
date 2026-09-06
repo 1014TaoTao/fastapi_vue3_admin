@@ -1,7 +1,8 @@
 """v1 路由总表"""
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
+from app.core.rate_limiter import api_rate_limiter
 from app.modules.ai.chat.controller import ChatRouter
 from app.modules.common.file.controller import FileRouter
 from app.modules.generator.gencode.controller import GenRouter
@@ -63,7 +64,7 @@ DOMAIN_CONTROLLERS: dict[str, list[APIRouter]] = {
     "/common": [FileRouter],
 }
 
-api_v1 = APIRouter()
+api_v1 = APIRouter(dependencies=[Depends(api_rate_limiter)])
 for prefix, controllers in DOMAIN_CONTROLLERS.items():
     router = APIRouter(prefix=prefix)
     for controller in controllers:

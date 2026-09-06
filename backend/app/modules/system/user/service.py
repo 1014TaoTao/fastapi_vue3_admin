@@ -294,16 +294,16 @@ class UserService:
         await UserCRUD(self.auth, self.db).change_password(id=data.id, password_hash=new_password_hash)
         return await self.detail(id=data.id)
 
-    async def forget_password(self, data: UserForgetPasswordSchema) -> UserOutSchema:
-        user = await UserCRUD(self.auth, self.db).get_or_404(username=data.username)
-        if user.status == 1:
-            raise CustomException(msg="用户已停用")
-        if user.is_superuser:
-            raise CustomException(msg="超级管理员密码不能重置")
+    async def forget_password(self, data: UserForgetPasswordSchema) -> None:
+        """接受忘记密码申请，但不根据用户名直接改密。
 
-        new_password_hash = await PwdUtil.ahash_password(password=data.new_password)
-        await UserCRUD(self.auth, self.db).change_password(id=user.id, password_hash=new_password_hash)
-        return await self.detail(id=user.id)
+        未登录调用方不得设置新密码。管理员请使用 reset_password。
+        无论账号是否存在、是否停用、是否超管，均不返回可区分信息（防用户枚举）。
+        """
+        user = await UserCRUD(self.auth, self.db).get(username=data.username)
+        if user is not None and user.status == 0 and not user.is_superuser:
+            logger.info("password reset requested for username={}", data.username)
+        return None
 
     async def register(self, data: UserRegisterSchema) -> UserOutSchema:
         """用户注册"""

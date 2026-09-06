@@ -74,10 +74,11 @@ class CurrentUserUpdateSchema(BaseModel):
 
 
 class UserForgetPasswordSchema(BaseModel):
-    """忘记密码"""
+    """忘记密码申请。仅接受用户名，不得携带新密码（改密走管理员 reset_password）。"""
+
+    model_config = ConfigDict(extra="ignore")
 
     username: str = Field(..., min_length=3, max_length=32, description="用户名")
-    new_password: str = Field(..., description=PASSWORD_FIELD_DESC)
 
     @field_validator("username")
     @classmethod
@@ -90,12 +91,6 @@ class UserForgetPasswordSchema(BaseModel):
         if not re.match(r"^[A-Za-z][A-Za-z0-9_.-]{2,31}$", v):
             raise ValueError("账号需以字母开头，3-32 位，仅允许字母、数字、_ . -")
         return v
-
-    @field_validator("new_password")
-    @classmethod
-    def validate_new_password(cls, value: str):
-        """校验新密码：长度与复杂度"""
-        return password_validator(value)
 
 
 class UserChangePasswordSchema(BaseModel):

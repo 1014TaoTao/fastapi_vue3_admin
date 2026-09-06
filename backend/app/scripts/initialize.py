@@ -6,7 +6,7 @@ from sqlalchemy import func, inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.common.enums import EnvironmentEnum
-from app.config.path_conf import ALEMBIC_VERSION_DIR, BASE_DIR, SCRIPT_DIR
+from app.config.path_conf import ALEMBIC_VERSION_DIR, BASE_DIR, SCRIPT_DIR, STATIC_DIR
 from app.config.setting import settings
 from app.core.base_model import MappedBase
 from app.core.database import async_db_session, async_engine, create_tables
@@ -18,6 +18,8 @@ from app.modules.system.params.model import ParamsModel
 from app.modules.system.role.model import RoleModel
 from app.modules.system.user.model import UserModel, UserRolesModel
 from app.modules.system.versions.model import VersionModel
+from app.modules.task.cronjob.node.model import NodeModel
+from app.modules.task.storage.node.model import StorageNodeModel
 from app.utils.import_util import ImportUtil
 
 # 导入全部模型：与 alembic env.py 保持一致，确保全局 MapperRegistry 的 FK 引用可完整解析
@@ -38,6 +40,8 @@ class InitializeData:
         UserModel,
         UserRolesModel,
         VersionModel,
+        NodeModel,
+        StorageNodeModel,
     ]
 
     # 树形模型：JSON 含嵌套 children，需递归创建对象
@@ -49,6 +53,9 @@ class InitializeData:
 
         async with async_db_session() as session, session.begin():
             await self.__init_data(session)
+
+        # 内置本地存储源的根目录（种子节点 host 指向 static/upload），保证开箱可浏览
+        (STATIC_DIR / "upload").mkdir(parents=True, exist_ok=True)
 
     @staticmethod
     async def __apply_migrations() -> None:

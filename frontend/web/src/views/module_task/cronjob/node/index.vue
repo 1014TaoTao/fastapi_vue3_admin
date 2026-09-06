@@ -276,9 +276,10 @@ const jobStoreOptions: OptionItem[] = [
   { label: "内存(Memory)", value: "memory" },
 ];
 
-/** 执行器选项（对应 ap_scheduler executors 配置，不再依赖字典） */
+/** 执行器选项（对应 ap_scheduler executors 配置：default=AsyncIOExecutor / threadpool / processpool） */
 const jobExecutorOptions: OptionItem[] = [
-  { label: "线程池", value: "default" },
+  { label: "异步协程(事件循环)", value: "default" },
+  { label: "线程池", value: "threadpool" },
   { label: "进程池", value: "processpool" },
 ];
 
@@ -833,7 +834,7 @@ const initialFormData: Partial<NodeForm> = {
   id: undefined,
   name: "",
   code: undefined,
-  jobstore: "sqlalchemy",
+  jobstore: "default",
   executor: "default",
   func: defaultCodeBlock,
   args: undefined,
@@ -931,7 +932,9 @@ async function handleSubmit() {
               ? formData.value.start_date || undefined
               : undefined,
           end_date:
-            trig === "cron" || trig === "interval" ? formData.value.end_date || undefined : undefined,
+            trig === "cron" || trig === "interval"
+              ? formData.value.end_date || undefined
+              : undefined,
         };
         if (id) {
           await NodeAPI.updateNode(id, submitData);

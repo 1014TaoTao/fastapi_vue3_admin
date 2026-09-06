@@ -6,7 +6,9 @@
       <el-link type="primary" :href="modelValue" target="_blank" :underline="false">
         {{ fileName }}
       </el-link>
-      <el-icon class="file-item-action" title="移除" @click="handleRemove"><CircleCloseFilled /></el-icon>
+      <el-icon class="file-item-action" title="移除" @click="handleRemove"
+        ><CircleCloseFilled
+      /></el-icon>
     </div>
     <el-button v-else type="primary" plain :loading="uploading" @click="fileInputRef?.click()">
       <el-icon class="mr-1"><UploadFilled /></el-icon>
@@ -115,20 +117,20 @@ const doUpload = async (file: File) => {
 
 .fa-file-upload .file-item {
   display: flex;
-  align-items: center;
   gap: 6px;
+  align-items: center;
   min-width: 0;
 }
 
 .fa-file-upload .file-item-icon {
-  color: var(--el-color-primary);
   flex-shrink: 0;
+  color: var(--el-color-primary);
 }
 
 .fa-file-upload .file-item-action {
-  cursor: pointer;
-  color: var(--el-text-color-secondary);
   flex-shrink: 0;
+  color: var(--el-text-color-secondary);
+  cursor: pointer;
 }
 
 .fa-file-upload .file-item-action:hover {
@@ -138,7 +140,7 @@ const doUpload = async (file: File) => {
 .fa-file-upload .file-tip {
   margin-top: 4px;
   font-size: 12px;
-  color: var(--el-text-color-secondary);
   line-height: 1.4;
+  color: var(--el-text-color-secondary);
 }
 </style>
