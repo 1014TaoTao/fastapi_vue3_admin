@@ -1,5 +1,5 @@
 import { request } from "@utils";
-import { MenuTable, MenuForm } from "@/api/module_system/menu";
+import { type MenuTable, type MenuForm } from "@/api/module_system/menu";
 
 const API_PATH = "/system/user";
 
@@ -141,8 +141,6 @@ export default UserAPI;
 
 export interface ForgetPasswordForm {
   username: string;
-  new_password: string;
-  confirmPassword: string;
 }
 
 export interface RegisterForm {

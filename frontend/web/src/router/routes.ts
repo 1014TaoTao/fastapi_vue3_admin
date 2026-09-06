@@ -10,9 +10,10 @@
  */
 import type { AppRouteRecordRaw } from "@utils";
 import type { AppRouteRecord, RouteMeta } from "@/types/router";
-import { defineComponent, h, onMounted, ref } from "vue";
+import { defineComponent, h, KeepAlive, onMounted, ref, type VNode } from "vue";
 import { RouterView, useRoute } from "vue-router";
 import { $t } from "@/locales";
+import { useWorktabStore } from "@stores";
 import LayoutComponent from "@/layouts/index.vue";
 import DashboardWorkplace from "@views/dashboard/workplace/index.vue";
 import DashboardAnalysis from "@views/dashboard/analysis/index.vue";
@@ -150,7 +151,24 @@ export const HOME_ROUTE_NAME = "Home" as const;
 export const NestedRouterParent = defineComponent({
   name: "NestedRouterParent",
   setup() {
-    return () => h(RouterView);
+    const route = useRoute();
+    const worktabStore = useWorktabStore();
+    return () =>
+      h(RouterView, null, {
+        default: ({ Component }: { Component?: VNode }) => {
+          if (!Component) return null;
+          // 内层 KeepAlive（v-slot 模式）：按叶子组件名缓存，与工作栏 tab.name 一致，
+          // 关闭标签时由 keepAliveExclude 精确清除；meta.keepAlive === false 时不缓存叶子
+          if (route.meta.keepAlive !== false) {
+            return h(
+              KeepAlive,
+              { exclude: worktabStore.keepAliveExclude },
+              { default: () => h(Component) }
+            );
+          }
+          return h(Component);
+        },
+      });
   },
 });
 

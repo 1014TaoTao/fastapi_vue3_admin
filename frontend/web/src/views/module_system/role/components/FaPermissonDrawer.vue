@@ -82,7 +82,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from "vue";
 import { QuestionFilled } from "@element-plus/icons-vue";
 import RoleAPI, { permissionDataType } from "@/api/module_system/role";
 import MenuAPI, { MenuTable } from "@/api/module_system/menu";
@@ -134,7 +133,7 @@ const init = async () => {
     rawMenuTree.value = menuResponse.data.data || [];
 
     const roleResponse = await RoleAPI.detailRole(props.roleId);
-    const savedMenuIds = roleResponse.data.data.menus?.map((menu: any) => menu.id) || [];
+    const savedMenuIds = roleResponse.data.data.menus?.map((menu) => menu.id) || [];
 
     permissionState.value = {
       role_ids: [props.roleId],

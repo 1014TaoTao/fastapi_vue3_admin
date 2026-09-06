@@ -97,11 +97,11 @@ Add an A record pointing to your server IP.
 cd FastapiAdmin/backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp env/.env.dev.example env/.env.prod     # Edit as needed
+cp env/.env.example env/.env.prod     # Edit as needed
 
 # Start with Gunicorn + Uvicorn
 pip install gunicorn uvloop
-gunicorn -w 4 -k uvicorn.workers.UvicornWorker main:app --bind 0.0.0.0:8001 --daemon
+gunicorn -w 4 -k uvicorn.workers.UvicornWorker 'app.init_app:create_app()' --bind 0.0.0.0:8001 --daemon
 ```
 
 ### Frontend

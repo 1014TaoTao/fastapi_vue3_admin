@@ -324,21 +324,6 @@ class UploadUtil:
             return False
 
     @staticmethod
-    def generate_file(filepath: Path, chunk_size: int = 8192):
-        """根据文件生成二进制数据迭代器。
-
-        参数:
-        - filepath (Path): 文件路径。
-        - chunk_size (int): 分块大小，默认 8192 字节。
-
-        返回:
-        - Iterator[bytes]: 文件二进制数据分块迭代器。
-        """
-        with filepath.open("rb") as f:
-            while chunk := f.read(chunk_size):
-                yield chunk
-
-    @staticmethod
     def _sanitize_target_path(target_path: str) -> str:
         """清理目标路径，移除危险字符和路径穿越。
 
@@ -496,16 +481,3 @@ class UploadUtil:
         - list[dict]: 文件树列表。
         """
         return [{"name": item.name, "is_dir": item.is_dir()} for item in Path(file_path).iterdir()]
-
-    @classmethod
-    async def download_file(cls, file_path: str) -> str:
-        """下载文件，生成新的文件名。
-
-        参数:
-        - file_path (str): 文件路径。
-
-        返回:
-        - str: 文件下载信息。
-        """
-        filename = cls.generate_file(Path(file_path))
-        return str(filename)

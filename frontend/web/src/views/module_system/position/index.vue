@@ -93,12 +93,6 @@
           :show-submit="false"
           class="crud-dialog-art-form"
         >
-          <template #status>
-            <ElRadioGroup v-model="formData.status">
-              <ElRadio :value="0">启用</ElRadio>
-              <ElRadio :value="1">停用</ElRadio>
-            </ElRadioGroup>
-          </template>
         </FaForm>
       </template>
     </FaDialog>
@@ -114,8 +108,6 @@
 </template>
 
 <script setup lang="ts">
-import { useCrudForm } from "@/hooks/core/useCrudForm";
-import { confirmToggleStatus } from "@/hooks/core/useConfirm";
 import PositionAPI, {
   type PositionForm,
   type PositionPageQuery,
@@ -135,6 +127,7 @@ import {
   stripPaginationParams,
   cleanEmptyArrayParams,
   toCrudCols,
+  type TableOperationAction,
 } from "@utils";
 
 defineOptions({
@@ -170,16 +163,6 @@ function buildPositionReplaceParams(p: PositionSearchForm): Record<string, unkno
   };
 }
 
-type RowAction = {
-  key: string;
-  label: string;
-  artType: "add" | "edit" | "delete" | "view" | "more";
-  icon?: string;
-  perm: string;
-  disabled?: boolean;
-  run: () => void;
-};
-
 function buildPositionRowActions(
   row: PositionTable,
   ctx: {
@@ -187,8 +170,8 @@ function buildPositionRowActions(
     onEdit: (id: number) => void;
     onDelete: (id: number, name: string) => void;
   }
-): RowAction[] {
-  const all: RowAction[] = [
+): TableOperationAction[] {
+  const all: TableOperationAction[] = [
     {
       key: "detail",
       label: "详情",
@@ -480,7 +463,18 @@ const positionDialogFormItems = computed<FormItem[]>(() => [
     span: 24,
     props: { controlsPosition: "right", min: 1 },
   },
-  { key: "status", label: "状态", type: "radiogroup", span: 24 },
+  {
+    label: "状态",
+    key: "status",
+    type: "radiogroup",
+    span: 24,
+    props: {
+      options: [
+        { label: "启用", value: 0 },
+        { label: "停用", value: 1 },
+      ],
+    },
+  },
   {
     label: "描述",
     key: "description",

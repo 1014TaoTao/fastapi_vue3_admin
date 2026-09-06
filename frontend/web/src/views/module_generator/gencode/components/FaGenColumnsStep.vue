@@ -246,7 +246,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch, nextTick } from "vue";
 import { Rank, Search } from "@element-plus/icons-vue";
 import { useDraggable } from "vue-draggable-plus";
 import type { GenTableSchema, GenTableColumnSchema } from "@/api/module_generator/gencode";
@@ -293,7 +292,7 @@ const displayColumns = computed(() => {
 
 function syncSortNumbers() {
   const cols = columnsModel.value || [];
-  cols.forEach((c: any, idx: number) => {
+  cols.forEach((c, idx) => {
     c.sort = idx + 1;
   });
 }

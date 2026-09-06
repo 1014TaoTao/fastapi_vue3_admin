@@ -137,7 +137,6 @@ defineOptions({
   inheritAttrs: false,
 });
 
-import { ref, reactive, computed, watchEffect, onActivated, nextTick, provide } from "vue";
 import "codemirror/theme/dracula.css";
 import { useClipboard } from "@vueuse/core";
 import { useRoute } from "vue-router";
@@ -151,8 +150,8 @@ import GencodeAPI, {
   type DBTableSchema,
   type GenTablePageQuery,
 } from "@/api/module_generator/gencode";
-import MenuAPI, { MenuTable } from "@/api/module_system/menu";
-import DictAPI, { DictTable } from "@/api/module_system/dict";
+import MenuAPI, { type MenuTable } from "@/api/module_system/menu";
+import DictAPI, { type DictTable } from "@/api/module_system/dict";
 import { MenuTypeEnum } from "@/enums";
 import { useSettingsStore } from "@stores";
 import type { SearchFormItem } from "@/components/forms/fa-search-bar/index.vue";
@@ -161,8 +160,7 @@ import FaGenCodeDrawer from "./components/FaGenCodeDrawer.vue";
 import FaImportDbTableDialog from "./components/FaImportDbTableDialog.vue";
 import FaCreateTableDialog from "./components/FaCreateTableDialog.vue";
 import { GENCODE_BASIC_FORM_KEY, GENCODE_CM_KEY } from "./gencodeInjectionKeys";
-import type { TableOperationAction } from "@utils";
-import { renderTableOperationCell } from "@utils";
+import { renderTableOperationCell, type TableOperationAction } from "@utils";
 import type { TreeNode } from "./types";
 import type { ColumnOption } from "@/types/component";
 import FaTableHeader from "@/components/tables/fa-table-header/index.vue";
@@ -601,22 +599,30 @@ function handleImportTableSelectionChange(rows: ImportTableSelectionRow[]): void
 }
 
 /** 代码生成「上级菜单」仅展示目录节点，便于挂到目录下生成新菜单（不选菜单/按钮作为父级） */
-const filterMenuTypes = (nodes: MenuTable[]) => {
+const filterMenuTypes = (nodes: MenuTable[]): MenuTable[] => {
   return nodes
     .filter((node) => node.type === MenuTypeEnum.CATALOG)
-    .map((node: any): any => ({
+    .map((node) => ({
       ...node,
       children: node.children ? filterMenuTypes(node.children) : [],
     }));
 };
 
 /** 代码生成专用：保留 route_path，便于实时推断分系统 module_xxx */
-function formatMenuTreeWithMeta(nodes: any[]): any[] {
+type MenuTreeOption = {
+  value: number;
+  label: string;
+  disabled: boolean;
+  route_path?: string;
+  children?: MenuTreeOption[];
+};
+
+function formatMenuTreeWithMeta(nodes: MenuTable[]): MenuTreeOption[] {
   return nodes.map((node) => {
-    const formattedNode: any = {
-      value: node.id,
-      label: node.name,
-      disabled: node.status === false || String(node.status) === "false",
+    const formattedNode: MenuTreeOption = {
+      value: node.id ?? 0,
+      label: node.name ?? "",
+      disabled: String(node.status) === "false",
       route_path: node.route_path,
     };
     if (node.children && node.children.length > 0) {
@@ -686,11 +692,7 @@ async function handleDelete(row?: GenTableSchema): Promise<void> {
   }
 
   try {
-    await ElMessageBox.confirm(`是否确认删除选中的${tableIds.length}条数据？`, "删除确认", {
-      confirmButtonText: "确定",
-      cancelButtonText: "取消",
-      type: "warning",
-    });
+    await confirmDelete(`是否确认删除选中的${tableIds.length}条数据？`);
 
     await GencodeAPI.deleteTable(tableIds);
     faTableRef.value?.elTableRef?.clearSelection();

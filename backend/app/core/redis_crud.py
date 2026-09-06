@@ -1,8 +1,47 @@
 from typing import Any
 
-from redis.asyncio.client import Redis
+from fastapi import FastAPI
+from redis import exceptions
+from redis.asyncio import Redis
 
+from app.config.setting import settings
 from app.core.logger import logger
+
+
+async def redis_connect(app: FastAPI, status: bool) -> Redis | None:
+    """创建或关闭Redis连接。
+
+    连接失败时直接抛出异常（fail-fast）：Redis 承载会话/参数缓存/调度 jobstore，
+    静默降级会导致应用带病运行、请求期随机 500，宁可启动即失败。
+
+    参数:
+    - app (FastAPI): FastAPI应用实例。
+    - status (bool): 连接状态,True为创建连接,False为关闭连接。
+
+    返回:
+    - Redis | None: Redis连接实例（status=False 时返回 None）。
+    """
+    if status:
+        try:
+            rd = await Redis.from_url(
+                url=settings.REDIS_URI,
+                encoding="utf-8",
+                decode_responses=True,
+                health_check_interval=settings.REDIS_HEALTH_CHECK_INTERVAL,
+                max_connections=settings.POOL_SIZE,
+                socket_timeout=settings.POOL_TIMEOUT,
+            )
+            app.state.redis = rd
+            if await rd.ping():  # pyright: ignore[reportGeneralTypeIssues]
+                return rd
+            msg = "Redis ping 返回 False，连接不可用"
+            raise exceptions.ConnectionError(msg)
+        except exceptions.RedisError as e:
+            logger.error(f"❌ Redis 连接失败: {e}")
+            raise
+    else:
+        await app.state.redis.close()
+        logger.info("✅️ Redis连接已关闭")
 
 
 class RedisCURD:
@@ -103,6 +142,35 @@ class RedisCURD:
             return True
         except Exception as e:
             logger.error(f"设置缓存失败: {e!s}")
+            return False
+
+    async def compare_and_set(self, key: str, expected: str, value: str, expire: int) -> bool:
+        """原子替换：仅当键当前值与 expected 完全一致时写入 value。
+
+        用于「读-改-写」场景：键被并发修改、删除（如已登出的会话）时写入会被跳过，
+        既不会覆盖他人更新，也不会让已删除的键复活。
+
+        参数:
+        - key (str): 缓存键名
+        - expected (str): 读取到的原值
+        - value (str): 待写入的新值
+        - expire (int): 新值的过期时间(秒)
+
+        返回:
+        - bool: 写入成功返回True，键已变化/不存在或出错返回False
+        """
+        try:
+            script = """
+            if redis.call('get', KEYS[1]) ~= ARGV[1] then
+                return 0
+            end
+            redis.call('set', KEYS[1], ARGV[2], 'EX', tonumber(ARGV[3]))
+            return 1
+            """
+            result = await self.redis.eval(script, 1, key, expected, value, expire)  # pyright: ignore[reportGeneralTypeIssues]
+            return result == 1
+        except Exception as e:
+            logger.error(f"原子更新缓存失败: {key}: {e!s}")
             return False
 
     async def lock(self, key: str, expire: int, value: str | None = None) -> tuple[bool, str]:

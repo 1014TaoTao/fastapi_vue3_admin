@@ -19,7 +19,12 @@
       @reset="onResetSearch"
     />
 
-    <ElSegmented class="mt-3" v-model="menuClientTab" :options="menuSegmentedOptions" @change="handleMenuClientTabChange" />
+    <ElSegmented
+      class="mt-3"
+      v-model="menuClientTab"
+      :options="menuSegmentedOptions"
+      @change="handleMenuClientTabChange"
+    />
 
     <ElCard
       class="fa-table-card"
@@ -180,29 +185,6 @@
             </ElText>
           </template>
 
-          <!-- 外链地址 -->
-          <template #link>
-            <ElInput v-model="formData.link" placeholder="请输入外链完整路径" />
-          </template>
-
-          <!-- 嵌入iframe -->
-          <template #is_iframe>
-            <ElRadioGroup v-model="formData.is_iframe">
-              <ElRadio :value="true">是</ElRadio>
-              <ElRadio :value="false">否</ElRadio>
-            </ElRadioGroup>
-          </template>
-
-          <!-- 路由名称 -->
-          <template #route_name>
-            <ElInput v-model="formData.route_name" placeholder="请输入路由名称" />
-          </template>
-
-          <!-- 路由路径 -->
-          <template #route_path>
-            <ElInput v-model="formData.route_path" placeholder="请输入路由路径，如 system" />
-          </template>
-
           <!-- 组件路径 -->
           <template #component_path>
             <ElInput
@@ -213,14 +195,6 @@
               <template #prepend>src/views/</template>
               <template #append>.vue</template>
             </ElInput>
-          </template>
-
-          <!-- 激活菜单路径 -->
-          <template #active_path>
-            <ElInput
-              v-model="formData.active_path"
-              placeholder="请输入激活菜单路径，用于高亮父级菜单"
-            />
           </template>
 
           <!-- 路由参数(动态键值编辑器) -->
@@ -257,35 +231,6 @@
               </div>
             </template>
           </template>
-          <!-- 是否隐藏 -->
-          <template #hidden>
-            <ElRadioGroup v-model="formData.hidden">
-              <ElRadio :value="true">是</ElRadio>
-              <ElRadio :value="false">否</ElRadio>
-            </ElRadioGroup>
-          </template>
-
-          <!-- 始终显示 -->
-          <template #always_show>
-            <ElRadioGroup v-model="formData.always_show">
-              <ElRadio :value="true">是</ElRadio>
-              <ElRadio :value="false">否</ElRadio>
-            </ElRadioGroup>
-          </template>
-
-          <!-- 缓存页面 -->
-          <template #keep_alive>
-            <ElRadioGroup v-model="formData.keep_alive">
-              <ElRadio :value="true">开启</ElRadio>
-              <ElRadio :value="false">关闭</ElRadio>
-            </ElRadioGroup>
-          </template>
-
-          <!-- 权限标识 -->
-          <template #permission>
-            <ElInput v-model="formData.permission" placeholder="请输入权限标识，如sys:user:add" />
-          </template>
-
           <!-- 图标 -->
           <template #icon>
             <FaIconSelect v-model="formData.icon" />
@@ -302,35 +247,6 @@
               "
             />
           </template>
-
-          <!-- 常驻标签栏 -->
-          <template #affix>
-            <ElRadioGroup v-model="formData.affix">
-              <ElRadio :value="true">是</ElRadio>
-              <ElRadio :value="false">否</ElRadio>
-            </ElRadioGroup>
-          </template>
-
-          <!-- 隐藏标签页 -->
-          <template #is_hide_tab>
-            <ElRadioGroup v-model="formData.is_hide_tab">
-              <ElRadio :value="true">是</ElRadio>
-              <ElRadio :value="false">否</ElRadio>
-            </ElRadioGroup>
-          </template>
-
-          <!-- 显示红点角标 -->
-          <template #show_badge>
-            <ElRadioGroup v-model="formData.show_badge">
-              <ElRadio :value="true">是</ElRadio>
-              <ElRadio :value="false">否</ElRadio>
-            </ElRadioGroup>
-          </template>
-
-          <!-- 文字角标内容 -->
-          <template #show_text_badge>
-            <ElInput v-model="formData.show_text_badge" placeholder="请输入文字角标内容" />
-          </template>
         </FaForm>
       </template>
     </FaDrawer>
@@ -338,7 +254,6 @@
 </template>
 
 <script setup lang="ts">
-import { h } from "vue";
 defineOptions({
   name: "SysMenu",
   inheritAttrs: false,
@@ -361,7 +276,7 @@ import type FaSearchBar from "@/components/forms/fa-search-bar/index.vue";
 import type { FormItem } from "@/components/forms/fa-form/index.vue";
 import FaForm from "@/components/forms/fa-form/index.vue";
 import FaMenuRouteIcon from "@/components/navigation/fa-menu-route-icon/index.vue";
-import { ElMessage, ElMessageBox } from "element-plus";
+import { ElMessage } from "element-plus";
 import FaDescriptions from "@/components/display/fa-descriptions/index.vue";
 import FaTableHeader from "@/components/tables/fa-table-header/index.vue";
 
@@ -593,19 +508,33 @@ const menuDialogFormItems = computed<FormItem[]>(() => {
     { key: "name", label: "菜单名称", type: "input", props: { placeholder: "请输入菜单名称" } },
     { key: "title", label: "菜单标题", type: "input", props: { placeholder: "请输入菜单标题" } },
     { key: "icon", label: "图标", type: "input", hidden: t === MenuTypeEnum.BUTTON },
-    { key: "link", label: "外链地址", type: "input", hidden: t !== MenuTypeEnum.EXTLINK },
-    { key: "route_name", label: "路由名称", type: "input", hidden: t === MenuTypeEnum.BUTTON },
+    {
+      key: "link",
+      label: "外链地址",
+      type: "input",
+      hidden: t !== MenuTypeEnum.EXTLINK,
+      props: { placeholder: "请输入外链完整路径" },
+    },
+    {
+      key: "route_name",
+      label: "路由名称",
+      type: "input",
+      hidden: t === MenuTypeEnum.BUTTON,
+      props: { placeholder: "请输入路由名称" },
+    },
     {
       key: "permission",
       label: "权限标识",
       type: "input",
       hidden: t !== MenuTypeEnum.BUTTON && t !== MenuTypeEnum.MENU,
+      props: { placeholder: "请输入权限标识，如sys:user:add" },
     },
     {
       key: "route_path",
       label: "路由路径",
       type: "input",
       hidden: t !== MenuTypeEnum.CATALOG && t !== MenuTypeEnum.MENU,
+      props: { placeholder: "请输入路由路径，如 system" },
     },
     {
       key: "component_path",
@@ -618,6 +547,7 @@ const menuDialogFormItems = computed<FormItem[]>(() => {
       label: "激活菜单路径",
       type: "input",
       hidden: t !== MenuTypeEnum.CATALOG && t !== MenuTypeEnum.MENU,
+      props: { placeholder: "请输入激活菜单路径，用于高亮父级菜单" },
     },
     {
       key: "redirect",
@@ -632,6 +562,12 @@ const menuDialogFormItems = computed<FormItem[]>(() => {
       label: "嵌入iframe",
       type: "radiogroup",
       hidden: t !== MenuTypeEnum.EXTLINK,
+      props: {
+        options: [
+          { label: "是", value: true },
+          { label: "否", value: false },
+        ],
+      },
     },
     {
       key: "status",
@@ -644,37 +580,84 @@ const menuDialogFormItems = computed<FormItem[]>(() => {
         ],
       },
     },
-    { key: "hidden", label: "是否隐藏", type: "radiogroup", hidden: t === MenuTypeEnum.BUTTON },
+    {
+      key: "hidden",
+      label: "是否隐藏",
+      type: "radiogroup",
+      hidden: t === MenuTypeEnum.BUTTON,
+      props: {
+        options: [
+          { label: "是", value: true },
+          { label: "否", value: false },
+        ],
+      },
+    },
     {
       key: "always_show",
       label: "始终显示",
       type: "radiogroup",
       hidden: t !== MenuTypeEnum.CATALOG && t !== MenuTypeEnum.MENU,
+      props: {
+        options: [
+          { label: "是", value: true },
+          { label: "否", value: false },
+        ],
+      },
     },
     {
       key: "keep_alive",
       label: "缓存页面",
       type: "radiogroup",
       hidden: t !== MenuTypeEnum.MENU,
+      props: {
+        options: [
+          { label: "开启", value: true },
+          { label: "关闭", value: false },
+        ],
+      },
     },
-    { key: "affix", label: "常驻标签栏", type: "radiogroup", hidden: t === MenuTypeEnum.BUTTON },
+    {
+      key: "affix",
+      label: "常驻标签栏",
+      type: "radiogroup",
+      hidden: t === MenuTypeEnum.BUTTON,
+      props: {
+        options: [
+          { label: "是", value: true },
+          { label: "否", value: false },
+        ],
+      },
+    },
     {
       key: "is_hide_tab",
       label: "隐藏标签页",
       type: "radiogroup",
       hidden: t === MenuTypeEnum.BUTTON,
+      props: {
+        options: [
+          { label: "是", value: true },
+          { label: "否", value: false },
+        ],
+      },
     },
     {
       key: "show_badge",
       label: "显示红点角标",
       type: "radiogroup",
       hidden: t === MenuTypeEnum.BUTTON,
+      props: {
+        options: [
+          { label: "是", value: true },
+          { label: "否", value: false },
+        ],
+      },
     },
     {
       key: "show_text_badge",
       label: "文字角标内容",
       type: "input",
       hidden: t === MenuTypeEnum.BUTTON || !formData.value.show_badge,
+      props: { placeholder: "请输入文字角标内容" },
     },
     {
       key: "params",
@@ -871,7 +854,7 @@ const opCtx = {
 const { columnChecks, columns } = useTableColumns<MenuTable>(
   resolveStatusColumns(() => [
     { type: "selection", width: 48, fixed: "left" },
-    { type: "index", label: "序号", width: 60, fixed: "left" },
+    { type: "globalIndex", width: 56, label: "序号" },
     // ─── 基础信息 ───
     {
       prop: "name",
@@ -1080,13 +1063,39 @@ const rules = reactive({
     { required: true, message: "请输入菜单名称", trigger: "blur" },
     { min: 2, max: 50, message: "长度 2 到 50 个字符", trigger: "blur" },
   ],
-  parent_id: [{ required: true, message: "请选择父级菜单", trigger: "blur" }],
+  // 父级菜单：顶级节点允许为空（后端 parent_id 可空），无需强制必填
   type: [{ required: true, message: "请选择菜单类型", trigger: "blur" }],
   order: [{ required: true, message: "请输入排序", trigger: "blur" }],
-  permission: [{ required: true, message: "请输入权限标识", trigger: "blur" }],
+  permission: [
+    {
+      validator: (_rule: unknown, value: string | undefined, callback: (e?: Error) => void) => {
+        // 仅按钮/菜单类型需要权限标识，目录/外链不校验（与表单 hidden 条件一致）
+        const t = formData.value.type as MenuTypeEnum;
+        if ((t === MenuTypeEnum.BUTTON || t === MenuTypeEnum.MENU) && !String(value ?? "").trim()) {
+          callback(new Error("请输入权限标识"));
+          return;
+        }
+        callback();
+      },
+      trigger: "blur",
+    },
+  ],
   route_name: [{ required: true, message: "请输入路由名称", trigger: "blur" }],
   route_path: [{ required: true, message: "请输入路由路径", trigger: "blur" }],
-  component_path: [{ required: true, message: "请输入组件路径", trigger: "blur" }],
+  component_path: [
+    {
+      validator: (_rule: unknown, value: string | undefined, callback: (e?: Error) => void) => {
+        // 仅菜单类型需要组件路径，目录/按钮/外链不校验（与表单 hidden 条件一致）
+        const t = formData.value.type as MenuTypeEnum;
+        if (t === MenuTypeEnum.MENU && !String(value ?? "").trim()) {
+          callback(new Error("请输入组件路径"));
+          return;
+        }
+        callback();
+      },
+      trigger: "blur",
+    },
+  ],
   title: [
     { required: true, message: "请输入菜单标题", trigger: "blur" },
     { min: 2, max: 50, message: "长度 2 到 50 个字符", trigger: "blur" },
@@ -1095,7 +1104,6 @@ const rules = reactive({
   hidden: [{ required: true, message: "请选择是否隐藏", trigger: "change" }],
   always_show: [{ required: true, message: "请选择始终显示", trigger: "change" }],
   status: [{ required: true, message: "请选择状态", trigger: "change" }],
-  client: [{ required: true, message: "请选择终端", trigger: "change" }],
   redirect: [
     {
       validator: (_rule: unknown, value: string | undefined, callback: (e?: Error) => void) => {
@@ -1291,11 +1299,7 @@ async function handleMoreClick(value: "enable" | "disable") {
     return;
   }
   try {
-    await ElMessageBox.confirm(`确认${value === "enable" ? "启用" : "停用"}该项数据?`, "警告", {
-      confirmButtonText: "确定",
-      cancelButtonText: "取消",
-      type: "warning",
-    });
+    await confirmToggleStatus(value);
     moreLoading.value = true;
     const status = value === "enable" ? 0 : 1;
     await MenuAPI.batchMenu({ ids, status });

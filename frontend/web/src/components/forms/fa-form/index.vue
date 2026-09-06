@@ -22,11 +22,12 @@
           >
             <ElFormItem
               :prop="item.key"
+              :label="typeof item.label === 'string' ? item.label : undefined"
               :label-width="item.label ? item.labelWidth || labelWidth : undefined"
             >
-              <template #label v-if="item.label">
-                <component v-if="typeof item.label !== 'string'" :is="item.label" />
-                <span v-else>{{ item.label }}</span>
+              <!-- 字符串 label 走 ElFormItem 默认渲染使 label-suffix 生效；组件 label 保留插槽 -->
+              <template v-if="item.label && typeof item.label !== 'string'" #label>
+                <component :is="item.label" />
               </template>
               <slot :name="item.key" :item="item" :modelValue="modelValue">
                 <component
@@ -119,11 +120,12 @@
         >
           <ElFormItem
             :prop="item.key"
+            :label="typeof item.label === 'string' ? item.label : undefined"
             :label-width="item.label ? item.labelWidth || labelWidth : undefined"
           >
-            <template #label v-if="item.label">
-              <component v-if="typeof item.label !== 'string'" :is="item.label" />
-              <span v-else>{{ item.label }}</span>
+            <!-- 字符串 label 走 ElFormItem 默认渲染使 label-suffix 生效；组件 label 保留插槽 -->
+            <template v-if="item.label && typeof item.label !== 'string'" #label>
+              <component :is="item.label" />
             </template>
             <slot :name="item.key" :item="item" :modelValue="modelValue">
               <component
@@ -226,6 +228,9 @@ import {
   useSanitizeOutputOptions,
   type SanitizeOutputOptions,
 } from "../composables/useFormBase";
+import FaFileUpload from "@/components/forms/fa-file-upload/index.vue";
+import FaUpload from "@/components/actions/fa-upload/index.vue";
+import FaWangEditor from "@/components/forms/fa-wang-editor/index.vue";
 
 defineOptions({ name: "FaForm" });
 
@@ -252,6 +257,9 @@ const componentMap = {
   timepicker: ElTimePicker, // 时间选择器
   timeselect: ElTimeSelect, // 时间选择
   treeselect: ElTreeSelect, // 树选择器
+  editor: FaWangEditor, // 富文本编辑器
+  imageupload: FaUpload, // 单图上传
+  fileupload: FaFileUpload, // 单文件上传
 };
 
 const { t } = useI18n();

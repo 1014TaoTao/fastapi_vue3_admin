@@ -48,7 +48,7 @@ FastAPI 的 **自动类型校验 + 自动文档 + 异步性能** 是组合优势
 
 ```
 # 按业务域竖切（本项目）
-api/v1/module_system/user/      # 用户相关的代码全在这个目录
+modules/system/user/            # 用户相关的代码全在这个目录
 ├── controller.py
 ├── service.py
 ├── crud.py

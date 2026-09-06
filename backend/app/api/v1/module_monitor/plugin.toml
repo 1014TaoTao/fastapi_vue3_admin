@@ -1,8 +1,0 @@
-# 见 docs/PLUGIN_ARCHITECTURE.md
-
-name = "monitor"
-title = "监控"
-version = "1.0.0"
-description = "监控功能；路由由 module_monitor/**/controller 动态注册。"
-optional = true
-tags = ["monitor"]

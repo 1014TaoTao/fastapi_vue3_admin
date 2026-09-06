@@ -13,9 +13,9 @@ from app.core.validator import DateStr, DateTimeStr, TimeStr
 class DemoCreateSchema(BaseModel):
     """新增模型"""
 
-    name: str = Field(..., description="名称")
-    status: int = Field(default=0, ge=0, le=1, description="是否启用(0:启用 1:禁用)")
-    description: str | None = Field(default=None, description="描述")
+    name: str = Field(..., min_length=2, max_length=50, description="名称")
+    status: int = Field(default=0, ge=0, le=1, description="状态(0:正常 1:停用)")
+    description: str | None = Field(default=None, max_length=255, description="描述")
     int_val: int | None = Field(default=None, description="整数")
     bigint_val: int | None = Field(default=None, description="大整数")
     float_val: float | None = Field(default=None, description="浮点数")
@@ -47,29 +47,21 @@ class DemoCreateSchema(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def _after_validation(self):
+    def validate_name_format(self):
         """核心业务规则校验
         """
-        # 长度校验：名称最小长度
-        if len(self.name) < 2 or len(self.name) > 50:
-            raise ValueError("名称长度必须在2-50个字符之间")
         # 格式校验：名称只能包含字母、数字、下划线和中划线
         if not all(c.isalnum() or c in "-_" for c in self.name):
             raise ValueError("名称只能包含字母、数字、下划线和中划线")
-        if self.status not in [0, 1]:
-            raise ValueError("是否启用必须为0或1")
-        # 描述校验：描述最大长度
-        if self.description and len(self.description) > 255:
-            raise ValueError("描述长度不能超过255个字符")
         return self
 
 
 class DemoUpdateSchema(BaseModel):
     """更新模型"""
 
-    name: str | None = Field(default=None, description="名称")
-    status: int | None = Field(default=None, ge=0, le=1, description="是否启用(0:启用 1:禁用)")
-    description: str | None = Field(default=None, description="描述")
+    name: str | None = Field(default=None, min_length=2, max_length=50, description="名称")
+    status: int | None = Field(default=None, ge=0, le=1, description="状态(0:正常 1:停用)")
+    description: str | None = Field(default=None, max_length=255, description="描述")
     int_val: int | None = Field(default=None, description="整数")
     bigint_val: int | None = Field(default=None, description="大整数")
     float_val: float | None = Field(default=None, description="浮点数")
@@ -92,4 +84,4 @@ class DemoQueryParam(BaseQueryParam, UserByQueryParam):
 
     name: str | None = Field(None, description="名称", json_schema_extra={"q": "like"})
     description: str | None = Field(None, description="描述", json_schema_extra={"q": "like"})
-    status: int | None = Field(None, description="是否启用", json_schema_extra={"q": "eq"})
+    status: int | None = Field(None, description="状态(0:正常 1:停用)", json_schema_extra={"q": "eq"})

@@ -2,7 +2,7 @@
 import urllib.parse
 from typing import Annotated
 
-from fastapi import APIRouter, Body, Depends, File, Path, Query, UploadFile, status
+from fastapi import APIRouter, Body, Depends, File, Path, Query, Security, UploadFile, status
 from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,8 +20,8 @@ from .service import {{ class_name }}Service
 
 @{{ class_name }}Router.get("/detail/{id}", summary="获取{{ function_name }}详情", response_model=ResponseSchema[{{ class_name }}OutSchema])
 async def get_obj_detail_controller(
-    auth: Annotated[AuthSchema, Depends(AuthPermission(["{{ permission_prefix }}:detail"]))],
-    id: Annotated[int, Path(description="{{ function_name }}ID")],
+    auth: Annotated[AuthSchema, Security(AuthPermission(["{{ permission_prefix }}:detail"]))],
+    id: Annotated[int, Path(description="{{ function_name }}ID", ge=1)],
     db: Annotated[AsyncSession, Depends(db_getter)],
 ) -> JSONResponse:
     service = {{ class_name }}Service(auth, db)
@@ -31,7 +31,7 @@ async def get_obj_detail_controller(
 
 @{{ class_name }}Router.get("/list", summary="分页查询{{ function_name }}", response_model=ResponseSchema[PageResultSchema[{{ class_name }}OutSchema]])
 async def get_obj_list_controller(
-    auth: Annotated[AuthSchema, Depends(AuthPermission(["{{ permission_prefix }}:query"]))],
+    auth: Annotated[AuthSchema, Security(AuthPermission(["{{ permission_prefix }}:query"]))],
     page: Annotated[PaginationQueryParam, Depends()],
     search: Annotated[{{ class_name }}QueryParam, Query()],
     db: Annotated[AsyncSession, Depends(db_getter)],
@@ -48,7 +48,7 @@ async def get_obj_list_controller(
 
 @{{ class_name }}Router.post("/create", status_code=status.HTTP_201_CREATED, summary="创建{{ function_name }}", response_model=ResponseSchema[{{ class_name }}OutSchema])
 async def create_obj_controller(
-    auth: Annotated[AuthSchema, Depends(AuthPermission(["{{ permission_prefix }}:create"]))],
+    auth: Annotated[AuthSchema, Security(AuthPermission(["{{ permission_prefix }}:create"]))],
     data: Annotated[{{ class_name }}CreateSchema, Body(description="创建参数")],
     db: Annotated[AsyncSession, Depends(db_getter)],
 ) -> JSONResponse:
@@ -59,8 +59,8 @@ async def create_obj_controller(
 
 @{{ class_name }}Router.put("/update/{id}", summary="修改{{ function_name }}", response_model=ResponseSchema[{{ class_name }}OutSchema])
 async def update_obj_controller(
-    auth: Annotated[AuthSchema, Depends(AuthPermission(["{{ permission_prefix }}:update"]))],
-    id: Annotated[int, Path(description="{{ function_name }}ID")],
+    auth: Annotated[AuthSchema, Security(AuthPermission(["{{ permission_prefix }}:update"]))],
+    id: Annotated[int, Path(description="{{ function_name }}ID", ge=1)],
     data: Annotated[{{ class_name }}UpdateSchema, Body(description="修改参数")],
     db: Annotated[AsyncSession, Depends(db_getter)],
 ) -> JSONResponse:
@@ -71,7 +71,7 @@ async def update_obj_controller(
 
 @{{ class_name }}Router.delete("/delete", summary="删除{{ function_name }}", response_model=ResponseSchema[None])
 async def delete_obj_controller(
-    auth: Annotated[AuthSchema, Depends(AuthPermission(["{{ permission_prefix }}:delete"]))],
+    auth: Annotated[AuthSchema, Security(AuthPermission(["{{ permission_prefix }}:delete"]))],
     ids: Annotated[list[int], Body(description="ID列表")],
     db: Annotated[AsyncSession, Depends(db_getter)],
 ) -> JSONResponse:
@@ -82,7 +82,7 @@ async def delete_obj_controller(
 
 @{{ class_name }}Router.patch("/status/batch", summary="批量修改{{ function_name }}状态", response_model=ResponseSchema[None])
 async def batch_set_available_obj_controller(
-    auth: Annotated[AuthSchema, Depends(AuthPermission(["{{ permission_prefix }}:patch"]))],
+    auth: Annotated[AuthSchema, Security(AuthPermission(["{{ permission_prefix }}:patch"]))],
     data: Annotated[BatchSetAvailable, Body(description="状态设置")],
     db: Annotated[AsyncSession, Depends(db_getter)],
 ) -> JSONResponse:
@@ -93,13 +93,13 @@ async def batch_set_available_obj_controller(
 
 @{{ class_name }}Router.post("/export", summary="导出{{ function_name }}")
 async def export_obj_list_controller(
-    auth: Annotated[AuthSchema, Depends(AuthPermission(["{{ permission_prefix }}:export"]))],
-    search: Annotated[{{ class_name }}QueryParam, Query()],
+    auth: Annotated[AuthSchema, Security(AuthPermission(["{{ permission_prefix }}:export"]))],
+    search: Annotated[{{ class_name }}QueryParam, Body()],
     db: Annotated[AsyncSession, Depends(db_getter)],
 ) -> StreamingResponse:
     service = {{ class_name }}Service(auth, db)
     result_dict_list = await service.get_list(search=search)
-    export_result = {{ class_name }}Service.batch_export(obj_list=[item.model_dump() for item in result_dict_list])
+    export_result = await {{ class_name }}Service.batch_export(obj_list=[item.model_dump() for item in result_dict_list])
 
     return StreamResponse(
         data=bytes2file_response(export_result),
@@ -111,7 +111,7 @@ async def export_obj_list_controller(
 @{{ class_name }}Router.post("/import", summary="导入{{ function_name }}", response_model=ResponseSchema[str])
 async def import_obj_list_controller(
     file: Annotated[UploadFile, File(description="导入文件")],
-    auth: Annotated[AuthSchema, Depends(AuthPermission(["{{ permission_prefix }}:import"]))],
+    auth: Annotated[AuthSchema, Security(AuthPermission(["{{ permission_prefix }}:import"]))],
     db: Annotated[AsyncSession, Depends(db_getter)],
 ) -> JSONResponse:
     service = {{ class_name }}Service(auth, db)
@@ -119,7 +119,7 @@ async def import_obj_list_controller(
     return SuccessResponse(data=batch_import_result, msg="导入{{ function_name }}成功")
 
 
-@{{ class_name }}Router.post("/download/template", summary="获取{{ function_name }}导入模板", dependencies=[Depends(AuthPermission(["{{ permission_prefix }}:download"]))])
+@{{ class_name }}Router.post("/download/template", summary="获取{{ function_name }}导入模板", dependencies=[Security(AuthPermission(["{{ permission_prefix }}:download"]))])
 async def export_obj_template_controller() -> StreamingResponse:
     import_template_result = {{ class_name }}Service.import_template_download()
 

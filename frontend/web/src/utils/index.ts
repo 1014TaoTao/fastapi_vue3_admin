@@ -19,7 +19,6 @@ export * from "./icons";
 
 // 网络
 export * from "./http";
-export * from "./socket";
 
 // 浏览器 / 系统
 export * from "./storage";

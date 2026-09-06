@@ -37,7 +37,7 @@ class {{ class_name }}Model(ModelMixin, UserMixin):
     {% if column.column_name not in ['id', 'uuid', 'tenant_id', 'created_time', 'updated_time', 'created_id', 'updated_id', 'is_deleted', 'deleted_time', 'deleted_id'] %}
     {% set sqlalchemy_type = column|get_sqlalchemy_type %}
     {% if column.column_name == sub_table_fk_name %}
-    {{ column.column_name }}: Mapped[{{ column.python_type }} | None] = mapped_column({{ sqlalchemy_type }}, ForeignKey('{{ parent_table_name }}.{{ parent_pk_column_name }}', ondelete='CASCADE'), {% if column.is_pk %}primary_key=True, {% endif %}{% if column.is_increment %}autoincrement=True, {% endif %}{% if (not column.is_nullable) or column.is_pk %}nullable=False{% else %}nullable=True{% endif %}, comment='{{ column.column_comment }}')
+    {{ column.column_name }}: Mapped[{{ column.python_type }}{% if column.is_nullable and not column.is_pk %} | None{% endif %}] = mapped_column({{ sqlalchemy_type }}, ForeignKey('{{ parent_table_name }}.{{ parent_pk_column_name }}', ondelete='CASCADE'), {% if column.is_pk %}primary_key=True, {% endif %}{% if column.is_increment %}autoincrement=True, {% endif %}{% if (not column.is_nullable) or column.is_pk %}nullable=False{% else %}nullable=True{% endif %}, comment='{{ column.column_comment }}')
     {% else %}
     {% if not column.is_nullable %}
     {{ column.column_name }}: Mapped[{{ column.python_type }}] = mapped_column({{ sqlalchemy_type }}, {% if column.is_pk %}primary_key=True, {% endif %}{% if column.is_increment %}autoincrement=True, {% endif %}nullable=False, comment='{{ column.column_comment }}')

@@ -101,9 +101,6 @@
 </template>
 
 <script setup lang="ts">
-import { useTableColumns } from "@/hooks/core/useTableColumns";
-import { useCrudForm } from "@/hooks/core/useCrudForm";
-import { confirmToggleStatus } from "@/hooks/core/useConfirm";
 import DeptAPI, {
   type DeptForm,
   type DeptPageQuery,

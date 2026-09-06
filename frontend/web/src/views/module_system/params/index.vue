@@ -231,7 +231,6 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive, onMounted } from "vue";
 import { ElMessage } from "element-plus";
 import ParamsAPI from "@/api/module_system/params";
 import { useConfigStore } from "@stores";
@@ -391,7 +390,7 @@ async function saveField(field: ParamField) {
       config_value: field.localValue,
       config_name: field.configName,
       config_key: field.configKey,
-    } as any);
+    });
     field.modified = false;
     field.displayValue = field.localValue;
     configStore.isConfigLoaded = false;
@@ -414,7 +413,7 @@ async function saveGroup(fields: ParamField[]) {
         config_value: field.localValue,
         config_name: field.configName,
         config_key: field.configKey,
-      } as any);
+      });
       field.modified = false;
       field.displayValue = field.localValue;
       successCount++;

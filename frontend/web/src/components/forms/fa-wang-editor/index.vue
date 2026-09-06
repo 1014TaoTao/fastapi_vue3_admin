@@ -80,9 +80,7 @@ const DEFAULT_UPLOAD_CONFIG = {
 } as const;
 
 // 计算属性：上传服务器地址
-const uploadServer = computed(
-  () => props.uploadConfig?.server || `${VITE_API_URL}/common/file/upload`
-);
+const uploadServer = computed(() => props.uploadConfig?.server || `${VITE_API_URL}/file/upload`);
 
 // 合并上传配置
 const mergedUploadConfig = computed(() => ({

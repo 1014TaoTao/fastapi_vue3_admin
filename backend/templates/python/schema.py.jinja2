@@ -1,9 +1,5 @@
 # -*- coding: utf-8 -*-
 
-{% if table.sub %}
-from typing import List
-{% endif %}
-
 from pydantic import BaseModel, ConfigDict, Field
 {% for import_stmt in schema_import_list %}
 {{ import_stmt }}
@@ -85,6 +81,11 @@ class {{ class_name }}QueryParam(BaseQueryParam, UserByQueryParam):
 
     {% for column in columns %}
     {% if column.is_query and column.column_name not in ['created_time', 'updated_time', 'created_id', 'updated_id', 'tenant_id', 'is_deleted', 'deleted_time', 'deleted_id'] %}
+    {% if column.python_type in ['date', 'time', 'datetime'] %}
+    {{ column.column_name }}_start: {% if column.python_type == 'date' %}DateStr{% elif column.python_type == 'time' %}TimeStr{% else %}DateTimeStr{% endif %} | None = Field(None, description="{{ column.column_comment }}开始")
+    {{ column.column_name }}_end: {% if column.python_type == 'date' %}DateStr{% elif column.python_type == 'time' %}TimeStr{% else %}DateTimeStr{% endif %} | None = Field(None, description="{{ column.column_comment }}结束")
+    {% else %}
     {{ column.column_name }}: {{ column.python_type }} | None = Field(None, description="{{ column.column_comment }}"{% if column.query_type == 'LIKE' %}, json_schema_extra={"q": "like"}{% else %}, json_schema_extra={"q": "eq"}{% endif %})
+    {% endif %}
     {% endif %}
     {% endfor %}

@@ -6,7 +6,9 @@ from pydantic import AfterValidator, PlainSerializer, WithJsonSchema
 
 from app.common.constant import DATE_DISPLAY_FMT, DATETIME_DISPLAY_FMT, TIME_DISPLAY_FMT
 from app.common.enums import RET
+from app.config.setting import settings
 from app.core.exceptions import CustomException
+from app.utils.password_util import PwdUtil
 
 # 自定义日期时间字符串类型
 DateTimeStr = Annotated[
@@ -144,6 +146,41 @@ def email_validator(value: str) -> str:
     if not re.match(regex, value):
         raise CustomException(code=RET.ERROR.code, msg="邮箱地址格式不正确")
 
+    return value
+
+
+def password_validator(
+    value: str | None,
+    *,
+    check_strength: bool = True,
+    label: str = "密码",
+) -> str | None:
+    """口令验证器：长度区间 + 复杂度。
+
+    参数:
+    - value (str | None): 口令；``None`` 表示「本次不设置/不修改」，直接放行。
+    - check_strength (bool): 是否校验复杂度。改密时的「旧密码」只校验长度——
+      否则历史弱口令用户会被永远锁在系统里，无法主动换掉弱口令。
+    - label (str): 报错文案中的字段名。
+
+    返回:
+    - str | None: 校验通过的口令原值。
+
+    异常:
+    - ValueError: 空串、长度越界或复杂度不足（由 pydantic 转成 422 提示给用户）。
+    """
+    if value is None:
+        return None
+    if not value.strip():
+        raise ValueError(f"{label}不能为空")
+    if len(value) < settings.PASSWORD_MIN_LENGTH:
+        raise ValueError(f"{label}长度不能少于 {settings.PASSWORD_MIN_LENGTH} 位")
+    if len(value) > settings.PASSWORD_MAX_LENGTH:
+        raise ValueError(f"{label}长度不能超过 {settings.PASSWORD_MAX_LENGTH} 位")
+    if check_strength:
+        error = PwdUtil.check_password_strength(value)
+        if error:
+            raise ValueError(error)
     return value
 
 

@@ -1,3 +1,4 @@
+import hashlib
 import ipaddress
 import json
 import re
@@ -34,6 +35,17 @@ def get_client_ip(request: Request) -> str:
     if request.client:
         return request.client.host or ""
     return ""
+
+
+def get_client_fingerprint(request: Request) -> str:
+    """客户端来源指纹（IP + User-Agent 摘要）。
+
+    用于把一次性凭证（如验证码 key）绑定到签发它的来源，避免攻击者批量预取
+    凭证后再投毒给其它请求使用。UA 由客户端可控，因此这里只能提高滥用成本，
+    不能替代真实的人机校验。
+    """
+    ua = request.headers.get("user-agent", "")
+    return hashlib.sha256(f"{get_client_ip(request)}|{ua}".encode()).hexdigest()[:32]
 
 
 class IpLocalUtil:

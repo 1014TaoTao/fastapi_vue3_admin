@@ -13,7 +13,6 @@ import type { MenuTable } from "@/api/module_system/menu";
 import type { AppRouteRecord } from "@/types/router";
 import { ElNotification } from "element-plus";
 import { store, useDictStore } from "@stores";
-import { useChatStore } from "@/store/modules/chat.store";
 import type { UserInfo } from "@/api/module_system/user";
 import { ResultEnum } from "@/enums/api/result.enum";
 import { resetRouteInitState, resetRouterState } from "@/router/refresh";
@@ -326,8 +325,6 @@ export const useUserStore = defineStore(
       prems.value = [];
       /** 登出 / 认证失效：会话结束，工作栏与 KeepAlive exclude 一并清空（pinia 持久化随之写入） */
       useWorktabStore().clearAll();
-      /** 登出：断开聊天 WebSocket 并清空未读/在线状态 */
-      useChatStore(store).clearUserInfo();
     }
 
     /**

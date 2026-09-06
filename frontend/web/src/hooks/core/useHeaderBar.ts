@@ -95,11 +95,6 @@ export function useHeaderBar() {
     return isFeatureEnabled("notification") && showNotification.value;
   });
 
-  // 检查聊天功能是否显示
-  const shouldShowChat = computed(() => {
-    return isFeatureEnabled("chat");
-  });
-
   /** 语言：以新版设置里的 showLanguage 为准（优于旧版单独的 showLangSelect 双开关，避免两处含义重叠） */
   const shouldShowLanguage = computed(() => {
     return isFeatureEnabled("language") && showLanguage.value;
@@ -192,7 +187,6 @@ export function useHeaderBar() {
     shouldShowGlobalSearch, // 是否显示全局搜索
     shouldShowFullscreen, // 是否显示全屏按钮
     shouldShowNotification, // 是否显示通知中心
-    shouldShowChat, // 是否显示聊天功能
     shouldShowLanguage, // 是否显示语言切换
     shouldShowSizeSelect, // 是否显示组件尺寸切换
     shouldShowSettings, // 是否显示设置面板

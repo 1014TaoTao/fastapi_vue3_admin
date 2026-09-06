@@ -54,3 +54,5 @@ LICENSE
 
 # 数据库迁移（构建镜像时不包含，启动时动态执行）
 # 取消注释以加速构建：backend/alembic/versions
+# 用户上传文件（本地存储源根目录），不进镜像
+backend/static

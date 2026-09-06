@@ -8,13 +8,13 @@
 
 | 技术 | 版本 | 说明 |
 |------|------|------|
-| FastAPI | 0.115.2 | 现代 Web 框架 |
-| SQLAlchemy | 2.0.36 | ORM 框架 |
-| Alembic | 1.15.1 | 数据库迁移工具 |
-| Pydantic | 2.x | 数据验证与序列化 |
+| FastAPI | 0.138.2 | 现代 Web 框架 |
+| SQLAlchemy | 2.0.51 | ORM 框架 |
+| Alembic | 1.18.4 | 数据库迁移工具 |
+| Pydantic | 2.12.5+ | 数据验证与序列化 |
 | APScheduler | 3.11.0 | 定时任务调度 |
-| Redis | 5.2.1 | 缓存与会话存储 |
-| Uvicorn | 0.30.6 | ASGI 服务器 |
+| redis-py | 7.1.0 | 缓存与会话存储 |
+| Uvicorn | 0.49.0 | ASGI 服务器 |
 | Python | 3.12+ | 运行环境 |
 
 ## 项目结构
@@ -23,16 +23,17 @@
 backend/
 ├── app/                     # 项目核心代码
 │   ├── alembic/             # 数据库迁移管理
-│   ├── api/                 # API 接口模块
-│   │   └── v1/              # API v1 版本
-│   │       ├── module_system/   # 系统管理模块
-│   │       ├── module_monitor/  # 系统监控模块
-│   │       ├── module_ai/       # AI 功能模块
-│   │       └── module_*/       # 其他业务模块
+│   ├── api/                 # 路由装配层（routers.py 按域分组聚合各模块路由）
+│   ├── modules/             # 业务模块层（按业务域竖切）
+│   │   ├── system/          #   系统管理
+│   │   ├── monitor/         #   系统监控
+│   │   ├── task/            #   定时任务（cronjob）+ 存储传输（storage）
+│   │   ├── generator/       #   代码生成
+│   │   ├── ai/              #   AI 功能
+│   │   └── common/          #   文件上传 / 公共能力
 │   ├── common/              # 公共组件（常量、枚举、响应封装）
 │   ├── config/              # 项目配置文件
 │   ├── core/                # 核心模块（数据库、中间件、安全）
-│   ├── module_task/         # 定时任务模块
 │   ├── plugin/              # 插件模块（二开目录）
 │   ├── scripts/             # 初始化脚本和数据
 │   └── utils/               # 工具类（验证码、文件上传等）
@@ -40,7 +41,7 @@ backend/
 ├── logs/                    # 日志输出目录
 ├── sql/                     # SQL 初始化脚本
 ├── static/                  # 静态资源文件
-├── main.py                  # 项目启动入口
+├── main.py                  # CLI 入口（run 启动 / revision 生成迁移 / upgrade 应用迁移）
 ├── alembic.ini              # Alembic 迁移配置
 ├── requirements.txt         # Python 依赖包
 └── pyproject.toml           # 项目配置（uv / ruff）
@@ -51,7 +52,7 @@ backend/
 每个业务模块采用统一的分层结构：
 
 ```txt
-module_*/
+modules/<模块>/<子域>/
 ├── controller.py    # 控制器 - HTTP 请求处理
 ├── service.py       # 服务层 - 业务逻辑处理
 ├── crud.py          # 数据层 - 数据库操作
@@ -72,7 +73,7 @@ module_*/
 
 ### 第一次在本机跑起来
 
-1. 复制 `env/.env.dev.example` → `env/.env.dev`，填写数据库、Redis 等（先在 DB 中建好空库）。
+1. 复制 `env/.env.example` → `env/.env.dev`，填写数据库、Redis 等（先在 DB 中建好空库）。
 2. 在 **`backend/` 目录下** 安装依赖：推荐 **`uv sync`**；或 `pip install -r requirements.txt`。
 3. **启动**：`uv run main.py run --env=dev`（或 `python main.py run --env=dev`）。**首次启动会自动初始化数据库表与基础数据**，一般**无需**先执行 `upgrade`。接口文档示例：`http://127.0.0.1:8001/docs`（端口见 `.env.dev` 中 `SERVER_PORT`）。
 

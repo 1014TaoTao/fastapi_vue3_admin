@@ -5,7 +5,7 @@ import { request } from "@utils";
 const API_PATH = "/{{ api_route_prefix }}/{{ module_name }}";
 
 const {{ class_name }}API = {
-  get{{ class_name }}List(query: {{ class_name }}PageQuery) {
+  list{{ class_name }}(query: {{ class_name }}PageQuery) {
     return request<ApiResponse<PageResult<{{ class_name }}Table>>>({
       url: `${API_PATH}/list`,
       method: "get",
@@ -13,7 +13,7 @@ const {{ class_name }}API = {
     });
   },
 
-  get{{ class_name }}Detail(query: number) {
+  detail{{ class_name }}(query: number) {
     return request<ApiResponse<{{ class_name }}Table>>({
       url: `${API_PATH}/detail/${query}`,
       method: "get",
@@ -91,10 +91,15 @@ export default {{ class_name }}API;
 export interface {{ class_name }}PageQuery extends PageQuery, UserByQueryParams {
   {% for column in columns %}
   {% if column.is_query and column.column_name != pk_column_name and column.column_name not in ['created_time', 'updated_time', 'created_id', 'updated_id', 'tenant_id', 'is_deleted', 'deleted_time', 'deleted_id'] %}
+  {% if column.python_type in ['date', 'time', 'datetime'] %}
+  {{ column.column_name }}_start?: string;
+  {{ column.column_name }}_end?: string;
+  {% else %}
   {{ column.column_name }}?: {{
     'string' if column.query_type == 'LIKE'
     else (column.python_type | python_to_ts_type)
   }};
+  {% endif %}
   {% endif %}
   {% endfor %}
 }

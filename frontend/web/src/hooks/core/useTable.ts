@@ -5,8 +5,8 @@
  * `fetchDataQuiet` 吞掉 reject，避免页面重复 try/catch。
  *
  * 去重：
- * - 同实例：`inFlightDedupePromise` + `inFlightDedupeKey`
- * - 跨实例（同参）：模块级 `globalListNetworkInflight`（布局短时多挂载时合并为一条 HTTP）
+ * - 仅限单个 useTable 实例内部：`inFlightDedupePromise` + `inFlightDedupeKey`（同参进行中的请求复用 Promise）。
+ * - 不做跨实例去重：key 仅由参数生成，不同接口的同参请求会碰撞串台（PR #516）。
  *
  * KeepAlive：`onDeactivated` 会取消请求并置 `tableViewActive`，失活期间 `fetchData` 直接返回当前快照不发 HTTP。
  */
@@ -43,9 +43,6 @@ import {
   type TableError,
 } from "@utils";
 import type { ColumnOption } from "@/types/component";
-
-/** 跨组件实例：同一 dedupeKey 仅一条进行中的网络请求 */
-const globalListNetworkInflight = new Map<string, Promise<TableResponse<unknown>>>();
 
 // --- 类型推导（由 apiFn / 响应类型反推记录类型） ---
 type InferApiParams<T> = T extends (params: infer P) => any ? P : never;
@@ -389,26 +386,6 @@ function useTableImpl<TApiFn extends (params: any) => Promise<any>>(
       return inFlightDedupePromise;
     }
 
-    const sharedGlobal = globalListNetworkInflight.get(dedupeKey);
-    if (sharedGlobal) {
-      loadingState.value = "loading";
-      error.value = null;
-      try {
-        const standardResponse = (await sharedGlobal) as TableResponse<TRecord>;
-        commitNetworkSuccess(standardResponse, requestParams, useCache);
-        return standardResponse;
-      } catch (err) {
-        if (err instanceof Error && err.message === "请求已取消") {
-          loadingState.value = "idle";
-          return { records: [], total: 0, current: 1, size: 10 };
-        }
-        loadingState.value = "error";
-        data.value = [];
-        const tableError = handleError(err, "获取表格数据失败");
-        throw tableError;
-      }
-    }
-
     if (!tableViewActive) {
       return {
         records: [...data.value],
@@ -476,13 +453,6 @@ function useTableImpl<TApiFn extends (params: any) => Promise<any>>(
           }
         }
       })();
-
-      globalListNetworkInflight.set(dedupeKey, networkPromise as Promise<TableResponse<unknown>>);
-      networkPromise
-        .finally(() => {
-          globalListNetworkInflight.delete(dedupeKey);
-        })
-        .catch(() => {}); // 忽略取消/reject，仅用于清理全局 Map
 
       inFlightDedupePromise = networkPromise;
 
@@ -826,10 +796,8 @@ function useTableImpl<TApiFn extends (params: any) => Promise<any>>(
       removeColumn: columnConfig.removeColumn,
       /** 切换列显示状态 */
       toggleColumn: columnConfig.toggleColumn,
-      /** 更新列配置 */
+      /** 更新列配置（支持单个或批量，批量传数组） */
       updateColumn: columnConfig.updateColumn,
-      /** 批量更新列配置 */
-      batchUpdateColumns: columnConfig.batchUpdateColumns,
       /** 重新排序列 */
       reorderColumns: columnConfig.reorderColumns,
       /** 获取指定列配置 */

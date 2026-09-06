@@ -83,6 +83,6 @@ watch(
     }
 
     requestAnimationFrame(step);
-  },
+  }
 );
 </script>

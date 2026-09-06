@@ -610,8 +610,9 @@ const cleanBodyColumnProps = (col: ColumnOption) => {
   if (isPersonFilterColumn(col)) {
     columnProps.filters = getColumnFilterOptions(col);
     columnProps.filterMethod = (value: any, row: any) =>
-      toFilterText(getPathValue(row as Record<string, any>, getPersonNamePath(col.prop as string))) ===
-      String(value);
+      toFilterText(
+        getPathValue(row as Record<string, any>, getPersonNamePath(col.prop as string))
+      ) === String(value);
   }
   return columnProps;
 };

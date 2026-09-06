@@ -185,7 +185,10 @@ async function handleDynamicRoutes(
   } catch (error) {
     console.error("[路由守卫] 路由初始化失败:", error);
     // 认证失败（如生产环境部署后旧 token 失效）跳转登录页，不标记为路由初始化失败
-    if (isHttpError(error) && (error.code === ApiStatus.unauthorized || error.code === ApiStatus.forbidden)) {
+    if (
+      isHttpError(error) &&
+      (error.code === ApiStatus.unauthorized || error.code === ApiStatus.forbidden)
+    ) {
       refreshState.dynamicRoutesRegistered = false;
       return "/login";
     }

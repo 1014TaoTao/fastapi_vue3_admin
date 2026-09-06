@@ -198,7 +198,6 @@ defineOptions({
   inheritAttrs: false,
 });
 
-import { h } from "vue";
 import { UserFilled } from "@element-plus/icons-vue";
 
 import { useAppStore } from "@stores";

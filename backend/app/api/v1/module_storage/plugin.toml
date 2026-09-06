@@ -1,8 +1,0 @@
-# 见 docs/PLUGIN_ARCHITECTURE.md
-
-name = "storage"
-title = "存储"
-version = "1.0.0"
-description = "多协议存储系统（FTP/FTPS/SFTP/S3/OBS/OSS/COS）"
-optional = true
-tags = ["storage", "ftp", "s3"]

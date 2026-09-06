@@ -2,10 +2,7 @@
   <div class="page-content box-border px-20! py-3.5 text-center max-md:px-5!">
     <ElResult :icon="resultIcon" :title="title" :sub-title="message">
       <template #icon>
-        <FaSvgIcon
-          class="size-14!"
-          :icon="iconCode"
-        />
+        <FaSvgIcon class="size-14!" :icon="iconCode" />
       </template>
       <template #extra>
         <slot name="buttons"></slot>

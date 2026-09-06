@@ -30,10 +30,13 @@
             :remove-ids="selectedIds"
             :perm-create="['module_task:cronjob:node:create']"
             :perm-delete="['module_task:cronjob:node:delete']"
+            :perm-patch="['module_task:cronjob:node:update']"
             :delete-loading="batchDeleting"
+            :more-loading="moreLoading"
             :create-loading="createLoading"
             @add="handleAdd"
             @delete="handleBatchDelete"
+            @more="handleBatchMoreStatus"
           />
         </template>
       </FaTableHeader>
@@ -78,20 +81,20 @@
               <template #jobstore>
                 <ElSelect v-model="formData.jobstore" placeholder="请选择存储器">
                   <ElOption
-                    v-for="item in dictStore.getDictArray('sys_job_store')"
-                    :key="item.dict_value"
-                    :label="item.dict_label"
-                    :value="item.dict_value"
+                    v-for="item in jobStoreOptions"
+                    :key="item.value"
+                    :label="item.label"
+                    :value="item.value"
                   />
                 </ElSelect>
               </template>
               <template #executor>
                 <ElSelect v-model="formData.executor" placeholder="请选择执行器">
                   <ElOption
-                    v-for="item in dictStore.getDictArray('sys_job_executor')"
-                    :key="item.dict_value"
-                    :label="item.dict_label"
-                    :value="item.dict_value"
+                    v-for="item in jobExecutorOptions"
+                    :key="item.value"
+                    :label="item.label"
+                    :value="item.value"
                   />
                 </ElSelect>
               </template>
@@ -154,6 +157,60 @@
                   :max="10"
                 />
               </template>
+              <template #trigger_args>
+                <template v-if="formData.trigger === 'cron'">
+                  <ElInput
+                    v-model="formData.trigger_args"
+                    placeholder="请输入 * * * * * ? *"
+                    readonly
+                    @click="openCron = true"
+                  />
+                  <FaDialog
+                    v-model="openCron"
+                    title="Cron 表达式"
+                    width="min(700px, calc(100vw - 48px))"
+                    append-to-body
+                  >
+                    <FaCron v-model="cronTempValue" />
+                    <template #footer>
+                      <ElButton @click="openCron = false">取消</ElButton>
+                      <ElButton type="primary" @click="confirmCron">确定</ElButton>
+                    </template>
+                  </FaDialog>
+                </template>
+                <template v-else-if="formData.trigger === 'interval'">
+                  <ElPopover
+                    :visible="openInterval"
+                    width="600px"
+                    trigger="click"
+                    :persistent="false"
+                    placement="auto-end"
+                  >
+                    <template #reference>
+                      <ElInput
+                        v-model="formData.trigger_args"
+                        placeholder="请点击设置间隔时间"
+                        @click="openInterval = true"
+                      />
+                    </template>
+                    <FaIntervalTab
+                      :cron-value="formData.trigger_args"
+                      @confirm="handleIntervalConfirm"
+                      @cancel="openInterval = false"
+                    />
+                  </ElPopover>
+                </template>
+                <template v-else-if="formData.trigger === 'date'">
+                  <ElDatePicker
+                    v-model="formData.trigger_args"
+                    type="datetime"
+                    format="YYYY-MM-DD HH:mm:ss"
+                    value-format="YYYY-MM-DD HH:mm:ss"
+                    placeholder="请选择执行时间"
+                    :style="'width: 100%'"
+                  />
+                </template>
+              </template>
             </FaForm>
           </ElScrollbar>
         </ElSplitterPanel>
@@ -183,96 +240,6 @@
         </div>
       </template>
     </FaDialog>
-
-    <FaDialog
-      v-model="executeDialogVisible"
-      title="调试节点"
-      width="700px"
-      @close="handleCloseExecuteDialog"
-    >
-      <FaForm
-        :key="executeFormRenderKey"
-        ref="executeFormRef"
-        v-model="executeFormData"
-        :items="executeDialogFormItems"
-        :rules="executeRules"
-        label-suffix=":"
-        label-width="85px"
-        :span="24"
-        :gutter="16"
-        :show-reset="false"
-        :show-submit="false"
-        class="crud-dialog-art-form execute-debug-art-form"
-      >
-        <template #trigger>
-          <ElRadioGroup v-model="executeFormData.trigger">
-            <ElRadio value="now">立即执行</ElRadio>
-            <ElRadio value="cron">Cron表达式</ElRadio>
-            <ElRadio value="interval">时间间隔</ElRadio>
-            <ElRadio value="date">固定日期</ElRadio>
-          </ElRadioGroup>
-        </template>
-        <template #trigger_args>
-          <template v-if="executeFormData.trigger === 'cron'">
-            <ElInput
-              v-model="executeFormData.trigger_args"
-              placeholder="请输入 * * * * * ? *"
-              readonly
-              @click="openCron = true"
-            />
-            <FaDialog
-              v-model="openCron"
-              title="Cron 表达式"
-              width="min(700px, calc(100vw - 48px))"
-              append-to-body
-            >
-              <FaCron v-model="cronTempValue" />
-              <template #footer>
-                <ElButton @click="openCron = false">取消</ElButton>
-                <ElButton type="primary" @click="confirmCron">确定</ElButton>
-              </template>
-            </FaDialog>
-          </template>
-          <template v-else-if="executeFormData.trigger === 'interval'">
-            <ElPopover
-              :visible="openInterval"
-              width="600px"
-              trigger="click"
-              :persistent="false"
-              placement="auto-end"
-            >
-              <template #reference>
-                <ElInput
-                  v-model="executeFormData.trigger_args"
-                  placeholder="请点击设置间隔时间"
-                  @click="openInterval = true"
-                />
-              </template>
-              <FaIntervalTab
-                :cron-value="executeFormData.trigger_args"
-                @confirm="handleIntervalConfirm"
-                @cancel="openInterval = false"
-              />
-            </ElPopover>
-          </template>
-          <template v-else-if="executeFormData.trigger === 'date'">
-            <ElDatePicker
-              v-model="executeFormData.trigger_args"
-              type="datetime"
-              format="YYYY-MM-DD HH:mm:ss"
-              value-format="YYYY-MM-DD HH:mm:ss"
-              placeholder="请选择执行时间"
-              :style="'width: 100%'"
-            />
-          </template>
-        </template>
-      </FaForm>
-
-      <template #footer>
-        <ElButton @click="handleCloseExecuteDialog">取消</ElButton>
-        <ElButton type="primary" :loading="submitLoading" @click="handleExecuteNode">确认</ElButton>
-      </template>
-    </FaDialog>
   </div>
 </template>
 
@@ -282,8 +249,8 @@ defineOptions({
   inheritAttrs: false,
 });
 
-import NodeAPI, { NodeTable, NodeForm, TriggerType } from "@/api/module_task/cronjob/node";
-import { useDictStore } from "@stores";
+import NodeAPI, { type NodeTable, type NodeForm } from "@/api/module_task/cronjob/node";
+import { confirmToggleStatus } from "@/hooks/core/useConfirm";
 import type { FormItem } from "@/components/forms/fa-form/index.vue";
 import FaForm from "@/components/forms/fa-form/index.vue";
 import type { SearchFormItem } from "@/components/forms/fa-search-bar/index.vue";
@@ -291,18 +258,30 @@ import type FaSearchBar from "@/components/forms/fa-search-bar/index.vue";
 import FaTableHeader from "@/components/tables/fa-table-header/index.vue";
 import FaTable from "@/components/tables/fa-table/index.vue";
 import FaDialog from "@/components/modal/fa-dialog/index.vue";
-import type { TableOperationAction } from "@utils";
-import { renderTableOperationCell } from "@utils";
-import { computed, nextTick, onMounted, reactive, ref, watch } from "vue";
+import { renderTableOperationCell, resolveStatusColumns, type TableOperationAction } from "@utils";
 import { Delete, Plus } from "@element-plus/icons-vue";
 import FaCron from "@/components/others/fa-cron/index.vue";
 import Codemirror, { CmComponentRef } from "codemirror-editor-vue3";
 import type { EditorConfiguration } from "codemirror";
 import "codemirror/mode/python/python.js";
 import "codemirror/theme/dracula.css";
-import type { ColumnOption } from "@/types/component";
 
-const dictStore = useDictStore();
+/** 可选对象字面量 */
+type OptionItem = { label: string; value: string };
+
+/** 存储器选项（对应 ap_scheduler jobstores 配置，不再依赖字典） */
+const jobStoreOptions: OptionItem[] = [
+  { label: "默认(Redis)", value: "default" },
+  { label: "数据库(Sqlalchemy)", value: "sqlalchemy" },
+  { label: "内存(Memory)", value: "memory" },
+];
+
+/** 执行器选项（对应 ap_scheduler executors 配置：default=AsyncIOExecutor / threadpool / processpool） */
+const jobExecutorOptions: OptionItem[] = [
+  { label: "异步协程(事件循环)", value: "default" },
+  { label: "线程池", value: "threadpool" },
+  { label: "进程池", value: "processpool" },
+];
 
 type NodeSearchForm = {
   name?: string;
@@ -338,6 +317,19 @@ const searchForm = ref<NodeSearchForm>({
 const showSearchBar = ref(true);
 const searchBarRef = ref<InstanceType<typeof FaSearchBar> | null>(null);
 const searchBarRules: Record<string, unknown> = {};
+
+const nodeTriggerLabelMap: Record<string, string> = {
+  cron: "Cron",
+  interval: "间隔",
+  date: "单次",
+};
+
+function formatNodeTriggerCell(row: NodeTable): string {
+  const trigger = row.trigger;
+  if (!trigger) return "不排程";
+  const label = nodeTriggerLabelMap[trigger] ?? trigger;
+  return row.trigger_args ? `${label} ${row.trigger_args}` : label;
+}
 
 const nodeSearchItems = computed<SearchFormItem[]>(() => [
   {
@@ -378,6 +370,7 @@ const selectedIds = computed(() =>
   selectedRows.value.map((r) => r.id).filter((id): id is number => typeof id === "number")
 );
 const batchDeleting = ref(false);
+const moreLoading = ref(false);
 
 function onTableSelectionChange(rows: NodeTable[]) {
   selectedRows.value = rows;
@@ -396,15 +389,29 @@ async function deleteNodeRow(id: number | undefined, name: string | number) {
 }
 
 function buildNodeRowActions(row: NodeTable): TableOperationAction[] {
+  const disabled = row.status === 1;
   const all: TableOperationAction[] = [
     {
       key: "execute",
-      label: "调试",
+      label: "立即执行",
       artType: "more",
       icon: "ri:play-circle-line",
       iconColor: "var(--el-color-primary)",
       perm: "module_task:cronjob:node:execute",
-      run: () => handleOpenExecuteDialog(row),
+      run: () => {
+        if (row.id != null) void handleExecuteOnce(row.id);
+      },
+    },
+    {
+      key: disabled ? "enable" : "disable",
+      label: disabled ? "启用" : "停用",
+      artType: "more",
+      icon: disabled ? "ri:play-line" : "ri:pause-circle-line",
+      iconColor: disabled ? "var(--el-color-success)" : "var(--el-color-warning)",
+      perm: "module_task:cronjob:node:update",
+      run: () => {
+        if (row.id != null) void handleToggleRowStatus(row);
+      },
     },
     {
       key: "edit",
@@ -428,6 +435,47 @@ function buildNodeRowActions(row: NodeTable): TableOperationAction[] {
     },
   ];
   return all;
+}
+
+/** 立即执行一次（走后端临时 job，不影响已保存的执行计划） */
+async function handleExecuteOnce(id: number) {
+  try {
+    await NodeAPI.executeNode(id);
+    await refreshData();
+  } catch (error: unknown) {
+    if (import.meta.env.DEV) console.error(error);
+  }
+}
+
+/** 单行启停联动（后端会同步注册/卸载调度） */
+async function handleToggleRowStatus(row: NodeTable) {
+  if (row.id == null) return;
+  const enable = row.status === 1;
+  try {
+    await confirmToggleStatus(enable ? "enable" : "disable");
+    await NodeAPI.batchNode({ ids: [row.id], status: enable ? 0 : 1 });
+    await refreshData();
+  } catch {
+    // 用户取消
+  }
+}
+
+/** 批量启停联动 */
+async function handleBatchMoreStatus(type: "enable" | "disable") {
+  const ids = selectedIds.value;
+  if (ids.length === 0) return;
+  try {
+    await confirmToggleStatus(type);
+    moreLoading.value = true;
+    await NodeAPI.batchNode({ ids, status: type === "enable" ? 0 : 1 });
+    selectedRows.value = [];
+    faTableRef.value?.elTableRef?.clearSelection();
+    await refreshData();
+  } catch {
+    // 用户取消
+  } finally {
+    moreLoading.value = false;
+  }
 }
 
 function formatNodeOperationCell(row: NodeTable) {
@@ -477,7 +525,7 @@ const {
       page_no: 1,
       page_size: 10,
     },
-    columnsFactory: (): ColumnOption<NodeTable>[] => [
+    columnsFactory: resolveStatusColumns<NodeTable>(() => [
       { type: "selection", width: 48, fixed: "left" },
       { type: "globalIndex", width: 56, label: "序号" },
       {
@@ -489,35 +537,48 @@ const {
       {
         prop: "code",
         label: "节点编码",
-        minWidth: 120,
+        minWidth: 100,
         showOverflowTooltip: true,
       },
       {
-        prop: "jobstore",
-        label: "存储器",
-        minWidth: 80,
+        prop: "trigger",
+        label: "执行计划",
+        minWidth: 160,
+        showOverflowTooltip: true,
+        formatter: formatNodeTriggerCell,
       },
       {
-        prop: "executor",
-        label: "执行器",
-        minWidth: 80,
+        prop: "status",
+        label: "状态",
+        width: 86,
+        align: "center",
+        status: {
+          0: { type: "success", text: "启用" },
+          1: { type: "danger", text: "停用" },
+        },
+      },
+      {
+        prop: "next_run_time",
+        label: "下次运行",
+        minWidth: 165,
+        showOverflowTooltip: true,
       },
       {
         prop: "created_time",
         label: "创建时间",
-        minWidth: 180,
+        minWidth: 165,
         sortable: true,
         showOverflowTooltip: true,
       },
       {
         prop: "operation",
         label: "操作",
-        width: 220,
+        width: 250,
         fixed: "right",
         align: "center",
         formatter: (row: NodeTable) => formatNodeOperationCell(row),
       },
-    ],
+    ]),
   },
 });
 
@@ -551,15 +612,13 @@ const codeEditorOptions: EditorConfiguration = {
 };
 
 const dataFormRef = ref<InstanceType<typeof FaForm> | null>(null);
-const executeFormRef = ref<InstanceType<typeof FaForm> | null>(null);
 const nodeFormRenderKey = ref(0);
-const executeFormRenderKey = ref(0);
 const submitLoading = ref(false);
 const createLoading = ref(false);
 const openCron = ref(false);
 const cronTempValue = ref("");
 const confirmCron = () => {
-  executeFormData.value.trigger_args = cronTempValue.value;
+  if (cronTempValue.value) formData.value.trigger_args = cronTempValue.value;
   openCron.value = false;
 };
 const openInterval = ref(false);
@@ -626,6 +685,8 @@ const formData = ref<NodeForm>({
   kwargs: undefined,
   coalesce: false,
   max_instances: 1,
+  trigger: undefined,
+  trigger_args: undefined,
   start_date: undefined,
   end_date: undefined,
 });
@@ -633,59 +694,71 @@ const formData = ref<NodeForm>({
 const argsList = ref<string[]>([]);
 const kwargsList = ref<{ key: string; value: string }[]>([]);
 
-const executeDialogVisible = ref(false);
-const currentExecuteNode = ref<NodeTable | null>(null);
-const executeFormData = ref<{
-  node_display_name: string;
-  trigger: TriggerType;
-  trigger_args?: string;
-  start_date?: string;
-  end_date?: string;
-}>({
-  node_display_name: "",
-  trigger: "now",
-  trigger_args: undefined,
-  start_date: undefined,
-  end_date: undefined,
+const dialogVisible = reactive({
+  title: "",
+  visible: false,
+  type: "create" as "create" | "update" | "detail",
 });
 
-const executeDialogFormItems = computed<FormItem[]>(() => {
-  const trig = executeFormData.value.trigger;
-  const showRange = !!trig && trig !== "now" && trig !== "date";
-  let triggerArgsLabel = "执行参数";
-  if (trig === "cron") triggerArgsLabel = "Cron表达式";
-  else if (trig === "interval") triggerArgsLabel = "间隔时间";
-  else if (trig === "date") triggerArgsLabel = "执行时间";
+const rules = reactive({
+  name: [{ required: true, message: "请输入节点名称", trigger: "blur" }],
+  code: [{ required: true, message: "请输入节点编码", trigger: "blur" }],
+  trigger_args: [{ required: true, message: "请先配置执行计划参数", trigger: "blur" }],
+});
+
+const nodeDialogFormItems = computed<FormItem[]>(() => {
+  const trig = formData.value.trigger;
+  let planArgsLabel = "执行计划参数";
+  if (trig === "cron") planArgsLabel = "Cron表达式";
+  else if (trig === "interval") planArgsLabel = "间隔时间";
+  else if (trig === "date") planArgsLabel = "执行时间";
+  const isRangePlan = trig === "cron" || trig === "interval";
 
   return [
     {
       label: "节点名称",
-      key: "node_display_name",
+      key: "name",
       type: "input",
       span: 24,
-      props: { disabled: true },
+      props: { placeholder: "请输入节点名称", maxlength: 50 },
     },
     {
-      label: "执行方式",
-      key: "trigger",
+      label: "节点编码",
+      key: "code",
       type: "input",
+      span: 24,
+      props: { placeholder: "请输入节点编码", maxlength: 32 },
+    },
+    {
+      label: "执行计划",
+      key: "trigger",
+      type: "select",
       span: 24,
       placeholder: "",
+      props: {
+        clearable: true,
+        placeholder: "不排程：仅保存定义，可手动执行一次",
+        options: [
+          { label: "Cron表达式", value: "cron" },
+          { label: "时间间隔", value: "interval" },
+          { label: "固定时间", value: "date" },
+        ],
+      },
     },
     {
-      label: triggerArgsLabel,
+      label: planArgsLabel,
       key: "trigger_args",
       type: "input",
       span: 24,
       placeholder: "",
-      hidden: trig === "now" || !trig,
+      hidden: !trig,
     },
     {
       label: "开始时间",
       key: "start_date",
       type: "datetime",
       span: 24,
-      hidden: !showRange,
+      hidden: !isRangePlan,
       props: {
         type: "datetime",
         format: "YYYY-MM-DD HH:mm:ss",
@@ -699,7 +772,7 @@ const executeDialogFormItems = computed<FormItem[]>(() => {
       key: "end_date",
       type: "datetime",
       span: 24,
-      hidden: !showRange,
+      hidden: !isRangePlan,
       props: {
         type: "datetime",
         format: "YYYY-MM-DD HH:mm:ss",
@@ -708,99 +781,68 @@ const executeDialogFormItems = computed<FormItem[]>(() => {
         style: { width: "100%" },
       },
     },
-  ];
-});
-
-const dialogVisible = reactive({
-  title: "",
-  visible: false,
-  type: "create" as "create" | "update" | "detail",
-});
-
-const rules = reactive({
-  name: [{ required: true, message: "请输入节点名称", trigger: "blur" }],
-  code: [{ required: true, message: "请输入节点编码", trigger: "blur" }],
-});
-
-const nodeDialogFormItems = computed<FormItem[]>(() => [
-  {
-    label: "节点名称",
-    key: "name",
-    type: "input",
-    span: 24,
-    props: { placeholder: "请输入节点名称", maxlength: 50 },
-  },
-  {
-    label: "节点编码",
-    key: "code",
-    type: "input",
-    span: 24,
-    props: { placeholder: "请输入节点编码", maxlength: 32 },
-  },
-  {
-    label: "存储器",
-    key: "jobstore",
-    type: "select",
-    span: 24,
-    placeholder: "",
-  },
-  {
-    label: "执行器",
-    key: "executor",
-    type: "select",
-    span: 24,
-    placeholder: "",
-  },
-  {
-    label: "位置参数",
-    key: "args",
-    type: "input",
-    span: 24,
-    placeholder: "",
-  },
-  {
-    label: "关键字参数",
-    key: "kwargs",
-    type: "input",
-    span: 24,
-    placeholder: "",
-  },
-  {
-    label: "合并运行",
-    key: "coalesce",
-    type: "radiogroup",
-    span: 24,
-    placeholder: "",
-  },
-  {
-    label: "最大实例数",
-    key: "max_instances",
-    type: "number",
-    span: 24,
-    props: {
-      controlsPosition: "right",
-      min: 1,
-      max: 10,
+    {
+      label: "存储器",
+      key: "jobstore",
+      type: "select",
+      span: 24,
+      placeholder: "",
     },
-  },
-]);
-
-const executeRules = reactive({
-  trigger: [{ required: true, message: "请选择执行方式", trigger: "change" }],
-  trigger_args: [{ required: true, message: "请设置执行参数", trigger: "blur" }],
+    {
+      label: "执行器",
+      key: "executor",
+      type: "select",
+      span: 24,
+      placeholder: "",
+    },
+    {
+      label: "位置参数",
+      key: "args",
+      type: "input",
+      span: 24,
+      placeholder: "",
+    },
+    {
+      label: "关键字参数",
+      key: "kwargs",
+      type: "input",
+      span: 24,
+      placeholder: "",
+    },
+    {
+      label: "合并运行",
+      key: "coalesce",
+      type: "radiogroup",
+      span: 24,
+      placeholder: "",
+    },
+    {
+      label: "最大实例数",
+      key: "max_instances",
+      type: "number",
+      span: 24,
+      props: {
+        controlsPosition: "right",
+        min: 1,
+        max: 10,
+      },
+    },
+  ];
 });
 
 const initialFormData: Partial<NodeForm> = {
   id: undefined,
   name: "",
   code: undefined,
-  jobstore: "sqlalchemy",
+  jobstore: "default",
   executor: "default",
   func: defaultCodeBlock,
   args: undefined,
   kwargs: undefined,
   coalesce: false,
   max_instances: 5,
+  trigger: undefined,
+  trigger_args: undefined,
   start_date: undefined,
   end_date: undefined,
 };
@@ -811,6 +853,8 @@ async function resetForm() {
   Object.assign(formData.value, initialFormData);
   argsList.value = [];
   kwargsList.value = [];
+  openCron.value = false;
+  openInterval.value = false;
 }
 
 async function handleCloseDialog() {
@@ -860,21 +904,36 @@ function handleDialogOpened() {
 }
 
 async function handleSubmit() {
-  dataFormRef.value?.validate(async (valid: any) => {
+  dataFormRef.value?.validate(async (valid: boolean) => {
     if (valid) {
       submitLoading.value = true;
       const id = formData.value.id;
+      const trig = formData.value.trigger;
+      const kvList = kwargsList.value.filter((v) => v.key.trim());
       try {
+        // 显式组装：执行计划随节点定义一起保存，trigger 为空则不排程
         const submitData = {
-          ...formData.value,
+          name: formData.value.name,
+          code: formData.value.code || undefined,
+          jobstore: formData.value.jobstore,
+          executor: formData.value.executor,
+          func: formData.value.func,
+          coalesce: formData.value.coalesce,
+          max_instances: formData.value.max_instances,
           args: argsList.value.filter((v) => v.trim()).join(",") || undefined,
           kwargs:
-            kwargsList.value.filter((v) => v.key.trim()).length > 0
-              ? JSON.stringify(
-                  Object.fromEntries(
-                    kwargsList.value.filter((v) => v.key.trim()).map((v) => [v.key, v.value])
-                  )
-                )
+            kvList.length > 0
+              ? JSON.stringify(Object.fromEntries(kvList.map((v) => [v.key, v.value])))
+              : undefined,
+          trigger: trig || undefined,
+          trigger_args: trig ? formData.value.trigger_args || undefined : undefined,
+          start_date:
+            trig === "cron" || trig === "interval"
+              ? formData.value.start_date || undefined
+              : undefined,
+          end_date:
+            trig === "cron" || trig === "interval"
+              ? formData.value.end_date || undefined
               : undefined,
         };
         if (id) {
@@ -899,77 +958,21 @@ async function handleSubmit() {
 }
 
 const handleIntervalConfirm = (value: string) => {
-  executeFormData.value.trigger_args = value;
+  formData.value.trigger_args = value;
   openInterval.value = false;
 };
 
-function handleOpenExecuteDialog(row: NodeTable) {
-  currentExecuteNode.value = row;
-  executeFormData.value.node_display_name = row.name ?? "";
-  executeFormData.value.trigger = "now";
-  executeFormData.value.trigger_args = undefined;
-  executeFormData.value.start_date = undefined;
-  executeFormData.value.end_date = undefined;
-  executeFormRenderKey.value += 1;
-  executeDialogVisible.value = true;
-}
-
-function handleCloseExecuteDialog() {
-  executeDialogVisible.value = false;
-  currentExecuteNode.value = null;
-  executeFormRef.value?.resetFields();
-}
-
-async function handleExecuteNode() {
-  if (executeFormData.value.trigger !== "now") {
-    const execForm = executeFormRef.value;
-    const elForm = execForm?.ref;
-    if (!elForm) return;
-    const valid = await elForm.validate().catch(() => false);
-    if (!valid) return;
-  }
-
-  try {
-    submitLoading.value = true;
-    const params: any = {
-      trigger: executeFormData.value.trigger,
-    };
-
-    if (executeFormData.value.trigger !== "now") {
-      params.trigger_args = executeFormData.value.trigger_args;
-      params.start_date = executeFormData.value.start_date;
-      params.end_date = executeFormData.value.end_date;
-    }
-
-    await NodeAPI.executeNode(currentExecuteNode.value?.id as number, params);
-
-    handleCloseExecuteDialog();
-
-    await refreshUpdate();
-  } catch {
-    /* 已由全局拦截器提示 */
-  } finally {
-    submitLoading.value = false;
-  }
-}
-
 watch(openCron, (val) => {
-  if (val) cronTempValue.value = executeFormData.value.trigger_args || "";
-});
-
-onMounted(async () => {
-  await dictStore.getDict(["sys_job_store", "sys_job_executor"]);
+  if (val) cronTempValue.value = formData.value.trigger_args || "";
 });
 </script>
 
 <style scoped lang="scss">
-.node-splitter-art-form :deep(.el-row > .el-col:last-child),
-.execute-debug-art-form :deep(.el-row > .el-col:last-child) {
+.node-splitter-art-form :deep(.el-row > .el-col:last-child) {
   display: none;
 }
 
-.node-splitter-art-form :deep(.el-form-item__content),
-.execute-debug-art-form :deep(.el-form-item__content) {
+.node-splitter-art-form :deep(.el-form-item__content) {
   max-width: 100%;
 }
 

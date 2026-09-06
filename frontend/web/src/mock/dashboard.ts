@@ -171,21 +171,14 @@ export function getDashboardMock(): DashboardMock {
         class: "bg-success/12 text-success",
         title: "数据库",
         status: "正常",
-        time: "2ms",
+        time: "",
       },
       {
         icon: "ri:server-line",
         class: "bg-success/12 text-success",
         title: "Redis",
         status: "正常",
-        time: "1ms",
-      },
-      {
-        icon: "ri:hard-drive-2-line",
-        class: "bg-success/12 text-success",
-        title: "磁盘",
-        status: "正常",
-        time: "45%",
+        time: "",
       },
     ],
   };

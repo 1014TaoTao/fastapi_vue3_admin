@@ -222,9 +222,11 @@ function handlePaginationEvent(payload: { page: number; limit: number }) {
 .fa-card :deep(.el-card__header) {
   padding: 8px 16px;
 }
+
 .fa-card :deep(.el-card__body) {
   padding: 8px 16px;
 }
+
 .fa-card :deep(.el-card__footer) {
   padding: 8px 16px;
 }

@@ -193,6 +193,10 @@ class RET(Enum):
     # 认证授权错误码
     INVALID_CREDENTIALS = (4506, "无效凭证")
 
+    # 前后端约定的认证类业务码（对应前端 ResultEnum：TOKEN_EXPIRED / UNAUTHORIZED）
+    TOKEN_EXPIRED = (10401, "认证过期,请重新登录")
+    NO_PERMISSION = (10403, "无权限操作")
+
     def __init__(self, code: int, msg: str) -> None:
         self._code = code
         self._msg = msg

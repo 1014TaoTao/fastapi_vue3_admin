@@ -5,6 +5,7 @@ from fastapi import Form, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.security.utils import get_authorization_scheme_param
 
+from app.common.enums import RET
 from app.config.setting import settings
 from app.core.base_schema import JWTPayloadSchema
 from app.core.exceptions import CustomException
@@ -46,7 +47,7 @@ class CustomOAuth2PasswordBearer(OAuth2PasswordBearer):
 
         if not authorization or scheme.lower() != settings.TOKEN_TYPE.lower():
             if self.auto_error:
-                raise CustomException(msg="认证失败,请登录后再试", code=10401, status_code=401)
+                raise CustomException(msg="认证失败,请登录后再试", code=RET.TOKEN_EXPIRED.code, status_code=401)
             return None
         return token
 
@@ -129,7 +130,7 @@ def decode_access_token(token: str, verify_exp: bool = True) -> JWTPayloadSchema
     - CustomException: 解析失败时抛出,状态码为401。
     """
     if not token:
-        raise CustomException(msg="认证不存在,请重新登录", code=10401, status_code=401)
+        raise CustomException(msg="认证不存在,请重新登录", code=RET.TOKEN_EXPIRED.code, status_code=401)
 
     try:
         options: dict = {}
@@ -139,15 +140,15 @@ def decode_access_token(token: str, verify_exp: bool = True) -> JWTPayloadSchema
 
         online_user_info = payload.get("sub")
         if not online_user_info:
-            raise CustomException(msg="无效认证,请重新登录", code=10401, status_code=401)
+            raise CustomException(msg="无效认证,请重新登录", code=RET.TOKEN_EXPIRED.code, status_code=401)
 
         return JWTPayloadSchema(**payload)
 
     except (jwt.InvalidSignatureError, jwt.DecodeError):
-        raise CustomException(msg="无效认证,请重新登录", code=10401, status_code=401)
+        raise CustomException(msg="无效认证,请重新登录", code=RET.TOKEN_EXPIRED.code, status_code=401)
 
     except jwt.ExpiredSignatureError:
-        raise CustomException(msg="认证已过期,请重新登录", code=10401, status_code=401)
+        raise CustomException(msg="认证已过期,请重新登录", code=RET.TOKEN_EXPIRED.code, status_code=401)
 
     except jwt.InvalidTokenError:
-        raise CustomException(msg="token已失效,请重新登录", code=10401, status_code=401)
+        raise CustomException(msg="token已失效,请重新登录", code=RET.TOKEN_EXPIRED.code, status_code=401)

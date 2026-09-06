@@ -25,7 +25,7 @@ const UserAPI = {
    * @returns uni.uploadFile 成功回调（statusCode + data 响应体字符串，需调用方解析）
    */
   uploadCurrentUserAvatar(body: { filePath: string, name?: string }): Promise<{ statusCode: number, data: string }> {
-    return http.Post(`${USER_BASE_URL}/current/avatar/upload`, body, { requestType: 'upload' })
+    return http.Post('/file/upload?upload_type=avatar', body, { requestType: 'upload' })
   },
 
   /**
@@ -45,7 +45,7 @@ const UserAPI = {
    * @returns 修改后的用户信息
    */
   changeCurrentUserPassword(body: PasswordChangeForm): Promise<void> {
-    return http.Put(`${USER_BASE_URL}/current/password/change`, body)
+    return http.Put(`${USER_BASE_URL}/password/change`, body)
   },
 
   /**
@@ -154,7 +154,7 @@ const UserAPI = {
    * @param body 用户表单数据
    */
   updateUser(body: UserForm): Promise<void> {
-    return http.Put(`${USER_BASE_URL}/update`, body)
+    return http.Put(`${USER_BASE_URL}/update/${body.id}`, body)
   },
 
   /**
@@ -169,10 +169,9 @@ const UserAPI = {
 
 export default UserAPI
 
-/* 忘记密码表单（与后端 UserForgetPasswordSchema 一致，confirmPassword 为前端校验字段不提交） */
+/* 忘记密码申请（与后端 UserForgetPasswordSchema 一致：仅用户名，后端不会直接改密） */
 export interface ForgetPasswordForm {
   username: string
-  new_password: string
 }
 
 /* 注册表单 */

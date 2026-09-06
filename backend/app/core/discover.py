@@ -11,11 +11,15 @@
 """
 
 import importlib
+import re
 from pathlib import Path
 
 from fastapi import APIRouter, FastAPI
 
 from app.core.logger import logger
+
+# 路径参数只参与匹配、不参与语义，比较重复路由时先抹掉参数名
+_PATH_PARAM_RE = re.compile(r"\{[^}]*\}")
 
 
 class DynamicRouterRegistry:
@@ -28,79 +32,111 @@ class DynamicRouterRegistry:
         """构建动态路由、注册到 app——返回 self 支持链式调用。"""
         router = self._build()
         app.include_router(router)
+        check_route_conflicts(app)
         return self
 
     def _build(self) -> APIRouter:
-        """扫描并构建动态路由（带缓存）。"""
+        """扫描并构建动态路由（带缓存）。
+
+        任何插件导入失败都会中止启动：半成品 router 会让进程带着缺失的接口正常
+        提供服务，故障被推迟成"某个模块突然 404"，比启动即失败难定位得多。
+        """
         if self._cache is not None:
             return self._cache
 
-        logger.info("🚀 开始动态路由发现与注册")
-
         root_router = APIRouter()
         seen_router_ids: set[int] = set()
-        try:
-            base_package = importlib.import_module("app.plugin")
-            base_dir = Path(next(iter(base_package.__path__)))
+        base_package = importlib.import_module("app.plugin")
+        base_dir = Path(next(iter(base_package.__path__)))
 
-            controller_files = list(base_dir.glob("module_*/**/controller.py"))
-            controller_files.sort()
+        controller_files = sorted(base_dir.glob("module_*/**/controller.py"))
 
-            container_routers: dict[str, APIRouter] = {}
+        container_routers: dict[str, APIRouter] = {}
+        failed: list[str] = []
 
-            for file in controller_files:
-                rel_path = file.relative_to(base_dir)
-                path_parts = rel_path.parts
-                top_module = path_parts[0]
+        for file in controller_files:
+            rel_path = file.relative_to(base_dir)
+            path_parts = rel_path.parts
+            top_module = path_parts[0]
 
-                suffix = top_module[7:] if top_module.startswith("module_") else ""
-                if not suffix:
-                    logger.error(f"❌ 跳过异常顶级目录名（须为 module_ 前缀）: {top_module!r}，文件: {file}")
-                    continue
-                prefix = f"/{suffix}"
+            suffix = top_module[7:] if top_module.startswith("module_") else ""
+            if not suffix:
+                logger.error(f"❌ 跳过异常顶级目录名（须为 module_ 前缀）: {top_module!r}，文件: {file}")
+                continue
+            prefix = f"/{suffix}"
 
-                if prefix not in container_routers:
-                    container_routers[prefix] = APIRouter(prefix=prefix)
-                container_router = container_routers[prefix]
+            if prefix not in container_routers:
+                container_routers[prefix] = APIRouter(prefix=prefix)
+            container_router = container_routers[prefix]
 
-                module_path = f"app.plugin.{'.'.join(path_parts[:-1])}.controller"
-                try:
-                    module = importlib.import_module(module_path)
-                    registered_here = 0
-                    for attr_name in dir(module):
-                        attr_value = getattr(module, attr_name, None)
-                        if isinstance(attr_value, APIRouter):
-                            router_id = id(attr_value)
-                            if router_id not in seen_router_ids:
-                                seen_router_ids.add(router_id)
-                                container_router.include_router(attr_value)
-                                registered_here += 1
-                                logger.info(f"  ↳ 注册 APIRouter 变量 `{attr_name}` ← {module_path}")
+            module_path = f"app.plugin.{'.'.join(path_parts[:-1])}.controller"
+            try:
+                module = importlib.import_module(module_path)
+                registered_here = 0
+                for attr_name in dir(module):
+                    attr_value = getattr(module, attr_name, None)
+                    if isinstance(attr_value, APIRouter):
+                        router_id = id(attr_value)
+                        if router_id not in seen_router_ids:
+                            seen_router_ids.add(router_id)
+                            container_router.include_router(attr_value)
+                            registered_here += 1
 
-                    if registered_here == 0:
-                        logger.warning(
-                            f"⚠️ 模块已加载但未注册任何路由: {module_path}\n"
-                            f"   文件中未找到顶层 APIRouter 实例",
-                        )
+                if registered_here == 0:
+                    logger.warning(
+                        f"⚠️ 模块已加载但未注册任何路由: {module_path}\n"
+                        f"   文件中未找到顶层 APIRouter 实例",
+                    )
 
-                except Exception as e:
-                    hint = _import_failure_hint(e)
-                    logger.error(f"❌ 处理模块失败: {module_path}\n   {hint}\n   异常: {e!s}")
+            except Exception as e:
+                hint = _import_failure_hint(e)
+                logger.error(f"❌ 处理模块失败: {module_path}\n   {hint}\n   异常: {e!s}")
+                failed.append(module_path)
 
-            for prefix, container_router in sorted(container_routers.items()):
-                route_count = len(container_router.routes)
-                root_router.include_router(container_router)
-                if route_count == 0:
-                    logger.warning(f"⚠️ 容器前缀 {prefix} 下未挂载任何子路由")
-                logger.info(f"✅ 注册容器: {prefix} (子路由数: {route_count})")
+        if failed:
+            raise RuntimeError(
+                f"动态路由发现失败，{len(failed)} 个插件模块无法导入，已中止启动：\n   " + "\n   ".join(failed)
+            )
 
-            logger.info(f"✅ 动态路由发现完成: 共 {len(container_routers)} 个容器前缀")
-            self._cache = root_router
-            return root_router
+        for prefix, container_router in sorted(container_routers.items()):
+            route_count = len(container_router.routes)
+            root_router.include_router(container_router)
+            if route_count == 0:
+                logger.warning(f"⚠️ 容器前缀 {prefix} 下未挂载任何子路由")
+            logger.info(f"✅ 动态注册路由: {prefix} (子路由数: {route_count})")
 
-        except Exception as e:
-            logger.error(f"❌ 动态路由发现整体失败: {e!s}")
-            return root_router
+        self._cache = root_router
+        return root_router
+
+
+def check_route_conflicts(app: FastAPI) -> None:
+    """启动期检测路由冲突：同一路径被注册两次时，先注册的会静默屏蔽后注册的。
+
+    FastAPI 按注册顺序首次匹配，冲突不会报错，只会让部分接口永远不可达——
+    通常来自插件自带 prefix 与内置模块撞车，或同一 router 被重复挂载。
+    """
+    seen: dict[tuple[str, str], str] = {}
+    conflicts: list[str] = []
+    for route in app.routes:
+        methods = getattr(route, "methods", None)
+        path = getattr(route, "path", None)
+        if not methods or not path:
+            continue
+        # 参数名不参与匹配语义，/user/{id} 与 /user/{uid} 属于冲突
+        normalized = _PATH_PARAM_RE.sub("{}", path)
+        for method in sorted(methods):
+            key = (method, normalized)
+            endpoint = getattr(route, "name", None) or str(path)
+            if key in seen:
+                conflicts.append(f"{method} {path}（{endpoint}）已被 {seen[key]} 占用")
+            else:
+                seen[key] = endpoint
+
+    if conflicts:
+        raise RuntimeError(
+            f"检测到 {len(conflicts)} 处路由冲突，已中止启动（后注册者将永远不可达）：\n   "
+            + "\n   ".join(conflicts)
+        )
 
 
 # 模块级单例

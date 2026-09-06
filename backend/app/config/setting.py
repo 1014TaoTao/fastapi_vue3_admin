@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     # ================================================= #
     SERVER_HOST: str = "0.0.0.0"  # 允许访问的IP地址
     SERVER_PORT: int = 8001  # 服务端口
+    WORKERS: int = 1  # uvicorn worker 进程数（prod 环境可调大；>1 时需确保 Redis 共享 jobstore 不重复调度）
 
     # ================================================= #
     # ******************* API文档配置 ****************** #
@@ -52,10 +53,6 @@ class Settings(BaseSettings):
     # ================================================= #
     # ******************** 跨域配置 ******************** #
     # ================================================= #
-    # DEV 环境: ALLOW_ORIGINS=["*"] + ALLOW_CREDENTIALS=True
-    #   注意: 根据 W3C 规范，allow_origins=["*"] 时浏览器会忽略 allow_credentials，
-    #   实际表现为 credentials 不生效。但在开发场景下不影响使用。
-    # PROD 环境: 通过 PROD_CORS_ORIGINS 环境变量配置具体域名列表（逗号分隔），allow_credentials=True 正常生效。
     PROD_CORS_ORIGINS: str = ""  # 生产环境允许的域名列表，逗号分隔，如 "https://admin.example.com,https://www.example.com"
     ALLOW_METHODS: list[str] = ["*"]  # 允许的HTTP方法
     ALLOW_HEADERS: list[str] = ["*"]  # 允许的请求头
@@ -71,6 +68,19 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_SECONDS: int = 60 * 60 * 12  # refresh_token过期时间(秒)12 小时
     TOKEN_TYPE: str = "Bearer"  # token类型（RFC 6750 标准大小写）
     TOKEN_SLIDING_EXPIRE: bool = True  # 是否启用滑动过期(用户操作时自动续期)
+    SESSION_MAX_LIFETIME_SECONDS: int = 60 * 60 * 24 * 7  # 会话绝对存活上限(秒)，滑动续期不得超过该上限
+    LOGIN_RATE_LIMIT_WINDOW_SECONDS: int = 60  # 登录限流窗口(秒)
+    LOGIN_RATE_LIMIT_MAX_ATTEMPTS: int = 10  # 限流窗口内单 IP 最大登录尝试次数
+    API_RATE_LIMIT_TIMES: int = 60  # 全局 API 限流：窗口内单 IP 单路由最大请求数
+    API_RATE_LIMIT_INTERVAL_MS: int = 60 * 1000  # 全局 API 限流窗口(pyrate-limiter 以毫秒计)
+    WS_RATE_LIMIT_TIMES: int = 1  # WS 聊天限流：窗口内最大对话消息数
+    WS_RATE_LIMIT_INTERVAL_MS: int = 5 * 1000  # WS 聊天限流窗口(毫秒)
+
+    # ================================================= #
+    #  ****************** 数据加密配置 ***************** #
+    # ================================================= #
+    DATA_ENCRYPTION_KEY: str | None = None  # 数据加密主密钥(建议 openssl rand -hex 32)；未配置时由 SECRET_KEY 经 HKDF 派生
+    DATA_ENCRYPTION_OLD_KEYS: str = ""  # 轮换后的旧主密钥列表(逗号分隔)，仅用于解密历史数据
 
     # ================================================= #
     # ******************** 数据库配置 ******************* #
@@ -83,7 +93,6 @@ class Settings(BaseSettings):
     POOL_RECYCLE: int = 1800  # 连接回收时间(秒)
     POOL_USE_LIFO: bool = True  # 是否使用LIFO连接池
     POOL_PRE_PING: bool = True  # 是否开启连接预检
-    FUTURE: bool = True  # 是否使用SQLAlchemy 2.0特性
     AUTOCOMMIT: bool = False  # 是否自动提交（映射 SQLAlchemy sessionmaker(autocommit=...)）
     AUTOFLUSH: bool = False  # 是否自动刷新（映射 SQLAlchemy sessionmaker(autoflush=...)）
     AUTOFETCH: bool | None = None  # AUTOFLUSH 别名（优先级高于 AUTOFLUSH，兼容旧环境变量名）
@@ -113,11 +122,23 @@ class Settings(BaseSettings):
     # ================================================= #
     CAPTCHA_ENABLE: bool = True  # 是否启用验证码
     CAPTCHA_EXPIRE_SECONDS: int = 60 * 1  # 验证码过期时间(秒) 1分钟
+    CAPTCHA_MIN_VERIFY_SECONDS: float = 0.2
+
+    # ================================================= #
+    # ******************* 任务调度配置 ****************** #
+    # ================================================= #
+    SCHEDULER_ALLOW_CODE_EXEC: bool = True  # 是否允许定时任务执行用户提交的代码块(exec)。等同远程代码执行能力，生产环境强烈建议设为 False
+
+    # ================================================= #
+    # ******************* 口令策略配置 ****************** #
+    # ================================================= #
+    PASSWORD_MIN_LENGTH: int = 6
+    PASSWORD_MAX_LENGTH: int = 128
+    PASSWORD_IMPORT_DEFAULT: str = "123456"
 
     # ================================================= #
     # ***************** 第三方 OAuth 登录（可选）********* #
     # ================================================= #
-    # 自动注册用户的默认角色 ID 列表（须与库中角色主键一致）
     OAUTH_DEFAULT_ROLE_IDS: list[int] = [2]
     OAUTH_FRONTEND_FALLBACK: str = "http://127.0.0.1:5173/login"
     OAUTH_GITHUB_CLIENT_ID: str = ""
@@ -129,7 +150,6 @@ class Settings(BaseSettings):
     OAUTH_QQ_APP_ID: str = ""
     OAUTH_QQ_APP_SECRET: str = ""
     OAUTH_STATE_TTL: int = 600  # OAuth state 参数过期时间（秒）
-    # OAuth 回调域名白名单（["*"] 表示不限制，生产环境请设置为具体域名列表，如 ["example.com"]）
     OAUTH_ALLOWED_HOSTS: list[str] = ["*"]
 
     # ================================================= #
@@ -170,9 +190,6 @@ class Settings(BaseSettings):
     # ================================================= #
     ALLOWED_HOSTS: list[str] = ["service.fastapiadmin.com", "*.fastapiadmin.com"]  # 允许访问的主机名列表
 
-    # 操作日志保留天数（调度器按此天数定期清理过期日志）
-    OPERATION_LOG_RETENTION_DAYS: int = 90
-
     # 接口白名单（无需认证即可访问的接口路径，支持 * 开头表示前缀匹配）
     WHITE_API_LIST_PATH: list[str] = [
         "/api/v1/system/auth/login",
@@ -184,9 +201,7 @@ class Settings(BaseSettings):
         "/api/v1/system/dict/info",
         "/api/v1/system/user/current/info",
         "/api/v1/system/notice/available",
-        "/api/v1/common/health",
-        "/api/v1/common/health/ready",
-        "/api/v1/common/health/live",
+        "/api/v1/monitor/health",
         "/metrics",
     ]
 
@@ -250,11 +265,6 @@ class Settings(BaseSettings):
 
     @property
     def MIDDLEWARE_LIST(self) -> list[str | None]:
-        # 中间件列表（注册时逆序叠加：下列第一项在列表中最前，最终位于最外层，优先生效）
-        # 中间件执行顺序（从外到内）：
-        #   HTTPSRedirect → TrustedHost → CORS → RequestLog → GZip → CorrelationId → 业务路由
-        # 安全响应头（X-Content-Type-Options / Referrer-Policy / Permissions-Policy / HSTS）
-        # 由前置 Nginx / 反向代理通过 add_header 设置，避免应用层 BaseHTTPMiddleware 开销。
         MIDDLEWARES: list[str | None] = [
             "app.core.middlewares.CustomHTTPSRedirectMiddleware" if self.ENVIRONMENT == EnvironmentEnum.PROD else None,
             "app.core.middlewares.CustomTrustedHostMiddleware" if self.ENVIRONMENT == EnvironmentEnum.PROD else None,
@@ -275,7 +285,8 @@ class Settings(BaseSettings):
         elif self.DATABASE_TYPE == "postgres":
             db_connect = f"postgresql+asyncpg://{self.DATABASE_USER}:{quote_plus(self.DATABASE_PASSWORD)}@{self.DATABASE_HOST}:{self.DATABASE_PORT}/{self.DATABASE_NAME}"
         else:
-            db_connect = f"sqlite+aiosqlite:///{self.DATABASE_NAME}.db"
+            name = self.DATABASE_NAME if self.DATABASE_NAME.endswith(".db") else f"{self.DATABASE_NAME}.db"
+            db_connect = f"sqlite+aiosqlite:///{name}"
         return db_connect
 
     @property
@@ -288,7 +299,8 @@ class Settings(BaseSettings):
         elif self.DATABASE_TYPE == "postgres":
             db_connect = f"postgresql+psycopg://{self.DATABASE_USER}:{quote_plus(self.DATABASE_PASSWORD)}@{self.DATABASE_HOST}:{self.DATABASE_PORT}/{self.DATABASE_NAME}"
         else:
-            db_connect = f"sqlite:///{self.DATABASE_NAME}.db"
+            name = self.DATABASE_NAME if self.DATABASE_NAME.endswith(".db") else f"{self.DATABASE_NAME}.db"
+            db_connect = f"sqlite:///{name}"
         return db_connect
 
     @property
@@ -316,7 +328,7 @@ class Settings(BaseSettings):
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
-    return Settings()
+    return Settings(_env_file=ENV_DIR / f".env.{os.getenv('ENVIRONMENT', 'dev')}")  # pyright: ignore[reportCallIssue]
 
 
 settings = get_settings()

@@ -24,14 +24,21 @@ outline: "deep"
 
 ```
 backend/app/
-├── api/v1/              # API modules by business domain
-│   ├── module_system/   # System management (users, roles, menus, etc.)
-│   ├── module_monitor/  # Monitoring
-│   └── module_ai/       # AI features
+├── api/v1/              # Route manifests (aggregation only, no business logic)
+│   ├── system.py        #   System routes
+│   ├── monitor.py       #   Monitoring routes
+│   └── ...
+├── modules/             # Business layer (vertical slices by domain)
+│   ├── system/          #   System management domain (users, roles, menus, etc.)
+│   ├── monitor/         #   Monitoring domain
+│   ├── ai/              #   AI features domain
+│   ├── task/            #   Task domain (scheduled jobs)
+│   ├── workflow/        #   Workflow domain
+│   ├── generator/       #   Code generator domain
+│   └── common/          #   Common domain (files, health check)
 ├── common/              # Shared components (constants, enums, response)
 ├── config/              # Project configuration
 ├── core/                # Core modules (database, security, auth, middleware)
-├── module_task/         # Scheduled tasks
 ├── plugin/              # Plugin directory (extension development)
 └── utils/               # Utilities
 ```
@@ -41,7 +48,7 @@ backend/app/
 Each business module follows a uniform layered structure (vertical slice):
 
 ```
-module_*/<domain>/
+modules/<module>/<domain>/
 ├── controller.py    # HTTP request handling
 ├── service.py       # Business logic
 ├── crud.py          # Database operations
@@ -102,7 +109,7 @@ from fastapi.responses import JSONResponse
 from app.common.response import SuccessResponse
 from app.core.router_class import OperationLogRoute
 from app.core.dependencies import AuthPermission
-from app.api.v1.module_system.auth.schema import AuthSchema
+from app.modules.system.auth.schema import AuthSchema
 from .service import YourFeatureService
 
 YourFeatureRouter = APIRouter(

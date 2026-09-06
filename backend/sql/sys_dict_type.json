@@ -1,0 +1,14 @@
+[
+    {
+        "dict_name": "用户性别",
+        "dict_type": "sys_user_sex",
+        "status": 0,
+        "description": "用户性别列表"
+    },
+    {
+        "dict_name": "通知类型",
+        "dict_type": "sys_notice_type",
+        "status": 0,
+        "description": "通知类型列表"
+    }
+]

@@ -85,7 +85,6 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
 import type { FormInstance, TableInstance } from "element-plus";
 import { Search, Refresh } from "@element-plus/icons-vue";
 import type { DBTableSchema, GenTablePageQuery } from "@/api/module_generator/gencode";

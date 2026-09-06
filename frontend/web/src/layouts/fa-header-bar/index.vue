@@ -142,23 +142,6 @@
           </ElBadge>
         </FaIconButton>
 
-        <!-- 聊天按钮 -->
-        <FaIconButton
-          v-if="shouldShowChat"
-          icon="ri:message-3-line"
-          class="chat-button relative"
-          @click="openChat"
-        >
-          <ElBadge
-            v-if="chatStore.unreadTotal > 0"
-            :value="chatStore.unreadTotal > 99 ? '99+' : chatStore.unreadTotal"
-            :max="99"
-            class="absolute top-0 right-0"
-          >
-            <div class="size-1.5"></div>
-          </ElBadge>
-        </FaIconButton>
-
         <!-- 设置按钮 -->
         <div v-if="shouldShowSettings">
           <ElPopover :visible="showSettingGuide" placement="bottom-start" :width="190" :offset="0">
@@ -211,7 +194,6 @@ import {
   useUserStore,
   useNoticeStore,
   useConfigStore,
-  useChatStore,
   refreshAppCaches,
 } from "@stores";
 import AppConfig from "@/config";
@@ -236,7 +218,6 @@ const userStore = useUserStore();
 const menuStore = useMenuStore();
 const configStore = useConfigStore();
 const noticeStore = useNoticeStore();
-const chatStore = useChatStore();
 
 /** 租户配置：logo_url / name */
 const headerLogoSrc = computed(() => {
@@ -259,7 +240,6 @@ const {
   shouldShowGlobalSearch,
   shouldShowFullscreen,
   shouldShowNotification,
-  shouldShowChat,
   shouldShowLanguage,
   shouldShowSettings,
   shouldShowThemeToggle,
@@ -287,8 +267,6 @@ onMounted(() => {
   initLanguage();
   document.addEventListener("click", bodyCloseNotice);
   noticeStore.getNotice();
-  chatStore.initChat();
-  chatStore.refreshUnread();
 });
 
 onUnmounted(() => {
@@ -396,13 +374,6 @@ const bodyCloseNotice = (e: any): void => {
  */
 const visibleNotice = (): void => {
   showNotice.value = !showNotice.value;
-};
-
-/**
- * 打开聊天窗口（fa-chat-window 全局组件监听 openChat 事件）
- */
-const openChat = (): void => {
-  mittBus.emit("openChat");
 };
 </script>
 
@@ -530,10 +501,6 @@ const openChat = (): void => {
 }
 
 .notice-button:hover :deep(.fa-svg-icon) {
-  animation: shake 0.5s ease-in-out;
-}
-
-.chat-button:hover :deep(.fa-svg-icon) {
   animation: shake 0.5s ease-in-out;
 }
 

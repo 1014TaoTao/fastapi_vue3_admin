@@ -13,52 +13,52 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed } from "vue";
 
 defineOptions({
-  name: 'FaCascader'
-})
+  name: "FaCascader",
+});
 
 interface FaCascaderProps {
-  modelValue?: any
-  options?: any[]
-  placeholder?: string
-  clearable?: boolean
-  filterable?: boolean
-  showAllLevels?: boolean
-  separator?: string
-  checkStrictly?: boolean
-  multiple?: boolean
+  modelValue?: any;
+  options?: any[];
+  placeholder?: string;
+  clearable?: boolean;
+  filterable?: boolean;
+  showAllLevels?: boolean;
+  separator?: string;
+  checkStrictly?: boolean;
+  multiple?: boolean;
 }
 
 const props = withDefaults(defineProps<FaCascaderProps>(), {
   modelValue: () => [],
   options: () => [],
-  placeholder: '请选择',
+  placeholder: "请选择",
   clearable: true,
   filterable: true,
   showAllLevels: true,
-  separator: '/',
+  separator: "/",
   checkStrictly: false,
-  multiple: false
-})
+  multiple: false,
+});
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: any): void
-  (e: 'change', value: any): void
-}>()
+  (e: "update:modelValue", value: any): void;
+  (e: "change", value: any): void;
+}>();
 
 const cascaderProps = computed(() => ({
   checkStrictly: props.checkStrictly,
   multiple: props.multiple,
-  emitPath: false
-}))
+  emitPath: false,
+}));
 
 const selectedValue = computed({
   get: () => props.modelValue,
   set: (value: any) => {
-    emit('update:modelValue', value)
-    emit('change', value)
-  }
-})
+    emit("update:modelValue", value);
+    emit("change", value);
+  },
+});
 </script>

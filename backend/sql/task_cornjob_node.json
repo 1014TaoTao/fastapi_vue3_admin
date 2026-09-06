@@ -1,0 +1,17 @@
+[
+  {
+    "name": "日志保留清理",
+    "code": "log_cleanup",
+    "jobstore": "default",
+    "executor": "threadpool",
+    "trigger": "cron",
+    "trigger_args": "0 0 3 * * ?",
+    "func": "def handler(**kwargs):\n    import asyncio\n    from app.modules.system.log.service import cleanup_expired_logs\n    return asyncio.run(cleanup_expired_logs(days=int(kwargs.get(\"days\", 90))))",
+    "args": null,
+    "kwargs": "{\"days\": 90}",
+    "coalesce": true,
+    "max_instances": 1,
+    "status": 0,
+    "description": "每天 03:00 物理清理超过保留天数的操作日志与登录日志（默认保留 90 天，可改 kwargs.days）"
+  }
+]

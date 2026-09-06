@@ -23,14 +23,21 @@ outline: "deep"
 
 ```
 backend/app/
-├── api/v1/              # API 接口（按业务模块分包）
-│   ├── module_system/   # 系统管理（用户、角色、菜单等）
-│   ├── module_monitor/  # 监控管理
-│   └── module_ai/       # AI 功能
+├── api/v1/              # 路由清单（仅聚合路由，不含业务逻辑）
+│   ├── system.py        #   系统管理路由
+│   ├── monitor.py       #   监控路由
+│   └── ...
+├── modules/             # 业务层（按业务域竖切）
+│   ├── system/          #   系统管理业务域（用户、角色、菜单等）
+│   ├── monitor/         #   监控业务域（缓存、在线用户、服务器、健康检查）
+│   ├── ai/              #   AI 功能业务域
+│   ├── task/            #   任务业务域（定时任务）
+│   ├── workflow/        #   工作流业务域
+│   ├── generator/       #   代码生成业务域
+│   └── file/            #   文件管理业务域（上传、下载）
 ├── common/              # 公共组件（常量、枚举、响应封装）
 ├── config/              # 项目配置
 ├── core/                # 核心模块（数据库、安全、权限、中间件）
-├── module_task/         # 定时任务
 ├── plugin/              # 插件目录（二开目录）
 └── utils/               # 工具类
 ```
@@ -40,7 +47,7 @@ backend/app/
 每个业务模块采用统一的分层结构（按业务特性竖切）：
 
 ```
-module_*/<子域>/
+modules/<模块>/<子域>/
 ├── controller.py    # HTTP 请求处理
 ├── service.py       # 业务逻辑
 ├── crud.py          # 数据库操作
@@ -82,7 +89,7 @@ python main.py upgrade --env=dev
 
 | 文件 | 说明 |
 |------|------|
-| `env/.env.dev.example` | 开发环境模板 |
+| `env/.env.example` | 开发环境模板 |
 | `env/.env.dev` | 开发环境（需自行创建） |
 | `env/.env.prod.example` | 生产环境模板 |
 
@@ -113,7 +120,7 @@ from fastapi.responses import JSONResponse
 from app.common.response import SuccessResponse
 from app.core.router_class import OperationLogRoute
 from app.core.dependencies import AuthPermission
-from app.api.v1.module_system.auth.schema import AuthSchema
+from app.modules.system.auth.schema import AuthSchema
 from .service import YourFeatureService
 
 YourFeatureRouter = APIRouter(

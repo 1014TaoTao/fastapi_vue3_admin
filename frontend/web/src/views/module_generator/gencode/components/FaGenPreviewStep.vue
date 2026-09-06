@@ -87,7 +87,6 @@ import "codemirror/mode/javascript/javascript.js";
 import "codemirror/mode/python/python.js";
 import "codemirror/mode/htmlmixed/htmlmixed.js";
 import "codemirror/theme/dracula.css";
-import { computed, inject, onUnmounted, ref, watch } from "vue";
 import Codemirror from "codemirror-editor-vue3";
 import type { EditorConfiguration } from "codemirror";
 import type { CmComponentRef } from "codemirror-editor-vue3";

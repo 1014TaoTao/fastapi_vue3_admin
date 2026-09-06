@@ -179,8 +179,6 @@
 </template>
 
 <script setup lang="ts">
-import { h } from "vue";
-
 import OperationLogAPI, {
   type OperationLogPageQuery,
   type OperationLogTable,

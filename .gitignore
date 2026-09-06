@@ -45,11 +45,11 @@ node_modules
 
 backend/logs
 backend/*.db
-backend/alembic/versions/*
+# 用户上传目录，禁止入库
+backend/static/upload/
 backend/env/.env.dev
 backend/env/.env.prod
 backend/env/.env.test
-!backend/alembic/versions/.gitkeep
 
 docker/.env
 docker/nginx/app/dist

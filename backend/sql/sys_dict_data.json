@@ -1,0 +1,62 @@
+[
+    {
+        "dict_sort": 1,
+        "dict_label": "男",
+        "dict_value": "0",
+        "dict_type": "sys_user_sex",
+        "dict_type_id": 1,
+        "css_class": "blue",
+        "list_class": null,
+        "is_default": true,
+        "status": 0,
+        "description": "性别男"
+    },
+    {
+        "dict_sort": 2,
+        "dict_label": "女",
+        "dict_value": "1",
+        "dict_type": "sys_user_sex",
+        "dict_type_id": 1,
+        "css_class": "pink",
+        "list_class": null,
+        "is_default": false,
+        "status": 0,
+        "description": "性别女"
+    },
+    {
+        "dict_sort": 3,
+        "dict_label": "未知",
+        "dict_value": "2",
+        "dict_type": "sys_user_sex",
+        "dict_type_id": 1,
+        "css_class": "red",
+        "list_class": null,
+        "is_default": false,
+        "status": 0,
+        "description": "性别未知"
+    },
+    {
+        "dict_sort": 1,
+        "dict_label": "通知",
+        "dict_value": "1",
+        "dict_type": "sys_notice_type",
+        "dict_type_id": 2,
+        "css_class": "blue",
+        "list_class": "warning",
+        "is_default": true,
+        "status": 0,
+        "description": "通知"
+    },
+    {
+        "dict_sort": 2,
+        "dict_label": "公告",
+        "dict_value": "2",
+        "dict_type": "sys_notice_type",
+        "dict_type_id": 2,
+        "css_class": "orange",
+        "list_class": "success",
+        "is_default": false,
+        "status": 0,
+        "description": "公告"
+    }
+]

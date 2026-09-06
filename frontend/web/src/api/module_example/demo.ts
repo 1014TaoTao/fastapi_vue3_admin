@@ -3,7 +3,7 @@ import { request } from "@utils";
 const API_PATH = "/example/demo";
 
 const DemoAPI = {
-  getDemoList(query: DemoPageQuery) {
+  listDemo(query: DemoPageQuery) {
     return request<ApiResponse<PageResult<DemoTable>>>({
       url: `${API_PATH}/list`,
       method: "get",
@@ -11,7 +11,7 @@ const DemoAPI = {
     });
   },
 
-  getDemoDetail(query: number) {
+  detailDemo(query: number) {
     return request<ApiResponse<DemoTable>>({
       url: `${API_PATH}/detail/${query}`,
       method: "get",

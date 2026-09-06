@@ -5,11 +5,12 @@ from collections.abc import Generator, Sequence
 from pathlib import Path
 from typing import Any, Literal
 
+from sqlalchemy import text
 from sqlalchemy.engine.row import Row
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.orm.collections import InstrumentedList
 from sqlalchemy.sql.elements import Null
-from sqlalchemy.sql.expression import null
+from sqlalchemy.sql.expression import false, null, true
 
 from app.config.path_conf import STATIC_DIR
 from app.core.exceptions import CustomException
@@ -101,6 +102,15 @@ def search_to_dict(search: Any, default: Any = None) -> dict | None:
     if not search:
         return default
     d = search.model_dump(exclude_none=True)
+
+    # 自动合并 _start/_end 时间范围对 → ("between", [start, end])
+    # 适用业务时间列（date/time/datetime），如 begin_date_start / begin_date_end
+    for key in list(d.keys()):
+        if key.endswith("_start"):
+            base = key[: -len("_start")]
+            end_key = f"{base}_end"
+            if end_key in d:
+                d[base] = ("between", [d.pop(key), d.pop(end_key)])
 
     # 处理数组格式的时间范围参数 → ("between", [start, end])
     for key in list(d.keys()):
@@ -396,6 +406,24 @@ class SqlalchemyUtil:
         if need_explicit_null and dialect_name == "postgres":
             return null()
         return None
+
+    @classmethod
+    def get_boolean_server_default(cls, dialect_name: str, value: bool) -> Any:
+        """按方言返回布尔列的服务端默认值，保证 Alembic autogenerate 与各库反射结果一致。
+
+        - MySQL/SQLite: 反射结果为 '0'/'1'，使用 text("0")/text("1")
+        - PostgreSQL:   反射结果为 'false'/'true'，使用 expression.false()/expression.true()
+
+        参数:
+        - dialect_name (str): 数据库方言名。
+        - value (bool): 布尔默认值。
+
+        返回:
+        - Any: SQLAlchemy 默认值表达式。
+        """
+        if dialect_name == "postgres":
+            return true() if value else false()
+        return text("1" if value else "0")
 
 
 class CamelCaseUtil:

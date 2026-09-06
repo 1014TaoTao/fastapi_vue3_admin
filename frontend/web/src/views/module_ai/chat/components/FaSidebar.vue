@@ -120,7 +120,6 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
 import {
@@ -303,7 +302,7 @@ const loadSessions = async () => {
           title: item.session_data?.session_name || item.session_id?.slice(0, 8) || "新会话",
           created_at: item.created_at,
           updated_at: item.updated_at,
-          message_count: item.runs?.length || 0,
+          message_count: item.message_count ?? item.runs?.length ?? 0,
           session_id: item.session_id,
           session_type: item.session_type,
           agent_id: item.agent_id,
@@ -320,7 +319,7 @@ const loadSessions = async () => {
           workflow_data: item.workflow_data,
           created_time: item.created_at ? new Date(item.created_at * 1000).toISOString() : null,
           updated_time: item.updated_at ? new Date(item.updated_at * 1000).toISOString() : null,
-          messages: item.runs?.flatMap((run: any) => run.messages || []) || [],
+          messages: item.messages || [],
         }));
     }
   } catch (error) {

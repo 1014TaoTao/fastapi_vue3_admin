@@ -64,7 +64,6 @@
 <script setup lang="ts">
 import "codemirror/mode/sql/sql.js";
 import "codemirror/theme/dracula.css";
-import { ref, watch } from "vue";
 import Codemirror from "codemirror-editor-vue3";
 import type { EditorConfiguration } from "codemirror";
 import type { CmComponentRef } from "codemirror-editor-vue3";

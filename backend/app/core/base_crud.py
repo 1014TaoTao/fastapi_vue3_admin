@@ -298,18 +298,6 @@ class CRUDBase[ModelType: ModelMixin, CreateSchemaType, UpdateSchemaType]:
         except Exception as e:
             raise CustomException(msg=f"批量更新失败: {e!s}") from e
 
-    async def restore(self, ids: list[int]) -> None:
-        """反删除：还原 is_deleted、清空删除时间和人。"""
-        try:
-            if not self._supports_soft_delete:
-                raise CustomException(msg="该模型不支持软删除，无法恢复")
-            pk = self._get_pk_col()
-            sql = update(self.model).where(pk.in_(ids)).values(is_deleted=False, deleted_time=None, deleted_id=None)
-            await self.db.execute(sql)
-            await self.db.flush()
-        except Exception as e:
-            raise CustomException(msg=f"恢复失败: {e!s}") from e
-
     # ── 条件与排序 ────────────────────────────────────────────────────
 
     async def _build_conditions(self, include_deleted: bool = False, **kwargs) -> list[ColumnElement]:

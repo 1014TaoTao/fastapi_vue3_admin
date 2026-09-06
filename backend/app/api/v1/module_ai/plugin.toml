@@ -1,8 +1,0 @@
-# 见 docs/PLUGIN_ARCHITECTURE.md
-
-name = "ai"
-title = "AI 子系统"
-version = "1.0.0"
-description = "对话、Agent 等能力（Agno）；路由由 module_ai/**/controller 动态注册。"
-optional = true
-tags = ["ai", "chat", "agno"]

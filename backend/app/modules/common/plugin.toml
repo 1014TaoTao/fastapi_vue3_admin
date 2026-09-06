@@ -1,0 +1,8 @@
+# 见 docs/PLUGIN_ARCHITECTURE.md
+
+name = "file"
+title = "文件"
+version = "1.0.0"
+description = "文件上传下载；路由经 api/v1/file.py 装配。"
+optional = true
+tags = ["file"]
