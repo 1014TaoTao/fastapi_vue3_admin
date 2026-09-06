@@ -5,7 +5,6 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 from fastapi.sse import EventSourceResponse, ServerSentEvent
-from fastapi_limiter.decorators import skip_limiter
 
 from app.common.response import ResponseSchema, SuccessResponse
 from app.config.setting import Settings, get_settings
@@ -19,7 +18,6 @@ HealthRouter = APIRouter(route_class=OperationLogRoute, prefix="/health", tags=[
 
 
 @HealthRouter.get("/check", summary="健康检查", response_model=ResponseSchema[ServiceInfoOut])
-@skip_limiter  # 监控探针高频调用，豁免全局限流
 async def health_check(request: Request, settings: Annotated[Settings, Depends(get_settings)]) -> JSONResponse:
     """健康检查：实时探测 DB / Redis 网络连通状态。"""
     redis: Any | None = getattr(request.app.state, "redis", None)
@@ -30,7 +28,6 @@ async def health_check(request: Request, settings: Annotated[Settings, Depends(g
 
 
 @HealthRouter.get("/stream", summary="健康检查实时流(SSE)", response_class=EventSourceResponse)
-@skip_limiter
 async def health_stream_controller(
     request: Request,
 ) -> AsyncGenerator[ServerSentEvent, None]:

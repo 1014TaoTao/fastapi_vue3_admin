@@ -114,6 +114,9 @@ services:
       REDIS_ENABLE: "true"
       # 日志级别
       LOGGER_LEVEL: "${LOGGER_LEVEL:-INFO}"
+      # 信任反向代理（nginx）传来的 X-Forwarded-Proto/For：否则 prod 的
+      # HTTPSRedirectMiddleware 会把 https 请求误判为 http 造成 301 循环
+      FORWARDED_ALLOW_IPS: "*"
     ports:
       - "${BACKEND_PORT:-8001}:8001"
     volumes:
@@ -136,7 +139,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:8001/api/v1/monitor/health/check\", timeout=5)' || exit 1",
+          "python -c 'import urllib.request; req = urllib.request.Request(\"http://localhost:8001/api/v1/monitor/health/check\", headers={\"X-Forwarded-Proto\": \"https\"}); urllib.request.urlopen(req, timeout=5)' || exit 1",
         ]
       interval: 15s
       timeout: 10s

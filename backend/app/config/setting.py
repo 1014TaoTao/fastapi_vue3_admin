@@ -71,10 +71,6 @@ class Settings(BaseSettings):
     SESSION_MAX_LIFETIME_SECONDS: int = 60 * 60 * 24 * 7  # 会话绝对存活上限(秒)，滑动续期不得超过该上限
     LOGIN_RATE_LIMIT_WINDOW_SECONDS: int = 60  # 登录限流窗口(秒)
     LOGIN_RATE_LIMIT_MAX_ATTEMPTS: int = 10  # 限流窗口内单 IP 最大登录尝试次数
-    API_RATE_LIMIT_TIMES: int = 60  # 全局 API 限流：窗口内单 IP 单路由最大请求数
-    API_RATE_LIMIT_INTERVAL_MS: int = 60 * 1000  # 全局 API 限流窗口(pyrate-limiter 以毫秒计)
-    WS_RATE_LIMIT_TIMES: int = 1  # WS 聊天限流：窗口内最大对话消息数
-    WS_RATE_LIMIT_INTERVAL_MS: int = 5 * 1000  # WS 聊天限流窗口(毫秒)
 
     # ================================================= #
     #  ****************** 数据加密配置 ***************** #
