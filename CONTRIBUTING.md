@@ -4,7 +4,7 @@
 
 ## 快速链接
 
-- 📖 **完整贡献指南**: [service.fastapiadmin.com/about/contributing](https://service.fastapiadmin.com/about/contributing)
+- 📖 **项目文档**: [service.fastapiadmin.com](https://service.fastapiadmin.com/)
 - 🐛 **反馈 Bug**: [GitHub Issues](https://github.com/fastapiadmin/FastapiAdmin/issues) | [Gitee Issues](https://gitee.com/fastapiadmin/FastapiAdmin/issues)
 - 💡 **功能建议**: 先提 Issue 讨论，再动手写代码
 - 📝 **开发规范**: [代码风格指南](https://service.fastapiadmin.com/guide/guidelines)
@@ -24,6 +24,9 @@ cd backend && uv sync && uv run main.py run --env=dev
 
 # 前端
 cd frontend/web && pnpm install && pnpm run dev
+
+# 小程序（uni-app，微信开发者工具导入 dist/dev/mp-weixin）
+cd frontend/app && pnpm install && pnpm dev:mp-weixin
 
 # 文档
 cd frontend/docs && pnpm install && pnpm run dev
