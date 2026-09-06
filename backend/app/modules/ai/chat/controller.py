@@ -11,7 +11,6 @@ from app.core.base_schema import AuthSchema, PageResultSchema, PaginationQueryPa
 from app.core.dependencies import AuthPermission, redis_getter, websocket_authenticate
 from app.core.exceptions import CustomException
 from app.core.logger import logger
-from app.core.rate_limiter import ws_rate_limiter
 from app.core.router_class import OperationLogRoute
 
 from .schema import (
@@ -260,8 +259,6 @@ async def websocket_chat_controller(websocket: WebSocket) -> None:
                     continue
 
                 # 对话指令
-                # 对话消息限流（stop 等控制指令不受限）：超限时回调下发提示并断开连接
-                await ws_rate_limiter(websocket)
                 logger.info("收到聊天查询: session_id={}", query.session_id)
 
                 is_generating.set()
