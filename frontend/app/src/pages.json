@@ -140,7 +140,8 @@
           "type": "page",
           "name": "work-ai-models",
           "style": {
-            "navigationBarTitleText": "AI 模型配置"
+            "navigationBarTitleText": "AI 模型配置",
+            "enablePullDownRefresh": true
           }
         },
         {
@@ -148,7 +149,8 @@
           "type": "page",
           "name": "work-notices",
           "style": {
-            "navigationBarTitleText": "通知公告"
+            "navigationBarTitleText": "通知公告",
+            "enablePullDownRefresh": true
           }
         },
         {
@@ -156,7 +158,8 @@
           "type": "page",
           "name": "work-ticket-detail",
           "style": {
-            "navigationBarTitleText": "工单详情"
+            "navigationBarTitleText": "工单详情",
+            "enablePullDownRefresh": true
           }
         },
         {
@@ -164,7 +167,8 @@
           "type": "page",
           "name": "work-tickets",
           "style": {
-            "navigationBarTitleText": "工单管理"
+            "navigationBarTitleText": "工单管理",
+            "enablePullDownRefresh": true
           }
         }
       ]
