@@ -8,13 +8,13 @@
 
 | 技术 | 版本 | 说明 |
 |------|------|------|
-| FastAPI | 0.115.2 | 现代 Web 框架 |
-| SQLAlchemy | 2.0.36 | ORM 框架 |
-| Alembic | 1.15.1 | 数据库迁移工具 |
-| Pydantic | 2.x | 数据验证与序列化 |
+| FastAPI | 0.138.2 | 现代 Web 框架 |
+| SQLAlchemy | 2.0.51 | ORM 框架 |
+| Alembic | 1.18.4 | 数据库迁移工具 |
+| Pydantic | 2.12.5+ | 数据验证与序列化 |
 | APScheduler | 3.11.0 | 定时任务调度 |
-| Redis | 5.2.1 | 缓存与会话存储 |
-| Uvicorn | 0.30.6 | ASGI 服务器 |
+| redis-py | 7.1.0 | 缓存与会话存储 |
+| Uvicorn | 0.49.0 | ASGI 服务器 |
 | Python | 3.12+ | 运行环境 |
 
 ## 项目结构
@@ -23,15 +23,14 @@
 backend/
 ├── app/                     # 项目核心代码
 │   ├── alembic/             # 数据库迁移管理
-│   ├── api/                 # 路由装配层（v1 聚合各模块路由）
+│   ├── api/                 # 路由装配层（routers.py 按域分组聚合各模块路由）
 │   ├── modules/             # 业务模块层（按业务域竖切）
 │   │   ├── system/          #   系统管理
 │   │   ├── monitor/         #   系统监控
-│   │   ├── ai/              #   AI 功能
-│   │   ├── task/            #   定时任务
-│   │   ├── workflow/        #   工作流
+│   │   ├── task/            #   定时任务（cronjob）+ 存储传输（storage）
 │   │   ├── generator/       #   代码生成
-│   │   └── common/          #   文件 / 健康检查
+│   │   ├── ai/              #   AI 功能
+│   │   └── common/          #   文件上传 / 公共能力
 │   ├── common/              # 公共组件（常量、枚举、响应封装）
 │   ├── config/              # 项目配置文件
 │   ├── core/                # 核心模块（数据库、中间件、安全）
@@ -42,7 +41,7 @@ backend/
 ├── logs/                    # 日志输出目录
 ├── sql/                     # SQL 初始化脚本
 ├── static/                  # 静态资源文件
-├── main.py                  # 项目启动入口
+├── main.py                  # CLI 入口（run 启动 / revision 生成迁移 / upgrade 应用迁移）
 ├── alembic.ini              # Alembic 迁移配置
 ├── requirements.txt         # Python 依赖包
 └── pyproject.toml           # 项目配置（uv / ruff）

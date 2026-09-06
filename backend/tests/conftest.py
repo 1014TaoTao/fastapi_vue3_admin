@@ -31,6 +31,12 @@ os.environ["POOL_SIZE"] = "1"
 os.environ["MAX_OVERFLOW"] = "1"
 os.environ["SECRET_KEY"] = "unit-test-secret-key-not-a-real-secret"  # Settings 必填项，固定注入保证测试确定性
 
+# 迁移守卫快照：conftest import 时刻早于任何布局（init_db），供 test_migrations.py
+# 比对 TestClient 布局期间 versions/ 目录是否被 dev 自动迁移写入文件（漂移/污染信号）
+from app.config.path_conf import ALEMBIC_VERSION_DIR
+
+_versions_before_layout: frozenset[str] = frozenset(p.name for p in ALEMBIC_VERSION_DIR.glob("*.py"))
+
 from app.config.setting import settings
 
 settings.DATABASE_TYPE = "sqlite"
@@ -185,7 +191,7 @@ async def _test_lifespan(app) -> AsyncGenerator[Any, None]:
     yield
 
 
-from main import create_app
+from app import create_app
 
 _app = create_app()
 _app.router.lifespan_context = _test_lifespan
@@ -200,6 +206,12 @@ def _api_client() -> Generator[TestClient, Any, None]:
     """Session 级共享 TestClient，所有测试复用同一个 app 实例。"""
     with TestClient(_app) as c:
         yield c
+
+
+@pytest.fixture(scope="session")
+def versions_before_layout() -> frozenset[str]:
+    """布局（init_db）前的 versions/ 文件名集合，供迁移守卫测试比对。"""
+    return _versions_before_layout
 
 
 @pytest.fixture

@@ -101,7 +101,7 @@ cp env/.env.example env/.env.prod     # Edit as needed
 
 # Start with Gunicorn + Uvicorn
 pip install gunicorn uvloop
-gunicorn -w 4 -k uvicorn.workers.UvicornWorker main:app --bind 0.0.0.0:8001 --daemon
+gunicorn -w 4 -k uvicorn.workers.UvicornWorker 'app.init_app:create_app()' --bind 0.0.0.0:8001 --daemon
 ```
 
 ### Frontend

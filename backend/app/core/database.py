@@ -90,17 +90,6 @@ def create_async_engine_and_session(db_url: str = settings.ASYNC_DB_URI) -> tupl
 engine = create_sync_engine()
 async_engine, async_db_session = create_async_engine_and_session()
 
-async def check_db() -> None:
-    """检查数据库连接是否正常。"""
-    try:
-        async with async_engine.connect():
-            pass
-        logger.info("✅ 数据库连接正常")
-    except Exception as e:
-        logger.error(f"❌ 数据库连接失败: {e}")
-        raise
-
-
 async def create_tables() -> None:
     """创建数据库表（根据 ORM metadata）。
 

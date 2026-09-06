@@ -6,7 +6,7 @@ lastUpdated: true
 hero:
   name: "FastApiAdmin"
   text: "Web · H5 · Mini-Program, one stack"
-  tagline: Built on FastAPI + Vue3 + TypeScript, frontend and backend share types. 30+ business modules out of the box, the AI Code Generator covers 90% of routine CRUD, and Docker Compose brings the whole stack online in one command.
+  tagline: Built on FastAPI + Vue3 + TypeScript, frontend and backend share types. 200+ REST endpoints out of the box, the AI Code Generator turns a table into full-stack CRUD, and Docker Compose brings the whole stack online in one command.
   image:
     src: /logo.svg
     alt: AI Code Generator — select a table, get the full CRUD

@@ -8,9 +8,7 @@ from alembic.config import Config
 from typer.main import Typer
 
 from app.common.enums import EnvironmentEnum
-from app.init_app import create_app
 
-app = create_app()
 fastapiadmin_cli: Typer = typer.Typer()
 alembic_cfg: Config = Config(file_="alembic.ini")
 
@@ -31,16 +29,14 @@ def run(
     - None
     """
     os.environ["ENVIRONMENT"] = env.value
-    
+
     from app.utils.banner import worship
     typer.secho(message=f"{worship()}", fg=typer.colors.GREEN)
-
-    from app.config.setting import get_settings, settings
-    
-    get_settings.cache_clear()
+    from app.config.setting import settings
 
     uvicorn.run(
-        app="main:app",
+        app="app:create_app",
+        factory=True,
         host=settings.SERVER_HOST,
         port=settings.SERVER_PORT,
         reload=settings.DEBUG,
@@ -56,20 +52,19 @@ def run(
 )
 def revision(
     env: Annotated[EnvironmentEnum, typer.Option("--env", help="运行环境 (dev, prod)")] = EnvironmentEnum.DEV,
+    message: Annotated[str, typer.Option("--message", "-m", help="迁移说明（进入迁移文件名 slug）")] = "迁移脚本",
 ) -> None:
     """使用 Alembic 自动生成迁移脚本（autogenerate）。
 
     参数:
     - env (EnvironmentEnum): 运行环境，用于加载对应数据库模型元数据。
+    - message (str): 迁移说明，写入迁移文件 message 与文件名 slug。
 
     返回:
     - None
     """
     os.environ["ENVIRONMENT"] = env.value
-    from app.config.setting import get_settings
-
-    get_settings.cache_clear()
-    command.revision(config=alembic_cfg, autogenerate=True, message="迁移脚本")
+    command.revision(config=alembic_cfg, autogenerate=True, message=message)
     typer.echo(message="迁移脚本已生成")
 
 
@@ -89,9 +84,6 @@ def upgrade(
     - None
     """
     os.environ["ENVIRONMENT"] = env.value
-    from app.config.setting import get_settings
-
-    get_settings.cache_clear()
     command.upgrade(config=alembic_cfg, revision="head")
     typer.echo(message="所有迁移已应用。")
 

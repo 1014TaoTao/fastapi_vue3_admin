@@ -324,7 +324,7 @@ class Settings(BaseSettings):
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
-    return Settings()
+    return Settings(_env_file=ENV_DIR / f".env.{os.getenv('ENVIRONMENT', 'dev')}")  # pyright: ignore[reportCallIssue]
 
 
 settings = get_settings()

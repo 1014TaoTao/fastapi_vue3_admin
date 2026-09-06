@@ -44,8 +44,6 @@ class DynamicRouterRegistry:
         if self._cache is not None:
             return self._cache
 
-        logger.info("🚀 开始动态路由发现与注册")
-
         root_router = APIRouter()
         seen_router_ids: set[int] = set()
         base_package = importlib.import_module("app.plugin")
@@ -83,7 +81,6 @@ class DynamicRouterRegistry:
                             seen_router_ids.add(router_id)
                             container_router.include_router(attr_value)
                             registered_here += 1
-                            logger.info(f"  ↳ 注册 APIRouter 变量 `{attr_name}` ← {module_path}")
 
                 if registered_here == 0:
                     logger.warning(
@@ -106,9 +103,8 @@ class DynamicRouterRegistry:
             root_router.include_router(container_router)
             if route_count == 0:
                 logger.warning(f"⚠️ 容器前缀 {prefix} 下未挂载任何子路由")
-            logger.info(f"✅ 注册容器: {prefix} (子路由数: {route_count})")
+            logger.info(f"✅ 动态注册路由: {prefix} (子路由数: {route_count})")
 
-        logger.info(f"✅ 动态路由发现完成: 共 {len(container_routers)} 个容器前缀")
         self._cache = root_router
         return root_router
 

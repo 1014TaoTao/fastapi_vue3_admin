@@ -9,7 +9,7 @@ from app.common.enums import EnvironmentEnum
 from app.config.path_conf import ALEMBIC_VERSION_DIR, BASE_DIR, SCRIPT_DIR
 from app.config.setting import settings
 from app.core.base_model import MappedBase
-from app.core.database import async_db_session, async_engine, check_db, create_tables
+from app.core.database import async_db_session, async_engine, create_tables
 from app.core.logger import logger
 from app.modules.system.dept.model import DeptModel
 from app.modules.system.dict.model import DictDataModel, DictTypeModel
@@ -44,8 +44,7 @@ class InitializeData:
     _RECURSIVE_TABLES: set[str] = {"sys_menu", "sys_dept"}
 
     async def init_db(self) -> None:
-        """应用数据库迁移并导入种子数据"""
-        await check_db()
+        """应用数据库迁移并导入种子数据（迁移成功即证明连接正常，失败时异常上抛）"""
         await self.__apply_migrations()
 
         async with async_db_session() as session, session.begin():
@@ -53,17 +52,7 @@ class InitializeData:
 
     @staticmethod
     async def __apply_migrations() -> None:
-        """将数据库 schema 带到模型定义的最新的版本（开源项目要求任意方言开箱即用）。
-
-        - 空库（哨兵表不存在）：按 ORM metadata create_all 直接建全表——方言无关、模型即真源，
-          使 docker compose / 本地首启 / CI 无需任何人工 baseline 迁移；若仓库已有迁移历史，
-          随后 stamp head 标记为最新，保证后续增量迁移能对自举库正确应用。
-        - 非空库：alembic upgrade head 执行增量迁移，存量环境的 schema 演进必须走入库+审查的迁移文件。
-        - dev 环境：额外自动 autogenerate（模型有变更则生成迁移文件）并应用，实现零操作迁移；
-          自动生成的迁移若含破坏性 DROP 操作，则中止应用并提示人工处理。
-
-        env.py 内部使用 asyncio.run，alembic 命令需在独立线程中执行，避免与当前事件循环冲突。
-        """
+        """将数据库 schema 带到模型定义的最新的版本（开源项目要求任意方言开箱即用）。"""
         from alembic import command
         from alembic.config import Config
 
@@ -139,6 +128,7 @@ class InitializeData:
 
     async def __init_data(self, db: AsyncSession) -> None:
         """按依赖顺序初始化各表种子数据（表已有数据则整体跳过，实现幂等）"""
+        skipped: list[str] = []
         for model in self.prepare_init_models:
             table_name = model.__tablename__
 
@@ -147,10 +137,10 @@ class InitializeData:
                 logger.info(f"⏭️  跳过 {table_name} 表，无初始化数据")
                 continue
 
-            # 已有数据则跳过
+            # 已有数据则跳过（汇总到循环结束后一次输出，避免每次启动刷 9 行）
             count = await db.execute(select(func.count()).select_from(model))
             if count.scalar():
-                logger.info(f"⏭️  跳过 {table_name} 表数据初始化（表已有数据）")
+                skipped.append(table_name)
                 continue
 
             try:
@@ -172,26 +162,30 @@ class InitializeData:
                 logger.error(f"❌️ 初始化 {table_name} 表数据失败")
                 raise
 
+        if skipped:
+            logger.info(f"⏭️  {len(skipped)} 张表已有数据，跳过初始化：{', '.join(skipped)}")
+
     @staticmethod
     async def __create_dict_data_objs(db: AsyncSession, data: list[dict]) -> list[DictDataModel]:
-        """字典数据种子：dict_type_id 通过查询库内字典类型解析。
-
-        不依赖本次运行新建的对象——即使 sys_dict_type 早在之前的初始化中已入库、
-        本次仅补录字典数据，外键也能正确解析。
-        """
+        """字典数据种子：dict_type_id 通过查询库内字典类型解析。"""
         type_names = {item.get("dict_type") for item in data if item.get("dict_type")}
         result = await db.execute(
             select(DictTypeModel.dict_type, DictTypeModel.id).where(
                 DictTypeModel.dict_type.in_(type_names)
             )
         )
-        id_map = dict(result.all())
+        # Row[Tuple[str, int]] 静态类型上不是双元素 (key, value) 元组，dict(rows) 会被类型检查器拒绝；
+        # 用下标显式拆出 (dict_type, id) 再构造，运行行为不变且类型清晰
+        id_map: dict[str, int] = {row[0]: row[1] for row in result.all()}
 
         objs: list[DictDataModel] = []
         for item in data:
-            dict_type_id = id_map.get(item.get("dict_type"))
+            dict_type = item.get("dict_type")
+            if not isinstance(dict_type, str):  # 与 type_names 的 truthy 过滤一致，同时收窄类型
+                continue
+            dict_type_id = id_map.get(dict_type)
             if dict_type_id is None:
-                logger.warning(f"⚠️  未找到字典类型 {item.get('dict_type')}，跳过")
+                logger.warning(f"⚠️  未找到字典类型 {dict_type}，跳过")
                 continue
             item["dict_type_id"] = dict_type_id
             objs.append(DictDataModel(**item))

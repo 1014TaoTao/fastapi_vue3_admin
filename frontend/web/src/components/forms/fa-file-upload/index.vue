@@ -89,7 +89,7 @@ const doUpload = async (file: File) => {
     const response = await request.post<
       ApiResponse<UploadFilePath>,
       AxiosResponse<ApiResponse<UploadFilePath>>
-    >("/file/upload", formData, {
+    >("/common/file/upload", formData, {
       params: { upload_type: "file" },
       headers: { "Content-Type": "multipart/form-data" },
     });

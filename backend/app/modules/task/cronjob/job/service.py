@@ -111,8 +111,8 @@ class JobService:
         SchedulerUtil.resume()
 
     @staticmethod
-    def shutdown_scheduler() -> None:
-        SchedulerUtil.shutdown()
+    async def shutdown_scheduler() -> None:
+        await SchedulerUtil.shutdown()
 
     @staticmethod
     def clear_scheduler_jobs() -> None:

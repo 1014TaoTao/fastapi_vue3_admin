@@ -14,7 +14,7 @@ export const UserAPI = {
 
   uploadCurrentUserAvatar(body: FormData) {
     return request<ApiResponse<UploadFilePath>>({
-      url: `/file/upload?upload_type=avatar`,
+      url: `/common/file/upload?upload_type=avatar`,
       method: "post",
       data: body,
       headers: { "Content-Type": "multipart/form-data" },

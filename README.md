@@ -19,6 +19,9 @@
           <a href="https://gitee.com/fastapiadmin/FastapiAdmin/blob/master/LICENSE" target="_blank">
                <img src="https://img.shields.io/badge/License-MIT-orange" alt="License">
           </a>
+          <a href="https://github.com/fastapiadmin/FastapiAdmin/commits" target="_blank">
+               <img src="https://img.shields.io/github/commit-activity/m/fastapiadmin/FastapiAdmin?style=flat&label=commits" alt="Commit Activity">
+          </a>
           <img src="https://img.shields.io/badge/Python-≥3.12-blue">
           <img src="https://img.shields.io/badge/NodeJS-≥20.0-blue">
           <img src="https://img.shields.io/badge/MySQL-≥8.0-blue">
@@ -28,6 +31,20 @@
 简体中文 | [English](./README.en.md)
 
 </div>
+
+## 🖥️ 界面一览
+
+**Web 端**
+
+![仪表盘](frontend/web/public/dashboard.png)
+
+**移动端（H5 / 小程序 / App 同一套代码）**
+
+<p>
+<img src="frontend/web/public/app_login.png" width="180" />
+<img src="frontend/web/public/app_home.png" width="180" />
+<img src="frontend/web/public/app_mine.png" width="180" />
+</p>
 
 ## 💡 为什么选择 FastapiAdmin？
 
@@ -74,6 +91,15 @@ cd ../frontend/web && pnpm install && pnpm run dev
 | Python ≥ 3.12 | Node.js ≥ 20.0 + pnpm |
 | MySQL 8.0+ / PostgreSQL 14+ | Redis 6.x / 7.x |
 
+### 🐳 或者：Docker 一键部署
+
+```bash
+cp docker/.env.example docker/.env    # 填写 MySQL / Redis 密码
+./deploy.sh                           # 自动构建镜像并启动全栈（含 Nginx + SSL）
+```
+
+> 端口、SSL 证书、前端构建等细节见 [Docker 部署文档](docker/README.md)。
+
 ## 📦 工程结构
 
 ```
@@ -89,6 +115,8 @@ FastapiAdmin/            # Monorepo 全栈工程
 ```
 
 ## 📌 内置功能
+
+> **200+ REST 接口** · MySQL / PostgreSQL / SQLite 三方言 · SFTP / S3 / OSS / COS / OBS 五种存储协议 · `ENABLED_MODULES` 一行开关裁剪模块
 
 ### 核心模块（始终启用，不可裁剪）
 
@@ -126,11 +154,11 @@ ENABLED_MODULES = ["generator", "task", "storage"]
 - **密钥安全**：所有第三方密钥（AI、云存储等）请配置在 `backend/env/.env.*` 环境变量中，**切勿提交到仓库或写入数据库**。
 - **数据库迁移**：正式环境请使用 Alembic 迁移（`uv run alembic upgrade head`）管理表结构变更，`create_all` 仅用于首次初始化的兜底。
 
-## 🔧 截图展示
+## 📷 更多截图
 
-| 登录 | 仪表盘 | 代码生成 | AI 助手 |
-| ---- | ------ | -------- | ------- |
-| ![登录](frontend/web/public/login.png) | ![仪表盘](frontend/web/public/dashboard.png) | ![代码生成](frontend/web/public/gencode.png) | ![AI](frontend/web/public/ai.png) |
+| 登录 | 代码生成 | AI 助手 |
+| ---- | -------- | ------- |
+| ![登录](frontend/web/public/login.png) | ![代码生成](frontend/web/public/gencode.png) | ![AI](frontend/web/public/ai.png) |
 
 ## 📖 文档地址
 
@@ -147,6 +175,10 @@ ENABLED_MODULES = ["generator", "task", "storage"]
 <img src="frontend/web/public/group.png" width="200" height="260" style="margin-right:30px"/>
 <img src="frontend/web/public/wechatPay.jpg" width="200" height="260" />
 </p>
+
+## ⭐ Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=fastapiadmin/FastapiAdmin&type=Date)](https://star-history.com/#fastapiadmin/FastapiAdmin&Date)
 
 ## 👥 贡献者
 > 感谢以下所有给 FastapiAdmin 贡献过代码的 开发者。

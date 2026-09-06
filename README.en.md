@@ -19,6 +19,9 @@
           <a href="https://gitee.com/fastapiadmin/FastapiAdmin/blob/master/LICENSE" target="_blank">
                <img src="https://img.shields.io/badge/License-MIT-orange" alt="License">
           </a>
+          <a href="https://github.com/fastapiadmin/FastapiAdmin/commits" target="_blank">
+               <img src="https://img.shields.io/github/commit-activity/m/fastapiadmin/FastapiAdmin?style=flat&label=commits" alt="Commit Activity">
+          </a>
           <img src="https://img.shields.io/badge/Python-≥3.12-blue">
           <img src="https://img.shields.io/badge/NodeJS-≥20.0-blue">
           <img src="https://img.shields.io/badge/MySQL-≥8.0-blue">
@@ -28,6 +31,20 @@
 English | [简体中文](./README.md)
 
 </div>
+
+## 🖥️ Screenshots
+
+**Web**
+
+![Dashboard](frontend/web/public/dashboard.png)
+
+**Mobile (H5 / Mini Program / App from one codebase)**
+
+<p>
+<img src="frontend/web/public/app_login.png" width="180" />
+<img src="frontend/web/public/app_home.png" width="180" />
+<img src="frontend/web/public/app_mine.png" width="180" />
+</p>
 
 ## 💡 Why FastapiAdmin?
 
@@ -74,6 +91,15 @@ cd ../frontend/web && pnpm install && pnpm run dev
 | Python ≥ 3.12 | Node.js ≥ 20 + pnpm |
 | MySQL 8.0+ / PostgreSQL 14+ | Redis 6.x / 7.x |
 
+### 🐳 Or: One-Command Docker Deployment
+
+```bash
+cp docker/.env.example docker/.env    # Fill in MySQL / Redis passwords
+./deploy.sh                           # Build images and start the full stack (Nginx + SSL included)
+```
+
+> For ports, SSL certificates and frontend builds, see the [Docker deployment guide](docker/README.md).
+
 ## 📦 Structure
 
 ```
@@ -89,6 +115,8 @@ FastapiAdmin/            # Monorepo full-stack project
 ```
 
 ## 📌 Built-in Features
+
+> **200+ REST endpoints** · MySQL / PostgreSQL / SQLite · SFTP / S3 / OSS / COS / OBS storage adapters · Trim modules with a single `ENABLED_MODULES` entry
 
 ### Core Modules (always enabled, cannot be removed)
 
@@ -126,11 +154,11 @@ ENABLED_MODULES = ["generator", "task", "storage"]
 - **Key security**: Configure all third-party keys (AI, cloud storage, etc.) in the `backend/env/.env.*` environment variables. **Never commit them to the repository or store them in the database**.
 - **Database migrations**: Manage schema changes with Alembic migrations in production (`uv run alembic upgrade head`); `create_all` is only a fallback for first-time initialization.
 
-## 🔧 Screenshots
+## 📷 More Screenshots
 
-| Login | Dashboard | Code Generator | AI Assistant |
-| ----- | --------- | -------------- | ------------ |
-| ![Login](frontend/web/public/login.png) | ![Dashboard](frontend/web/public/dashboard.png) | ![Code Generator](frontend/web/public/gencode.png) | ![AI](frontend/web/public/ai.png) |
+| Login | Code Generator | AI Assistant |
+| ----- | -------------- | ------------ |
+| ![Login](frontend/web/public/login.png) | ![Code Generator](frontend/web/public/gencode.png) | ![AI](frontend/web/public/ai.png) |
 
 ## 📖 Documentation
 
@@ -147,6 +175,10 @@ Issues and PRs are welcome! See [Contributing Guide](https://service.fastapiadmi
 <img src="frontend/web/public/group.png" width="200" height="260" style="margin-right:30px"/>
 <img src="frontend/web/public/wechatPay.jpg" width="200" height="260" />
 </p>
+
+## ⭐ Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=fastapiadmin/FastapiAdmin&type=Date)](https://star-history.com/#fastapiadmin/FastapiAdmin&Date)
 
 ## 👥 Contributors
 

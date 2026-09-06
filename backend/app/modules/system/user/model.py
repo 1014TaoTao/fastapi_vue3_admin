@@ -81,7 +81,7 @@ class UserModel(ModelMixin, UserMixin):
     status: Mapped[int] = mapped_column(Integer, default=0, nullable=False, comment="状态(0:启动 1:停用)")
     description: Mapped[str | None] = mapped_column(Text, default=None, nullable=True, comment="备注")
 
-    dept_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("sys_dept.id", ondelete="SET NULL", onupdate="CASCADE"), nullable=True, index=True, comment="部门ID")
+    dept_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("sys_dept.id", ondelete="SET NULL", onupdate="CASCADE", use_alter=True), nullable=True, index=True, comment="部门ID")
     dept: Mapped["DeptModel | None"] = relationship(back_populates="users", foreign_keys=[dept_id])
     roles: Mapped[list["RoleModel"]] = relationship(secondary="sys_user_roles", back_populates="users")
     positions: Mapped[list["PositionModel"]] = relationship(secondary="sys_user_positions", back_populates="users")

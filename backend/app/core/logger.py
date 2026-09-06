@@ -37,8 +37,10 @@ class InterceptHandler(logging.Handler):
             level = logger.level(record.levelname).name
         except ValueError:
             level = record.levelno
-        frame, depth = logging.currentframe(), 2
-        while frame and frame.f_code.co_filename == logging.__file__:
+        # 第一轮无条件回溯跳过 emit 自身帧，之后跳过 logging 内部帧，
+        # 使 caller 定位到真实调用方（否则 uvicorn 等日志会显示 logging:callHandlers:xxx）
+        frame, depth = logging.currentframe(), 0
+        while frame and (depth == 0 or frame.f_code.co_filename == logging.__file__):
             frame = frame.f_back
             depth += 1
         logger.opt(depth=depth, exception=record.exc_info).log(level, "{}", record.getMessage())
@@ -67,22 +69,26 @@ def setup_logger() -> None:
     )
 
     logging.basicConfig(handlers=[InterceptHandler()], level=settings.LOGGER_LEVEL, force=True)
-    for name in [k for k in logging.root.manager.loggerDict if isinstance(k, str)] + ["uvicorn", "uvicorn.error", "uvicorn.access", "alembic"]:
+    for name in [k for k in logging.root.manager.loggerDict if isinstance(k, str)] + ["uvicorn", "uvicorn.error", "uvicorn.access"]:
         std = logging.getLogger(name)
         std.handlers = [InterceptHandler()]
         std.propagate = False
 
     # 第三方库 DEBUG/INFO 噪音干扰太大，只保留 WARNING 以上：
     # apscheduler（任务轮询）、alembic（autogenerate 插件注册 setup plugin、模型对比 Detected added 批量输出）、
-    # 数据库驱动（aiomysql 连接缓存、sqlalchemy 引擎日志，原 alembic.ini [logger_sqlalchemy] 的配置迁移至此）
+    # 数据库驱动（aiomysql 连接缓存、sqlalchemy 引擎日志，原 alembic.ini [logger_sqlalchemy] 的配置迁移至此）、
+    # tzlocal（模块级调试输出 /etc/localtime found、is a symlink to ...，dev reload 下会随应用加载刷屏）
     for name in (
         "apscheduler",
         "apscheduler.schedulers",
         "apscheduler.jobstores",
+        "alembic.runtime.migration",
         "alembic.autogenerate",
         "alembic.runtime.plugins",
+        "asyncio",
         "sqlalchemy",
         "aiomysql",
+        "tzlocal",
     ):
         logging.getLogger(name).setLevel(logging.WARNING)
 

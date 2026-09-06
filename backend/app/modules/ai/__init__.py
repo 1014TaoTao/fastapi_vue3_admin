@@ -1,7 +1,1 @@
-from fastapi import APIRouter
-
-from .chat.controller import ChatRouter
-
-ai_router = APIRouter(prefix="/ai")
-
-ai_router.include_router(ChatRouter)
+"""AI 模块；路由由 app/api/v1/routers.py 统一聚合。"""

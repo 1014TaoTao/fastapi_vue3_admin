@@ -1,10 +1,22 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, MetaData, String
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase, Mapped, declared_attr, mapped_column, relationship
 
 from app.utils.common_util import uuid4_str
+
+# 官方 autogenerate 最佳实践：约束显式命名（匿名 FK 在 MySQL 落库为 ibfk_1 这类自动名，
+# 跨方言渲染/对比/batch 重建均不可靠）。ix 与 SQLAlchemy 默认模板一致，显式声明便于阅读。
+# uq 特意不配置：MySQL 下 unique=True 渲染为列名 unique index（如 `code`），一旦命名（uq_sys_dept_code）
+# 会与存量库名字不匹配，autogenerate 生成 remove_index+add_uq 迁移，又被 dev 启动的 DROP 拦截机制
+# 删除而永远无法自动应用，故保持默认匿名渲染。
+NAMING_CONVENTION: dict[str, str] = {
+    "ix": "ix_%(column_0_label)s",
+    "ck": "ck_%(table_name)s_%(constraint_name)s",
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+    "pk": "pk_%(table_name)s",
+}
 
 
 class MappedBase(AsyncAttrs, DeclarativeBase):
@@ -20,6 +32,7 @@ class MappedBase(AsyncAttrs, DeclarativeBase):
     """
 
     __abstract__: bool = True
+    metadata = MetaData(naming_convention=NAMING_CONVENTION)
 
     @declared_attr.directive
     def __tablename__(cls) -> str:

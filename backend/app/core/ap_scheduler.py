@@ -252,10 +252,10 @@ class SchedulerUtil:
         scheduler.resume()
 
     @classmethod
-    def _stop_scheduler_local(cls) -> None:
+    def _stop_scheduler_local(cls, wait: bool = False) -> None:
         """本地停止调度器（幂等）。"""
         if scheduler.running:
-            scheduler.shutdown(wait=False)
+            scheduler.shutdown(wait=wait)
 
     @classmethod
     def _spawn_maintain(cls) -> None:
@@ -277,9 +277,29 @@ class SchedulerUtil:
         return scheduler.running or cls._redis is not None
 
     @classmethod
-    def shutdown(cls, wait: bool = False) -> None:
-        """停止本进程调度器并释放持有权；多 worker 下其它候选进程会自动接管。
+    async def release_lock(cls) -> None:
+        """优雅退出时主动释放调度锁，消除退出到锁 TTL 过期之间的争抢窗口。
 
+        仅当本进程持有锁时操作；底层 Lua 校验 token 原子删除，不会误删其它进程的锁。
+        崩溃（SIGKILL）场景走不到这里，仍由锁 TTL 兜底自动过期。
+        """
+        if cls._redis is None or not cls._leader_token:
+            return
+        from app.core.redis_crud import RedisCURD
+
+        released = await RedisCURD(cls._redis).unlock(SCHEDULER_LOCK_KEY, cls._leader_token)
+        cls._leader_token = None
+        if released:
+            logger.info("🔑 调度器持有锁已释放")
+        else:
+            logger.warning("调度器持有锁已易主或过期，跳过释放")
+
+    @classmethod
+    async def shutdown(cls, wait: bool = False) -> None:
+        """停止本进程调度器并交还持有权；多 worker 下其它候选进程会自动接管。
+
+        顺序：先停本地调度器再释放锁，避免「锁已让出而本进程调度器仍在运行」
+        的双跑窗口；崩溃（SIGKILL）走不到这里，仍由锁 TTL 兜底自动过期。
         APScheduler 的暂停/停止是进程内状态，跨 worker 的手动编排不在 SDK 职责内。
         """
         if cls._maintain_task is not None and not cls._maintain_task.done():
@@ -288,8 +308,8 @@ class SchedulerUtil:
         if cls._reconcile_task is not None and not cls._reconcile_task.done():
             cls._reconcile_task.cancel()
             cls._reconcile_task = None
-        cls._leader_token = None
-        cls._stop_scheduler_local()
+        cls._stop_scheduler_local(wait=wait)
+        await cls.release_lock()
 
     @classmethod
     def _get_trigger_type(cls, job_id: str) -> str:
@@ -411,6 +431,15 @@ class SchedulerUtil:
     @classmethod
     def is_running(cls) -> bool:
         return scheduler.running
+
+    @classmethod
+    def is_scheduler_ready(cls) -> bool:
+        """调度系统整体是否就绪：本进程运行中，或分布式锁体系可用（持有/候选均算）。
+
+        候选进程虽不直接执行调度，但持有者存在（或崩溃后由本进程自动接管），
+        调度能力由集群保证，不应在启动面板显示为失败。
+        """
+        return scheduler.running or cls._redis is not None
 
     @classmethod
     def get_scheduler_state(cls) -> int:

@@ -6,7 +6,7 @@ lastUpdated: true
 hero:
   name: "FastApiAdmin"
   text: "Web · H5 · 小程序,一套全栈"
-  tagline: 基于 FastAPI + Vue3 + TypeScript,前后端类型共享。30+ 业务模块开箱即用,AI 代码生成器覆盖 90% 常规 CRUD,Docker Compose 一条命令上线。
+  tagline: 基于 FastAPI + Vue3 + TypeScript,前后端类型共享。200+ REST 接口开箱即用,AI 代码生成器选表即出全栈 CRUD,Docker Compose 一条命令上线。
   image:
     src: /logo.svg
     alt: AI 代码生成器 - 选表即生成完整 CRUD

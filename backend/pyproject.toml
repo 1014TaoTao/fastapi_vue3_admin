@@ -1,6 +1,6 @@
 [project]
 name = "backend"
-version = "2.0.0"
+version = "3.2.0"
 description = "fastapiadmin后端工程"
 readme = "README.md"
 requires-python = ">=3.12"
