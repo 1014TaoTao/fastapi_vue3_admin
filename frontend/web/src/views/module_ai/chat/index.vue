@@ -88,7 +88,9 @@ const WS_URL = import.meta.env.VITE_APP_WS_ENDPOINT;
 
 // ============ WebSocket 操作 ============
 const connectWebSocket = () => {
-  if (ws?.readyState === WebSocket.OPEN) return;
+  // CONNECTING / OPEN / CLOSING 期间一律拒绝重入：
+  // 仅挡 OPEN 会在连接握手期间被重复调用，旧连接引用被覆盖后泄漏（后台照样连上并弹「连接成功」）
+  if (ws && ws.readyState !== WebSocket.CLOSED) return;
 
   connectionStatus.value = "connecting";
   error.value = "";
@@ -129,8 +131,14 @@ const connectWebSocket = () => {
 
 const disconnectWebSocket = () => {
   if (ws) {
-    ws.close(1000, "用户主动断开");
+    const socket = ws;
     ws = null;
+    // 先摘除回调再关闭：握手期中止 / 关闭竞态期间不应再触发任何提示或状态回调
+    socket.onopen = null;
+    socket.onmessage = null;
+    socket.onerror = null;
+    socket.onclose = null;
+    socket.close(1000, "用户主动断开");
   }
   isConnected.value = false;
   connectionStatus.value = "disconnected";
@@ -336,6 +344,13 @@ const toggleSidebar = () => {
 // ============ 生命周期 ============
 onMounted(connectWebSocket);
 onUnmounted(disconnectWebSocket);
+
+// KeepAlive 缓存切换：离开视图即断开，回到视图按需重连。
+// 缺失 deactivated 时被缓存实例会持续占用 WebSocket 连接（登出后旧实例的连接也不会释放）。
+onActivated(() => {
+  if (!isConnected.value) connectWebSocket();
+});
+onDeactivated(disconnectWebSocket);
 </script>
 
 <style lang="scss" scoped>
