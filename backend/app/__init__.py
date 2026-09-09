@@ -124,7 +124,8 @@ def register_docs(app: FastAPI) -> None:
 
 def register_frontend(app: FastAPI) -> None:
     if path_conf.FRONTEND_DIST_DIR.exists():
-        app.mount("/web", StaticFiles(directory=str(path_conf.FRONTEND_DIST_DIR), html=True), name="frontend")
+        # 如果你的前端文件是稍后创建的（例如在创建应用对象之后通过单独的构建步骤生成），请设置 check_dir=False
+        app.frontend("/", directory="frontend/web/dist", check_dir=False)
 
 
 def create_app() -> FastAPI:

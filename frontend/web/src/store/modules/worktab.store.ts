@@ -529,6 +529,14 @@ export const useWorktabStore = defineStore(
      */
     const clearAll = (): void => {
       const fixedTabs = opened.value.filter((tab) => tab.fixedTab);
+      // 旧会话的 KeepAlive 缓存实例必须驱逐：
+      // opened 清空后 include 会变为 undefined（KeepAlive 对 undefined include 不做 prune），
+      // 旧实例会带着 WebSocket / 定时器等副作用跨会话存活。
+      const removedTabs = fixedTabs.length > 0 ? opened.value.filter((tab) => !tab.fixedTab) : opened.value;
+      const excludeNames = new Set<string>();
+      for (const tab of removedTabs) {
+        if (tab.name && tab.keepAlive !== false) excludeNames.add(String(tab.name));
+      }
       if (fixedTabs.length > 0) {
         opened.value = fixedTabs;
         current.value = { ...fixedTabs[0] };
@@ -536,7 +544,9 @@ export const useWorktabStore = defineStore(
         current.value = {};
         opened.value = [];
       }
-      keepAliveExclude.value = [];
+      // 用「待删标签组件名」替换 exclude（而非清空）：KeepAlive 收到非空 exclude 会 prune 掉这些组件的缓存实例；
+      // 下次 openTab 的 removeKeepAliveExclude 会自动将其移出，恢复正常缓存
+      keepAliveExclude.value = Array.from(excludeNames);
     };
 
     /**
