@@ -167,6 +167,8 @@ function getFileTreeNodeIcon(label: string): string {
   if (lower.endsWith(".xml")) return "xml";
   if (lower.endsWith(".md")) return "document";
   if (lower.endsWith(".yaml") || lower.endsWith(".yml")) return "file-json";
+  // toml：无本地 svg，走 Iconify（离线注册的 ri 图标集，文件+齿轮更贴合配置文件语义）
+  if (lower.endsWith(".toml")) return "ri:file-settings-line";
   if (/\.(png|jpe?g|gif|webp|svg|ico)$/i.test(lower)) return "file-image";
   if (/\.(zip|rar|7z)$/i.test(lower)) return "file-zip";
   if (/\.(pdf)$/i.test(lower)) return "file-pdf";

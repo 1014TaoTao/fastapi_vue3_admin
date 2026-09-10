@@ -204,6 +204,7 @@ class Jinja2TemplateUtil:
             "business_name_slug": business_name_slug,
             "base_package": cls.get_package_prefix(package_name),
             "package_name": package_name,
+            "plugin_name": package_name.removeprefix("module_"),
             "menu_route_first_segment": cls.get_menu_route_first_segment(gen_table),
             "datetime": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "pk_column": gen_table.pk_column,
@@ -290,6 +291,8 @@ class Jinja2TemplateUtil:
             "python/schema.py.jinja2",
             "python/model.py.jinja2",
             "python/__init__.py.jinja2",
+            "python/package_init.py.jinja2",
+            "python/plugin.toml.jinja2",
             "ts/api.ts.jinja2",
             "vue/index.vue.jinja2",
         ]
@@ -349,6 +352,8 @@ class Jinja2TemplateUtil:
             "schema.py.jinja2": f"{backend_dir}/schema.py",
             "model.py.jinja2": f"{backend_dir}/model.py",
             "__init__.py.jinja2": f"{backend_dir}/__init__.py",
+            "package_init.py.jinja2": f"{backend_base}/__init__.py",
+            "plugin.toml.jinja2": f"{backend_base}/plugin.toml",
             "api.ts.jinja2": api_path,
             "index.vue.jinja2": f"{view_dir}/index.vue",
         }
