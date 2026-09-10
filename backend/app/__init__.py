@@ -123,9 +123,10 @@ def register_docs(app: FastAPI) -> None:
 
 
 def register_frontend(app: FastAPI) -> None:
+    """注册前端静态文件路由。"""
     if path_conf.FRONTEND_DIST_DIR.exists():
         # 如果你的前端文件是稍后创建的（例如在创建应用对象之后通过单独的构建步骤生成），请设置 check_dir=False
-        app.frontend("/", directory="frontend/web/dist", check_dir=False)
+        app.frontend("/", directory=str(path_conf.FRONTEND_DIST_DIR), check_dir=False)
 
 
 def create_app() -> FastAPI:

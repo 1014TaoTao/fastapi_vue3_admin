@@ -93,7 +93,7 @@ pnpm build        # 构建
 - 配置：`app/config/setting.py` + `backend/env/.env`（模板见 `env/.env.example`）
 - 改了 model 必须生成并执行 Alembic 迁移；初始菜单/角色等数据在 `backend/sql/*.json`
 - 新模块两种放法：常规业务放 `app/modules/`，可插拔/示例性质放 `app/plugin/`（结构相同，都有 `plugin.toml`）
-- 代码生成：`backend/templates/{python,ts,vue}/*.jinja2` 配合 generator 模块（后台「代码生成」功能可视化生成）
+- 代码生成：`backend/templates/{python,ts,vue}/*.jinja2` 配合 generator 模块（后台「代码生成」功能可视化生成）；**生成/修改代码后必须重启后端**——dev reload 只在文件变更时重载，动态路由发现（`app/core/discover.py`）只在启动时执行，不重启新模块不生效且会静默失败
 
 ## 4. 前端 web 约定（frontend/web/src）
 
@@ -135,6 +135,8 @@ pnpm build        # 构建
 
 ## 8. 已知注意点
 
+- 静态前端托管：`register_frontend`（`app/__init__.py`）检查与挂载必须用同一个 `path_conf.FRONTEND_DIST_DIR`（backend/dist）。曾因检查用 path_conf、挂载硬编码 `frontend/web/dist` 导致 500：`check_dir=False` 时启动不报错，**首次请求才炸**，必须看 loguru 日志（`backend/logs/fastapiadmin.log`）才能定位
+- 模板/脚本里不要用 `{% for %}` + `{% set %}` 累计布尔标志：Jinja2 for 块作用域隔离，循环外读到的仍是初值。用过滤器一次性计算，如 `{% set has_x = columns | selectattr('python_type', 'equalto', 'date') | list | length > 0 %}`（代码生成器 schema.py.jinja2 曾因此漏生成 validator import，生成产物 NameError、后端起不来）
 - 跨端需求（web + 小程序）要同时评估 `frontend/web` 与 `frontend/app` 两套代码，API 层各自维护
 - 小程序侧有自己的 skills（`frontend/app/.agents/skills/`），改小程序 UI 时遵循 wot-ui 约定
 - 文档站改动记得中英两份（`src/guide/` 与 `src/en/guide/`）

@@ -5,18 +5,9 @@ from pydantic import BaseModel, ConfigDict, Field
 {{ import_stmt }}
 {% endfor %}
 from app.core.base_schema import BaseSchema, UserBySchema, BaseQueryParam, UserByQueryParam
-{% set has_date_validator = false %}
-{% set has_time_validator = false %}
-{% set has_datetime_validator = false %}
-{% for column in columns %}
-{% if column.python_type == 'date' %}
-{% set has_date_validator = true %}
-{% elif column.python_type == 'time' %}
-{% set has_time_validator = true %}
-{% elif column.python_type == 'datetime' %}
-{% set has_datetime_validator = true %}
-{% endif %}
-{% endfor %}
+{% set has_date_validator = columns | selectattr('python_type', 'equalto', 'date') | list | length > 0 %}
+{% set has_time_validator = columns | selectattr('python_type', 'equalto', 'time') | list | length > 0 %}
+{% set has_datetime_validator = columns | selectattr('python_type', 'equalto', 'datetime') | list | length > 0 %}
 {% if has_date_validator or has_time_validator or has_datetime_validator %}
 from app.core.validator import {% if has_date_validator %}DateStr{% endif %}{% if has_time_validator %}{% if has_date_validator %}, {% endif %}TimeStr{% endif %}{% if has_datetime_validator %}{% if has_date_validator or has_time_validator %}, {% endif %}DateTimeStr{% endif %}
 {% endif %}
